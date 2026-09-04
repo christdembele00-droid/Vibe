@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#08090d">
+  <title>VIBE — Gemini AI</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand"><span class="logo">V</span><div><strong>VIBE</strong><small>Gemini AI</small></div></div>
+      <span id="status" class="status">Connexion…</span>
+    </header>
+    <section id="chat" class="chat" aria-live="polite">
+      <div class="welcome"><div class="orb">V</div><h1>Bienvenue sur VIBE</h1><p>Une interface rapide et épurée propulsée par Gemini.</p></div>
+    </section>
+    <form id="form" class="composer">
+      <textarea id="input" maxlength="20000" rows="1" placeholder="Écris ton message…" autocomplete="off"></textarea>
+      <button id="send" type="submit" aria-label="Envoyer">➤</button>
+    </form>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>
