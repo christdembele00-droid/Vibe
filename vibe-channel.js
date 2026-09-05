@@ -30,10 +30,30 @@ function ensureChannelInSidebar(){
   button.className='contact';
   button.dataset.id=CHANNEL_ID;
   button.dataset.vibeChannel='true';
-  button.setAttribute('aria-label','Ouvrir le canal public VIBE');
-  button.innerHTML=`<img src="${CHANNEL_LOGO}" alt="VIBE"><span><b>VIBE</b><small>Canal public</small></span>`;
+  button.setAttribute('aria-label','Ouvrir le Canal Public VIBE');
+  button.innerHTML=`<img src="${CHANNEL_LOGO}" alt="VIBE"><span><b>VIBE — Canal Public</b><small>Communauté VIBE</small></span>`;
   button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();openChannel();});
   box.prepend(button);
+}
+
+function setChannelHeader(){
+  const avatar=$('avatar');
+  if(avatar){avatar.src=CHANNEL_LOGO;avatar.alt='Logo VIBE — Canal Public';}
+  const name=$('name');
+  if(name)name.textContent='VIBE — Canal Public';
+  const status=$('status');
+  if(status)status.textContent='Espace de discussion global de la communauté';
+  const title=$('chatMenu');
+  if(title)title.title='Rechercher dans le Canal Public VIBE';
+  const ai=$('ai');
+  if(ai)ai.title='VIBE AI';
+}
+
+function renderChannelWelcome(box){
+  const welcome=document.createElement('div');
+  welcome.className='welcome';
+  welcome.innerHTML=`<img src="${CHANNEL_LOGO}" alt="VIBE" style="width:72px;height:72px;border-radius:50%;object-fit:cover"><h2>Bienvenue sur le Canal Public VIBE</h2><p>Tous les utilisateurs authentifiés peuvent échanger ici en temps réel.</p><div class="welcome-features"><span>Temps réel</span><span>Communauté</span><span>VIBE AI</span></div>`;
+  box.appendChild(welcome);
 }
 
 function renderMessage(id,message,box){
@@ -59,19 +79,23 @@ function listenChannel(){
   channelUnsub?.();
   const box=$('messages'); if(!box||!currentUid)return;
   const q=query(collection(db,...CHANNEL_PATH),orderBy('createdAt','asc'),limit(300));
-  channelUnsub=onSnapshot(q,snap=>{if(!channelActive)return;box.replaceChildren();snap.forEach(item=>renderMessage(item.id,item.data(),box));box.scrollTop=box.scrollHeight;},error=>toast('Canal VIBE indisponible : '+(error?.code||error?.message||'erreur')));
+  channelUnsub=onSnapshot(q,snap=>{
+    if(!channelActive)return;
+    box.replaceChildren();
+    if(snap.empty){renderChannelWelcome(box);return;}
+    snap.forEach(item=>renderMessage(item.id,item.data(),box));
+    box.scrollTop=box.scrollHeight;
+  },error=>toast('Canal VIBE indisponible : '+(error?.code||error?.message||'erreur')));
 }
 
 function openChannel(){
-  if(!currentUid)return toast('Connecte-toi pour accéder au canal public.');
+  if(!currentUid)return toast('Connecte-toi pour accéder au Canal Public VIBE.');
   channelUnsub?.();
   channelActive=true;
   window.VIBE_CHANNEL_ACTIVE=true;
-  window.VIBE_CURRENT_USER={id:CHANNEL_ID,name:'VIBE',group:false,channel:true};
+  window.VIBE_CURRENT_USER={id:CHANNEL_ID,name:'VIBE — Canal Public',group:false,channel:true};
   document.querySelector('.app')?.classList.add('chat-open');
-  const avatar=$('avatar'); if(avatar)avatar.src=CHANNEL_LOGO;
-  const name=$('name'); if(name)name.textContent='VIBE';
-  const status=$('status'); if(status)status.textContent='Canal public · tous les utilisateurs';
+  setChannelHeader();
   const composer=$('composer'); if(composer)composer.hidden=false;
   const typing=$('typing'); if(typing)typing.hidden=true;
   const messages=$('messages'); if(messages)messages.replaceChildren();
