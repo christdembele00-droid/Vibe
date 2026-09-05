@@ -7,7 +7,6 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Utilisateurs authentifies : decouverte realtime des profils.
       allow read: if signedIn();
       allow create: if signedIn() && request.auth.uid == userId;
       allow update, delete: if signedIn() && request.auth.uid == userId;
@@ -18,10 +17,8 @@ service cloud.firestore {
     }
 
     match /presence/{userId} {
-      // Chaque compte ne peut ecrire que sa propre presence.
       allow read: if signedIn();
-      allow create, update: if signedIn() && request.auth.uid == userId;
-      allow delete: if signedIn() && request.auth.uid == userId;
+      allow create, update, delete: if signedIn() && request.auth.uid == userId;
     }
 
     match /rooms/{roomId} {
@@ -121,4 +118,4 @@ service cloud.firestore {
   }
 }
 
-// sync-trigger-20260905
+// sync-trigger-20260905-r2
