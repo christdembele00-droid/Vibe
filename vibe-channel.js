@@ -7,6 +7,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const CHANNEL_ID = 'vibe';
 const CHANNEL_PATH = ['channels', CHANNEL_ID, 'messages'];
+const CHANNEL_LOGO = './icons/icon.svg';
 let currentUid = null;
 let channelUnsub = null;
 let channelActive = false;
@@ -24,8 +25,14 @@ function ensureChannelInSidebar(){
   const box=$('contacts'); if(!box||!currentUid||channelActive)return;
   if(box.querySelector('[data-vibe-channel="true"]'))return;
   box.querySelector('.empty')?.remove();
-  const button=document.createElement('button'); button.type='button'; button.className='contact'; button.dataset.id=CHANNEL_ID; button.dataset.vibeChannel='true';
-  button.innerHTML=`<img src="${esc($('meAvatar')?.src||fallback)}" alt=""><span><b>VIBE</b><small>Canal public</small></span>`;
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='contact';
+  button.dataset.id=CHANNEL_ID;
+  button.dataset.vibeChannel='true';
+  button.setAttribute('aria-label','Ouvrir le canal public VIBE');
+  button.innerHTML=`<img src="${CHANNEL_LOGO}" alt="VIBE"><span><b>VIBE</b><small>Canal public</small></span>`;
+  button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();openChannel();});
   box.prepend(button);
 }
 
@@ -49,15 +56,27 @@ function renderMessage(id,message,box){
 }
 
 function listenChannel(){
-  channelUnsub?.(); const box=$('messages'); if(!box||!currentUid)return;
+  channelUnsub?.();
+  const box=$('messages'); if(!box||!currentUid)return;
   const q=query(collection(db,...CHANNEL_PATH),orderBy('createdAt','asc'),limit(300));
   channelUnsub=onSnapshot(q,snap=>{if(!channelActive)return;box.replaceChildren();snap.forEach(item=>renderMessage(item.id,item.data(),box));box.scrollTop=box.scrollHeight;},error=>toast('Canal VIBE indisponible : '+(error?.code||error?.message||'erreur')));
 }
 
 function openChannel(){
   if(!currentUid)return toast('Connecte-toi pour accéder au canal public.');
-  channelActive=true;window.VIBE_CHANNEL_ACTIVE=true;window.VIBE_CURRENT_USER={id:CHANNEL_ID,name:'VIBE',group:false,channel:true};
-  document.querySelector('.app')?.classList.add('chat-open');$('name').textContent='VIBE';$('status').textContent='Canal public · tous les utilisateurs';$('composer').hidden=false;$('typing').hidden=true;listenChannel();$('message')?.focus();
+  channelUnsub?.();
+  channelActive=true;
+  window.VIBE_CHANNEL_ACTIVE=true;
+  window.VIBE_CURRENT_USER={id:CHANNEL_ID,name:'VIBE',group:false,channel:true};
+  document.querySelector('.app')?.classList.add('chat-open');
+  const avatar=$('avatar'); if(avatar)avatar.src=CHANNEL_LOGO;
+  const name=$('name'); if(name)name.textContent='VIBE';
+  const status=$('status'); if(status)status.textContent='Canal public · tous les utilisateurs';
+  const composer=$('composer'); if(composer)composer.hidden=false;
+  const typing=$('typing'); if(typing)typing.hidden=true;
+  const messages=$('messages'); if(messages)messages.replaceChildren();
+  listenChannel();
+  $('message')?.focus();
 }
 function closeChannel(){channelUnsub?.();channelUnsub=null;channelActive=false;window.VIBE_CHANNEL_ACTIVE=false;}
 
@@ -90,7 +109,8 @@ function boot(){
   document.addEventListener('click',handleClicks,true);
   document.addEventListener('submit',handleSubmit,true);
   document.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&document.activeElement?.id==='message'&&channelActive){event.preventDefault();$('composer')?.requestSubmit();}},true);
-  observer=new MutationObserver(()=>ensureChannelInSidebar());const contacts=$('contacts');if(contacts)observer.observe(contacts,{childList:true});
+  observer=new MutationObserver(()=>ensureChannelInSidebar());
+  const contacts=$('contacts');if(contacts)observer.observe(contacts,{childList:true});
   onAuthStateChanged(auth,user=>{currentUid=user?.uid||null;closeChannel();if(currentUid)setTimeout(ensureChannelInSidebar,100);});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
