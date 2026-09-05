@@ -1,0 +1,5 @@
+const{onRequest}=require('firebase-functions/v2/https');
+const{defineSecret}=require('firebase-functions/params');
+const{GoogleGenerativeAI}=require('@google/generative-ai');
+const geminiKey=defineSecret('GEMINI_API_KEY');
+exports.vibeAI=onRequest({region:'us-central1',secrets:[geminiKey],cors:true,timeoutSeconds:60,memory:'256MiB'},async(req,res)=>{try{if(req.method!=='POST')return res.status(405).json({error:'POST required'});const text=String(req.body?.message||'').trim();if(!text)return res.status(400).json({error:'message required'});if(text.length>12000)return res.status(413).json({error:'message too long'});const ai=new GoogleGenerativeAI(geminiKey.value());const model=ai.getGenerativeModel({model:'gemini-2.5-flash'});const result=await model.generateContent(`Tu es VIBE AI, un assistant intégré à une messagerie. Réponds en français de façon utile, claire et concise.\n\nUtilisateur: ${text}`);res.json({reply:result.response.text()})}catch(e){console.error(e);res.status(500).json({error:'Gemini indisponible'})}});
