@@ -20,21 +20,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Check JavaScript syntax
         run: |
-          node --check vibe-runtime.js
-          node --check vibe-ai.js
-          node --check vibe-local-notifications.js
-          node --check calls.js
-          node --check vibe-actions.js
-          node --check vibe-online.js
-          node --check vibe-analytics.js
-          node --check vibe-channel.js
-          node --check vibe-user-sync.js
-          node --check sw.js
-          node --check firebase-config.js
+          for file in *.js; do
+            echo "Checking $file"
+            node --check "$file"
+          done
 
       - name: Check JSON files
         run: |
@@ -42,36 +35,33 @@ jobs:
 
       - name: Check frontend references
         run: |
-          test -f index.html
-          test -f style.css
-          test -f vibe-runtime.js
-          test -f vibe-ai.js
-          test -f vibe-local-notifications.js
-          test -f calls.js
-          test -f vibe-actions.js
-          test -f vibe-online.js
-          test -f vibe-analytics.js
-          test -f vibe-channel.js
-          test -f vibe-user-sync.js
-          test -f firebase-config.js
-          grep -q 'vibe-runtime.js' index.html
-          grep -q 'vibe-ai.js' index.html
-          grep -q 'vibe-local-notifications.js' index.html
-          grep -q 'calls.js' index.html
-          grep -q 'vibe-analytics.js' index.html
-          grep -q 'vibe-channel.js' index.html
-          grep -q 'vibe-user-sync.js' index.html
-          ! grep -qE 'vibe-(navigation|spa|native-panels|fixes|core)\\.js' index.html
-          ! grep -qE 'vibe-(navigation|spa|native-panels|fixes|core)\\.css' index.html
+          node <<'NODE'
+          const fs=require('fs');
+          const html=fs.readFileSync('index.html','utf8');
+          const expected=[
+            'vibe-runtime.js','vibe-enhancements.js','vibe-ai.js','calls.js',
+            'vibe-actions.js','vibe-online.js','vibe-analytics.js',
+            'vibe-local-notifications.js','vibe-channel.js','firebase-config.js'
+          ];
+          for(const file of expected){
+            if(!fs.existsSync(file)) throw new Error(`Missing file: ${file}`);
+            if(!html.includes(file)) throw new Error(`Missing index.html reference: ${file}`);
+          }
+          const forbidden=['vibe-navigation.js','vibe-spa.js','vibe-native-panels.js','vibe-fixes.js','vibe-core.js','vibe-navigation.css','vibe-spa.css','vibe-native-panels.css','vibe-fixes.css','vibe-core.css'];
+          for(const file of forbidden){
+            if(html.includes(file)) throw new Error(`Forbidden stale reference: ${file}`);
+          }
+          console.log('Frontend references OK');
+          NODE
 
       - name: Check PWA cache references
         run: |
-          grep -q "vibe-runtime.js" sw.js
-          grep -q "vibe-ai.js" sw.js
-          grep -q "vibe-local-notifications.js" sw.js
-          grep -q "calls.js" sw.js
-          grep -q "vibe-online.js" sw.js
-          grep -q "vibe-analytics.js" sw.js
-          grep -q "vibe-channel.js" sw.js
-          grep -q "vibe-user-sync.js" sw.js
-          ! grep -qE 'vibe-(navigation|spa|native-panels|fixes|core)' sw.js
+          node <<'NODE'
+          const fs=require('fs');
+          const sw=fs.readFileSync('sw.js','utf8');
+          const required=['vibe-runtime.js','vibe-enhancements.js','vibe-ai.js','vibe-local-notifications.js','vibe-actions.js','vibe-online.js','vibe-analytics.js','vibe-channel.js','calls.js','firebase-config.js','style.css','vibe-actions.css','vibe-redesign.css','manifest.webmanifest','icons/icon.svg'];
+          for(const file of required){
+            if(!sw.includes(file)) throw new Error(`Missing PWA cache asset: ${file}`);
+          }
+          console.log('PWA cache references OK');
+          NODE
