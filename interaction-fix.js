@@ -11,7 +11,7 @@ function openProfileSettings(){const modal=$('modal'),content=$('modalContent'),
 function setup(){const s=$('search'),clear=$('clearSearch');if(s){s.addEventListener('input',applySearch,true);s.addEventListener('keyup',applySearch,true);s.addEventListener('keydown',e=>{if(e.key==='Escape'){s.value='';applySearch();s.blur()}})}if(clear&&s)clear.onclick=()=>{s.value='';applySearch();s.focus()};const contacts=$('contacts');if(contacts)new MutationObserver(applySearch).observe(contacts,{childList:true,subtree:true});
 if($('railSettings'))$('railSettings').addEventListener('click',openSettings);
 if($('railProfile'))$('railProfile').addEventListener('click',openSettings);
-if($('newGroupQuick'))$('newGroupQuick').addEventListener('click',()=>{if($('newGroup'))$('newGroup').click()});
+if($('newGroupQuick'))$('newGroupQuick').addEventListener('click',()=>{$('newGroup')?.click()});
 if($('newStatusQuick'))$('newStatusQuick').addEventListener('click',()=>{const t=prompt('Écris ton statut :');if(!t?.trim())return;localStorage.setItem('vibe-status',t.trim());renderStatus(t.trim());document.querySelector('.tab[data-tab="stories"]')?.click();toast('Statut publié')});
 function renderStatus(text){const box=$('stories');if(box)box.innerHTML=`<div class="empty"><i class="fa-solid fa-circle-notch"></i><b>Ton statut</b><small>${safe(text)}</small></div>`}
 const saved=localStorage.getItem('vibe-status');if(saved)renderStatus(saved);
@@ -22,7 +22,7 @@ if($('railStories'))$('railStories').addEventListener('click',()=>tab('stories')
 if($('railFavorites'))$('railFavorites').addEventListener('click',()=>{tab('chats');toast('Les favoris seront affichés ici.')});
 if($('railArchive'))$('railArchive').addEventListener('click',()=>{tab('chats');toast('Les discussions archivées seront affichées ici.')});
 if($('railCommunities'))$('railCommunities').addEventListener('click',()=>toast('Communautés VIBE — bientôt disponibles.'));
-const close=$('closeModal');if(close)close.addEventListener('click',()=>modal?.close());
+const close=$('closeModal');if(close)close.addEventListener('click',()=>{$('modal')?.close()});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setup();
 window.VIBE_SEARCH=applySearch;window.VIBE_OPEN_USERS=openVibeUsers;
