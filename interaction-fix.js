@@ -1,3 +1,6 @@
+import{getApp}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
+import{getAuth}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import{getFirestore,doc,updateDoc}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 const $=id=>document.getElementById(id);
 const toast=t=>{const e=$('toast');if(!e)return;e.textContent=t;e.style.display='block';clearTimeout(window.__interactionToast);window.__interactionToast=setTimeout(()=>e.style.display='none',2400)};
 
@@ -6,30 +9,16 @@ function applyUserSearch(){
   if(!input||!box)return;
   const term=input.value.trim().toLowerCase();
   let visible=0;
-  box.querySelectorAll('.contact').forEach(item=>{
-    const text=(item.dataset.search||item.textContent||'').toLowerCase();
-    const match=!term||text.includes(term);
-    item.hidden=!match;
-    if(match)visible++;
-  });
+  box.querySelectorAll('.contact').forEach(item=>{const text=(item.dataset.search||item.textContent||'').toLowerCase();const match=!term||text.includes(term);item.hidden=!match;if(match)visible++});
   let empty=box.querySelector('.vibe-search-empty');
-  if(term&&visible===0){
-    if(!empty){empty=document.createElement('div');empty.className='empty vibe-search-empty';box.appendChild(empty)}
-    empty.innerHTML='<i class="fa-solid fa-magnifying-glass"></i><b>Aucun utilisateur trouvé</b><small>Essaie un autre nom.</small>';
-    empty.style.display='grid';
-  }else if(empty)empty.style.display='none';
+  if(term&&visible===0){if(!empty){empty=document.createElement('div');empty.className='empty vibe-search-empty';box.appendChild(empty)}empty.innerHTML='<i class="fa-solid fa-magnifying-glass"></i><b>Aucun utilisateur trouvé</b><small>Essaie un autre nom.</small>';empty.style.display='grid'}else if(empty)empty.style.display='none';
 }
 
 function initInteractionFixes(){
   const search=$('search'),clear=$('clearSearch');
-  if(search){
-    const sync=()=>{if(clear)clear.hidden=!search.value.trim();applyUserSearch()};
-    search.addEventListener('input',sync);search.addEventListener('keyup',applyUserSearch);sync();
-    search.addEventListener('keydown',e=>{if(e.key==='Escape'){search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));search.blur()}})
-  }
+  if(search){const sync=()=>{if(clear)clear.hidden=!search.value.trim();applyUserSearch()};search.addEventListener('input',sync);search.addEventListener('keyup',applyUserSearch);sync();search.addEventListener('keydown',e=>{if(e.key==='Escape'){search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));search.blur()}})}
   if(clear&&search)clear.onclick=()=>{search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));search.focus()};
-  const contacts=$('contacts');
-  if(contacts)new MutationObserver(()=>applyUserSearch()).observe(contacts,{childList:true});
+  const contacts=$('contacts');if(contacts)new MutationObserver(()=>applyUserSearch()).observe(contacts,{childList:true});
 
   const theme=$('theme');
   if(theme)theme.onclick=()=>{document.body.classList.toggle('dark');localStorage.setItem('vibe-theme',document.body.classList.contains('dark')?'dark':'light')};
@@ -40,13 +29,11 @@ function initInteractionFixes(){
   if(profile)profile.onclick=()=>railSettings?.click();
   if(railSettings)railSettings.onclick=()=>{
     const modal=$('modal'),content=$('modalContent');if(!modal||!content)return;
-    const name=$('meName')?.textContent||'Utilisateur';
-    const avatar=$('meAvatar')?.src||$('railAvatar')?.src||'https://i.pravatar.cc/150?img=12';
-    const status=$('meStatus')?.textContent||'● En ligne';
+    const name=$('meName')?.textContent||'Utilisateur',avatar=$('meAvatar')?.src||$('railAvatar')?.src||'https://i.pravatar.cc/150?img=12',status=$('meStatus')?.textContent||'● En ligne';
     const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     content.innerHTML=`<div class="vibe-settings-panel"><div class="vibe-settings-head"><img class="vibe-settings-avatar" src="${safe(avatar)}" alt="Profil"><div><h2>${safe(name)}</h2><p class="vibe-settings-online">${safe(status)}</p></div></div><div class="vibe-settings-title">Paramètres</div><button class="vibe-setting-row" id="settingsProfile" type="button"><i class="fa-solid fa-user"></i><span>Mon profil</span><small>Modifier</small></button><button class="vibe-setting-row" id="settingsTheme" type="button"><i class="fa-solid fa-moon"></i><span>Apparence</span><small>${document.body.classList.contains('dark')?'Sombre':'Clair'}</small></button><button class="vibe-setting-row vibe-setting-danger" id="settingsLogout" type="button"><i class="fa-solid fa-right-from-bracket"></i><span>Se déconnecter</span><small>Quitter ce compte</small></button></div>`;
     modal.showModal();
-    $('settingsProfile').onclick=()=>{modal.close();openModernProfile()};
+    $('settingsProfile').onclick=()=>openModernProfile();
     $('settingsTheme').onclick=()=>{theme?.click();const s=$('settingsTheme')?.querySelector('small');if(s)s.textContent=document.body.classList.contains('dark')?'Sombre':'Clair'};
     $('settingsLogout').onclick=()=>{$('settingsLogout').disabled=true;toast('Déconnexion…');$('logout')?.click()};
   };
@@ -59,27 +46,24 @@ function initInteractionFixes(){
   if(favorites)favorites.onclick=()=>{activateTab('chats');setTimeout(()=>document.querySelector('.pill[data-filter="favorites"]')?.click(),0)};
   if(archive)archive.onclick=()=>{activateTab('chats');document.querySelectorAll('#contacts .contact').forEach(x=>x.hidden=!x.dataset.archived);toast('Discussions archivées')};
 
-  const newGroupQuick=$('newGroupQuick'),newGroup=$('newGroup');
-  if(newGroupQuick&&newGroup)newGroupQuick.onclick=()=>newGroup.click();
-  const newStatusQuick=$('newStatusQuick');
-  if(newStatusQuick)newStatusQuick.onclick=()=>{const text=prompt('Écris ton statut :');if(!text?.trim())return;localStorage.setItem('vibe-status',text.trim());const storiesBox=$('stories');if(storiesBox){storiesBox.innerHTML=`<div class="empty">Ton statut : <b>${text.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c))}</b></div>`;storiesBox.hidden=false}activateTab('stories');toast('Statut publié')};
+  const newGroupQuick=$('newGroupQuick'),newGroup=$('newGroup');if(newGroupQuick&&newGroup)newGroupQuick.onclick=()=>newGroup.click();
+  const newStatusQuick=$('newStatusQuick');if(newStatusQuick)newStatusQuick.onclick=()=>{const text=prompt('Écris ton statut :');if(!text?.trim())return;localStorage.setItem('vibe-status',text.trim());const storiesBox=$('stories');if(storiesBox){storiesBox.innerHTML=`<div class="empty">Ton statut : <b>${text.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c))}</b></div>`;storiesBox.hidden=false}activateTab('stories');toast('Statut publié')};
 
   document.querySelectorAll('.tabs .tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tabs .tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');const chatsActive=t.dataset.tab==='chats';if($('contacts'))$('contacts').hidden=!chatsActive;if($('stories'))$('stories').hidden=chatsActive;if(!chatsActive&&$('stories')&&!$('stories').innerHTML.trim())$('stories').innerHTML='<div class="empty">Aucun statut pour le moment.</div>'}));
   document.querySelectorAll('.filter-pills .pill').forEach(p=>p.addEventListener('click',()=>{document.querySelectorAll('.filter-pills .pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');const f=p.dataset.filter;document.querySelectorAll('#contacts .contact').forEach(x=>{if(f==='all')x.hidden=false;else if(f==='groups')x.hidden=!x.textContent.includes('👥');else if(f==='favorites')x.hidden=!x.dataset.favorite;else if(f==='unread')x.hidden=!x.dataset.unread})}));
 
-  const chatMenu=$('chatMenu');
-  if(chatMenu)chatMenu.onclick=ev=>{ev.stopPropagation();document.querySelectorAll('.vibe-chat-menu').forEach(x=>x.remove());const head=document.querySelector('.chathead');if(!head)return;const menu=document.createElement('div');menu.className='vibe-chat-menu';[['🔎','Rechercher dans la discussion',()=>{$('message')?.focus()}],['🔔','Notifications',()=>toast('Notifications activées pour cette discussion.')],['🖼️','Médias, liens et documents',()=>toast('Les médias de cette discussion sont disponibles dans la conversation.')],['⭐','Ajouter aux favoris',()=>toast('Option de favori prête à être reliée à la discussion.')]].forEach(([icon,label,fn])=>{const b=document.createElement('button');b.type='button';b.textContent=`${icon}  ${label}`;b.onclick=()=>{fn();menu.remove()};menu.appendChild(b)});head.parentElement.style.position='relative';head.parentElement.appendChild(menu)};
+  const chatMenu=$('chatMenu');if(chatMenu)chatMenu.onclick=ev=>{ev.stopPropagation();document.querySelectorAll('.vibe-chat-menu').forEach(x=>x.remove());const head=document.querySelector('.chathead');if(!head)return;const menu=document.createElement('div');menu.className='vibe-chat-menu';[['🔎','Rechercher dans la discussion',()=>{$('message')?.focus()}],['🔔','Notifications',()=>toast('Notifications activées pour cette discussion.')],['🖼️','Médias, liens et documents',()=>toast('Les médias de cette discussion sont disponibles dans la conversation.')],['⭐','Ajouter aux favoris',()=>toast('Option de favori prête à être reliée à la discussion.')]].forEach(([icon,label,fn])=>{const b=document.createElement('button');b.type='button';b.textContent=`${icon}  ${label}`;b.onclick=()=>{fn();menu.remove()};menu.appendChild(b)});head.parentElement.style.position='relative';head.parentElement.appendChild(menu)};
   const emoji=$('emoji');if(emoji)emoji.setAttribute('aria-label','Choisir un emoji');
   document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.vibe-chat-menu,.vibe-emoji-picker').forEach(x=>x.remove())});
 }
 
-function openModernProfile(){
+async function openModernProfile(){
   const modal=$('modal'),content=$('modalContent');if(!modal||!content)return;
   const name=$('meName')?.textContent||'Utilisateur',avatar=$('meAvatar')?.src||$('railAvatar')?.src||'https://i.pravatar.cc/150?img=12';
   const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  content.innerHTML=`<div class="vibe-profile-card"><div class="vibe-profile-hero"><img class="vibe-profile-avatar" src="${safe(avatar)}" alt="Profil"><div><h2>${safe(name)}</h2><p>Compte VIBE</p><span class="vibe-profile-status"><i class="fa-solid fa-circle"></i> En ligne</span></div></div><div class="vibe-profile-actions"><button class="vibe-profile-action" id="rename"><i class="fa-solid fa-pen"></i><span>Modifier mon nom</span></button><button class="vibe-profile-action" id="backSettings"><i class="fa-solid fa-gear"></i><span>Paramètres du compte</span></button></div></div>`;
+  content.innerHTML=`<div class="vibe-profile-card"><div class="vibe-profile-hero"><img class="vibe-profile-avatar" src="${safe(avatar)}" alt="Profil"><div><h2>${safe(name)}</h2><p>Compte VIBE</p><span class="vibe-profile-status"><i class="fa-solid fa-circle"></i> En ligne</span></div></div><div class="vibe-profile-actions"><button class="vibe-profile-action" id="rename" type="button"><i class="fa-solid fa-pen"></i><span>Modifier mon nom</span></button><button class="vibe-profile-action" id="backSettings" type="button"><i class="fa-solid fa-gear"></i><span>Paramètres du compte</span></button></div></div>`;
   modal.showModal();
-  $('rename').onclick=async()=>{const n=prompt('Nouveau nom :',$('meName')?.textContent||'Utilisateur');if(!n?.trim())return;const renameButton=$('rename');if(renameButton)renameButton.disabled=true;try{if(typeof window.__vibeRename==='function')await window.__vibeRename(n.trim());else{toast('Nom modifié localement.');$('meName').textContent=n.trim()}}catch(e){toast('Impossible de modifier le nom.')}finally{if(renameButton)renameButton.disabled=false}};
+  $('rename').onclick=async()=>{const n=prompt('Nouveau nom :',$('meName')?.textContent||'Utilisateur');if(!n?.trim())return;const button=$('rename');if(button)button.disabled=true;try{const auth=getAuth(getApp()),user=auth.currentUser;if(user?.uid){await updateDoc(doc(getFirestore(getApp()),'users',user.uid),{name:n.trim()})}$('meName').textContent=n.trim();$('railAvatar')?.setAttribute('title',n.trim());toast('Profil mis à jour.')}catch(e){toast('Impossible de modifier le profil.')}finally{if(button)button.disabled=false}};
   $('backSettings').onclick=()=>{modal.close();$('railSettings')?.click()};
 }
 
