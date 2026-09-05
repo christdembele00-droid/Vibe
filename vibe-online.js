@@ -12,6 +12,7 @@ let unsubscribePresence = null;
 let heartbeat = null;
 let currentUser = null;
 const ONLINE_WINDOW = 90_000;
+const fallback = 'https://i.pravatar.cc/150?img=12';
 
 function render(count) {
   if (!counter) return;
@@ -43,19 +44,35 @@ function startCounter() {
 
 async function setPresence(user, online) {
   if (!user) return;
+  const now = Date.now();
+  const name = user.displayName || user.email?.split('@')[0] || 'Utilisateur';
+  const avatar = user.photoURL || fallback;
   try {
-    const now = Date.now();
-    await setDoc(doc(db, 'presence', user.uid), {
+    const payload = {
       uid: user.uid,
-      name: user.displayName || user.email?.split('@')[0] || 'Utilisateur',
-      avatar: user.photoURL || 'https://i.pravatar.cc/150?img=12',
+      name,
+      avatar,
       online,
       lastSeenMs: online ? now : 0,
       lastSeen: serverTimestamp(),
       updatedAt: serverTimestamp()
-    }, { merge: true });
+    };
+    // La présence alimente le compteur et le document users alimente la liste des contacts.
+    await Promise.all([
+      setDoc(doc(db, 'presence', user.uid), payload, { merge: true }),
+      setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        name,
+        email: user.email || '',
+        avatar,
+        online,
+        lastSeenMs: online ? now : 0,
+        lastSeen: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true })
+    ]);
   } catch (error) {
-    console.error('[VIBE] Presence update error:', error);
+    console.error('[VIBE] Presence/users update error:', error);
   }
 }
 
