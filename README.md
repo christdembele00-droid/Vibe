@@ -1,84 +1,66 @@
-VIBE - Messagerie Intelligente
-"Ton monde, au même endroit."
+# VIBE
 
-VIBE est une application de messagerie instantanée moderne, rapide et sécurisée, conçue pour offrir une expérience utilisateur fluide et familière. Pensée comme une alternative élégante aux standards du marché, VIBE reprend les codes visuels et fonctionnels qui ont fait leurs preuves (inspiré du design WhatsApp) tout en y intégrant l'identité de marque de FREEB.
+VIBE est une messagerie web temps réel construite autour de Firebase, avec une interface responsive, groupes, statuts, partage de médias, appels WebRTC et assistant VIBE AI.
 
-🚀 Fonctionnalités Principales
-VIBE propose un ensemble complet de fonctionnalités pour une communication totale :
+## Architecture
 
-💬 Messagerie en temps réel : Discutez instantanément avec vos contacts.
+- `index.html` — shell de l'application et structure responsive.
+- `style.css` — design system unique : desktop, tablette, mobile et mode sombre.
+- `app.js` — cœur de l'application : Auth, utilisateurs, groupes, messages, médias, statuts, recherche et présence.
+- `calls.js` — gestion WebRTC unique : appel entrant/sortant, ICE bidirectionnel, états et nettoyage.
+- `firebase-config.js` — configuration publique Firebase et URL de la Cloud Function IA.
+- `functions/index.js` — API Gemini sécurisée côté serveur et annuaire VIBE.
+- `firestore.rules` — contrôle d'accès Firestore.
+- `storage.rules` — contrôle d'accès aux médias, taille maximale et types MIME.
+- `manifest.webmanifest`, `sw.js`, `icons/icon.svg` — support PWA.
 
-👥 Communautés et Groupes : Gérez vos conversations de groupe et retrouvez vos communautés.
+## Fonctionnalités
 
-📸 Statuts (Stories) : Partagez des moments éphémères (photos/vidéos) visibles pendant 24h.
+- Authentification Google et GitHub via Firebase Authentication.
+- Conversations privées et groupes.
+- Messages texte, images, vidéos, audio et documents.
+- Modification, suppression pour tous et réactions aux messages.
+- Statuts persistants Firebase avec expiration à 24 h.
+- Recherche des utilisateurs/groupes et recherche dans les 100 derniers messages d'une conversation.
+- Présence en ligne et indicateur de frappe.
+- Appels audio/vidéo WebRTC avec échange ICE dans les deux sens.
+- VIBE AI via Cloud Function Gemini avec authentification Firebase et limitation de 12 requêtes/minute/utilisateur.
+- Interface responsive pensée pour grands écrans et mobiles.
+- Installation PWA et cache du shell de l'application.
 
-📞 Appels Vocaux et Vidéo : Lancez des appels sécurisés directement depuis l'application.
+## Firebase
 
-📎 Partage de Médias : Envoyez facilement des photos, vidéos et documents.
+1. Crée ou utilise le projet Firebase `vibe-749e5`.
+2. Active Google et GitHub dans Authentication.
+3. Ajoute le domaine GitHub Pages dans les domaines autorisés Firebase Authentication.
+4. Déploie Firestore et Storage Rules.
+5. Configure le secret `GEMINI_API_KEY` pour Cloud Functions.
+6. Déploie `functions/`.
 
-✨ Design Familier et Moderne : Une interface claire, intuitive et inspirée du design system WhatsApp, revisitée avec la palette de couleurs FREEB (Violet et Cyan).
+La clé Gemini ne doit jamais être placée dans le frontend.
 
-🛠️ Technologies Utilisées
-L'application VIBE repose sur une stack technique robuste pour garantir performance et évolutivité :
+## Développement
 
-Frontend
-Langages : HTML5, CSS3 (avec variables et Flexbox/Grid) et JavaScript (ES6+).
+Un serveur HTTP local est recommandé pour tester les modules ES, le service worker et WebRTC. Par exemple, utilise l'extension Live Server de VS Code ou un serveur statique local.
 
-Design : Reprise millimétrée de l'interface WhatsApp (tailles, espacements, typographie Segoe UI) avec une charte graphique personnalisée (Noir, Violet, Cyan).
+## Déploiement
 
-Icônes : FontAwesome 6.
+Le frontend peut être servi par GitHub Pages. Les fonctions Firebase sont déployées depuis `functions/` avec Firebase CLI.
 
-Architecture & Temps Réel
-Back-end : Conçu pour être interfacé avec Firebase (Firestore pour la base de données temps réel, Firebase Auth pour l'authentification).
+## Sécurité
 
-Logique : Gestion de l'état de l'application en JavaScript, écouteurs d'événements onSnapshot() pour Firestore, et gestion des modales (appels, statuts).
+- Les appels IA exigent un Firebase ID token.
+- Les clés Gemini restent dans Firebase Secret Manager.
+- Les médias exigent que l'utilisateur appartienne à la conversation.
+- Storage limite les fichiers à 25 Mo et autorise uniquement les types nécessaires à VIBE.
+- Les candidats WebRTC sont accessibles uniquement aux deux participants de l'appel.
 
-📦 Installation et Lancement
-VIBE est une application web statique qui ne nécessite pas de serveur d'application complexe pour être lancée en mode développement.
+## Limites actuelles
 
-Prérequis
-Aucun prérequis spécifique n'est nécessaire pour exécuter la version locale statique.
+- Les appels de groupe ne sont pas encore activés.
+- La recherche globale de messages reste limitée aux messages chargés d'une conversation ; Firestore n'est pas un moteur full-text.
+- Pour une robustesse WebRTC maximale sur les réseaux restrictifs, un serveur TURN de production doit être ajouté.
 
-Étapes
-Cloner le dépôt :
+## Licence
 
-Bash
-git clone https://github.com/VOTRE-UTILISATEUR/vibe.git
-Accéder au dossier du projet :
-
-Bash
-cd vibe
-Ouvrir l'interface :
-Simplement, ouvrez le fichier index.html dans votre navigateur web préféré (Chrome, Firefox, Edge).
-
-Note importante pour le mode réel : Pour que l'envoi et la réception de messages fonctionnent réellement entre utilisateurs, vous devez configurer un projet Firebase et remplacer les clés API dans le fichier app.js.
-
-🎨 Aperçu Visuel
-L'interface de VIBE est conçue pour être immédiatement intuitive pour les habitués de WhatsApp, avec une touche de modernité FREEB.
-
-Le Hub de discussion : Une barre latérale fixe avec un profil utilisateur mis en valeur par un anneau cyan.
-
-Le Chat en direct : Des bulles de messages personnalisées (dégradé violet pour les messages envoyés, fond sombre pour les reçus), et des accusés de lecture en double coche cyan.
-
-Les Modales : Des interfaces élégantes et sombres pour les appels vidéo et la visionneuse de statuts.
-
-📜 Roadmap et Contributions
-VIBE est un projet en constante évolution. Les prochaines étapes de développement incluent :
-
-[ ] Implémentation complète de Firebase Authentication.
-
-[ ] Connexion réelle à Firestore pour la persistance des données.
-
-[ ] Intégration du module WebRTC pour les appels.
-
-[ ] Ajout de la fonctionnalité de recherche globale.
-
-Les contributions sont les bienvenues ! N'hésitez pas à forker le projet et à soumettre des Pull Requests.
-
-👨‍💻 Auteur
-FREEBOY (Développeur principal)
-
-⚖️ Licence
-Ce projet est sous licence MIT.
-
-Ce README est généré pour accompagner la conception technique de l'application VIBE.
+MIT
