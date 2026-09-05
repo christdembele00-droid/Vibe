@@ -1,6 +1,6 @@
 import { getMessaging, getToken, onMessage, deleteToken } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-messaging.js';
 import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { firebaseConfig, VIBE_FCM_VAPID_KEY } from './firebase-config.js';
 
@@ -22,9 +22,10 @@ function notify(title, body, data = {}) {
   window.dispatchEvent(new CustomEvent('vibe:notification', { detail: { title, body, data } }));
 }
 
+function tokenDocId(token) { return encodeURIComponent(token).slice(0, 1500); }
+
 async function saveToken(user, token) {
-  const safeId = encodeURIComponent(token).slice(0, 1500);
-  await setDoc(doc(db, 'users', user.uid, 'fcmTokens', safeId), {
+  await setDoc(doc(db, 'users', user.uid, 'fcmTokens', tokenDocId(token)), {
     token,
     uid: user.uid,
     platform: 'web',
@@ -37,22 +38,15 @@ export async function initVibeNotifications(user) {
   if (!user || !('Notification' in window) || !('serviceWorker' in navigator)) return { ok: false, reason: 'unsupported' };
   if (!VIBE_FCM_VAPID_KEY) return { ok: false, reason: 'missing-vapid-key' };
   try {
-    const permission = Notification.permission === 'granted'
-      ? 'granted'
-      : await Notification.requestPermission();
+    const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
     if (permission !== 'granted') return { ok: false, reason: 'permission-denied' };
-
-    const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=1', { scope: './' });
-    await registration.update();
+    const registration = await navigator.serviceWorker.ready;
     const token = await getToken(messaging, { vapidKey: VIBE_FCM_VAPID_KEY, serviceWorkerRegistration: registration });
     if (!token) return { ok: false, reason: 'token-unavailable' };
     await saveToken(user, token);
-
     foregroundUnsubscribe?.();
     foregroundUnsubscribe = onMessage(messaging, payload => {
-      const title = payload.notification?.title || 'VIBE';
-      const body = payload.notification?.body || 'Nouveau message';
-      notify(title, body, payload.data || {});
+      notify(payload.notification?.title || 'VIBE', payload.notification?.body || 'Nouveau message', payload.data || {});
     });
     return { ok: true, token };
   } catch (error) {
@@ -68,9 +62,15 @@ export async function disableVibeNotifications(user) {
   const token = currentToken;
   currentToken = null;
   try {
-    await deleteDoc(doc(db, 'users', user.uid, 'fcmTokens', encodeURIComponent(token).slice(0, 1500)));
+    await deleteDoc(doc(db, 'users', user.uid, 'fcmTokens', tokenDocId(token)));
     await deleteToken(messaging);
   } catch (_) {}
 }
 
 window.VIBE_NOTIFICATIONS = { initVibeNotifications, disableVibeNotifications };
+
+onAuthStateChanged(auth, async user => {
+  if (!user) return;
+  const result = await initVibeNotifications(user);
+  if (!result.ok && result.reason !== 'missing-vapid-key') console.warn('VIBE notifications:', result.reason);
+});
