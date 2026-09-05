@@ -11,6 +11,7 @@ const label = document.getElementById('onlineUsersLabel');
 let unsubscribePresence = null;
 let heartbeat = null;
 let currentUser = null;
+let pagehideBound = false;
 const ONLINE_WINDOW = 90_000;
 const fallback = 'https://i.pravatar.cc/150?img=12';
 
@@ -32,66 +33,91 @@ function isRecentlyOnline(user) {
 
 function startCounter() {
   unsubscribePresence?.();
-  unsubscribePresence = onSnapshot(collection(db, 'presence'), snap => {
-    let count = 0;
-    snap.forEach(d => { if (isRecentlyOnline(d.data())) count++; });
-    render(count);
-  }, error => {
-    console.error('[VIBE] Presence listener error:', error);
-    render(0);
-  });
+  unsubscribePresence = onSnapshot(
+    collection(db, 'presence'),
+    snap => {
+      let count = 0;
+      snap.forEach(d => { if (isRecentlyOnline(d.data())) count++; });
+      render(count);
+    },
+    error => {
+      console.error('[VIBE] Firestore presence listener error:', error);
+      render(0);
+    }
+  );
 }
 
-async function setPresence(user, online) {
-  if (!user) return;
+async function writeUser(user, online) {
   const now = Date.now();
   const name = user.displayName || user.email?.split('@')[0] || 'Utilisateur';
   const avatar = user.photoURL || fallback;
+  await setDoc(doc(db, 'users', user.uid), {
+    uid: user.uid,
+    name,
+    email: user.email || '',
+    avatar,
+    online,
+    lastSeenMs: online ? now : 0,
+    lastSeen: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+}
+
+async function writePresence(user, online) {
+  const now = Date.now();
+  const name = user.displayName || user.email?.split('@')[0] || 'Utilisateur';
+  const avatar = user.photoURL || fallback;
+  await setDoc(doc(db, 'presence', user.uid), {
+    uid: user.uid,
+    name,
+    avatar,
+    online,
+    lastSeenMs: online ? now : 0,
+    lastSeen: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+}
+
+async function setPresence(user, online) {
+  if (!user?.uid) return;
   try {
-    const payload = {
-      uid: user.uid,
-      name,
-      avatar,
-      online,
-      lastSeenMs: online ? now : 0,
-      lastSeen: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
-    // La présence alimente le compteur et le document users alimente la liste des contacts.
-    await Promise.all([
-      setDoc(doc(db, 'presence', user.uid), payload, { merge: true }),
-      setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        name,
-        email: user.email || '',
-        avatar,
-        online,
-        lastSeenMs: online ? now : 0,
-        lastSeen: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      }, { merge: true })
-    ]);
+    await writeUser(user, online);
   } catch (error) {
-    console.error('[VIBE] Presence/users update error:', error);
+    console.error('[VIBE] users write failed:', error?.code || error?.message || error);
+  }
+  try {
+    await writePresence(user, online);
+  } catch (error) {
+    console.error('[VIBE] presence write failed:', error?.code || error?.message || error);
   }
 }
 
 function stopHeartbeat(user) {
   clearInterval(heartbeat);
   heartbeat = null;
-  if (user) setPresence(user, false);
+  if (user) void setPresence(user, false);
 }
 
 function startHeartbeat(user) {
-  stopHeartbeat();
+  clearInterval(heartbeat);
+  heartbeat = null;
   if (!user) return;
   currentUser = user;
-  setPresence(user, true);
-  heartbeat = setInterval(() => setPresence(user, true), 20_000);
-  window.addEventListener('pagehide', () => setPresence(user, false), { once: true });
+  void setPresence(user, true);
+  heartbeat = setInterval(() => {
+    if (auth.currentUser?.uid === user.uid) void setPresence(user, true);
+  }, 20_000);
+
+  if (!pagehideBound) {
+    pagehideBound = true;
+    window.addEventListener('pagehide', () => {
+      if (auth.currentUser) void setPresence(auth.currentUser, false);
+    });
+  }
 }
 
 onAuthStateChanged(auth, user => {
+  console.info('[VIBE] Auth state for Firestore sync:', user ? user.uid : 'signed-out');
   if (currentUser && (!user || user.uid !== currentUser.uid)) stopHeartbeat(currentUser);
   currentUser = user || null;
   if (user) startHeartbeat(user);
