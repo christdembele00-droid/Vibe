@@ -1,76 +1,84 @@
 const $=id=>document.getElementById(id);
-const toast=t=>{const e=$('toast');if(!e)return;e.textContent=t;e.style.display='block';clearTimeout(window.__interactionToast);window.__interactionToast=setTimeout(()=>e.style.display='none',2800)};
+const toast=t=>{const e=$('toast');if(!e)return;e.textContent=t;e.style.display='block';clearTimeout(window.__interactionToast);window.__interactionToast=setTimeout(()=>e.style.display='none',2400)};
 
 function initInteractionFixes(){
-  const clear=$('clearSearch'),search=$('search');
-  if(clear&&search){
-    clear.onclick=()=>{search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));search.focus()};
-    const sync=()=>clear.hidden=!search.value.trim();
+  const search=$('search'),clear=$('clearSearch');
+  if(search){
+    const sync=()=>{if(clear)clear.hidden=!search.value.trim()};
     search.addEventListener('input',sync);sync();
+    search.addEventListener('keydown',e=>{if(e.key==='Escape'){search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));search.blur()}});
   }
-
-  const newChat=$('newChat');
-  if(newChat) newChat.onclick=()=>{search?.focus();toast('Recherche un utilisateur pour démarrer une discussion.')};
+  if(clear&&search)clear.onclick=()=>{search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));search.focus()};
 
   const theme=$('theme');
-  if(theme) theme.onclick=()=>document.body.classList.toggle('dark');
+  if(theme)theme.onclick=()=>{document.body.classList.toggle('dark');localStorage.setItem('vibe-theme',document.body.classList.contains('dark')?'dark':'light')};
+  if(localStorage.getItem('vibe-theme')==='dark')document.body.classList.add('dark');
 
-  const railProfile=$('railProfile'),profile=$('profile');
-  if(railProfile&&profile) railProfile.onclick=()=>profile.click();
-  const railSettings=$('railSettings');
-  if(railSettings&&profile) railSettings.onclick=()=>profile.click();
+  const railProfile=$('railProfile'),profile=$('profile'),railSettings=$('railSettings');
+  if(railProfile&&profile)railProfile.onclick=()=>profile.click();
+  if(railSettings&&profile)railSettings.onclick=()=>profile.click();
 
-  const railChats=$('railChats'),railStories=$('railStories'),railCommunities=$('railCommunities'),railFavorites=$('railFavorites'),railArchive=$('railArchive');
-  if(railChats) railChats.onclick=()=>document.querySelector('.tab[data-tab="chats"]')?.click();
-  if(railStories) railStories.onclick=()=>document.querySelector('.tab[data-tab="stories"]')?.click();
-  if(railCommunities) railCommunities.onclick=()=>toast('Les communautés VIBE arrivent bientôt.');
-  if(railFavorites) railFavorites.onclick=()=>{document.querySelector('.pill[data-filter="favorites"]')?.click();toast('Affichage des favoris.')};
-  if(railArchive) railArchive.onclick=()=>toast('Aucune discussion archivée.');
+  const chats=$('railChats'),stories=$('railStories'),communities=$('railCommunities'),favorites=$('railFavorites'),archive=$('railArchive');
+  const activateTab=name=>document.querySelector(`.tab[data-tab="${name}"]`)?.click();
+  if(chats)chats.onclick=()=>activateTab('chats');
+  if(stories)stories.onclick=()=>activateTab('stories');
+  if(communities)communities.onclick=()=>{
+    document.querySelectorAll('.rail-button').forEach(x=>x.classList.remove('active'));communities.classList.add('active');
+    const box=$('contacts');if(box){box.hidden=false;box.innerHTML='<div class="empty">Aucune communauté pour le moment.</div>'}toast('Communautés');
+  };
+  if(favorites)favorites.onclick=()=>{
+    activateTab('chats');
+    setTimeout(()=>document.querySelector('.pill[data-filter="favorites"]')?.click(),0);
+  };
+  if(archive)archive.onclick=()=>{
+    activateTab('chats');
+    document.querySelectorAll('#contacts .contact').forEach(x=>x.hidden=!x.dataset.archived);
+    toast('Discussions archivées');
+  };
 
   const newGroupQuick=$('newGroupQuick'),newGroup=$('newGroup');
-  if(newGroupQuick&&newGroup) newGroupQuick.onclick=()=>newGroup.click();
+  if(newGroupQuick&&newGroup)newGroupQuick.onclick=()=>newGroup.click();
   const newStatusQuick=$('newStatusQuick');
-  if(newStatusQuick) newStatusQuick.onclick=()=>toast('Création de statut bientôt disponible.');
+  if(newStatusQuick)newStatusQuick.onclick=()=>{
+    const text=prompt('Écris ton statut :');
+    if(!text?.trim())return;
+    localStorage.setItem('vibe-status',text.trim());
+    const storiesBox=$('stories');
+    if(storiesBox){storiesBox.innerHTML=`<div class="empty">Ton statut : <b>${text.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</b></div>`;storiesBox.hidden=false}
+    activateTab('stories');toast('Statut publié');
+  };
 
-  const tabs=[...document.querySelectorAll('.tabs .tab')];
-  tabs.forEach(t=>t.addEventListener('click',()=>{
-    tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');
-    const chats=t.dataset.tab==='chats';
-    if($('contacts')) $('contacts').hidden=!chats;
-    if($('stories')) $('stories').hidden=chats;
-    if(!chats&&$('stories')) $('stories').innerHTML='<div class="empty">Aucun statut pour le moment.</div>';
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.tabs .tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');
+    const chatsActive=t.dataset.tab==='chats';
+    if($('contacts'))$('contacts').hidden=!chatsActive;
+    if($('stories'))$('stories').hidden=chatsActive;
+    if(!chatsActive&&$('stories')&&!$('stories').innerHTML.trim())$('stories').innerHTML='<div class="empty">Aucun statut pour le moment.</div>';
   }));
 
   document.querySelectorAll('.filter-pills .pill').forEach(p=>p.addEventListener('click',()=>{
     document.querySelectorAll('.filter-pills .pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');
     const f=p.dataset.filter;
-    if(f==='all') document.querySelectorAll('#contacts .contact').forEach(x=>x.hidden=false);
-    else if(f==='groups') document.querySelectorAll('#contacts .contact').forEach(x=>x.hidden=!x.textContent.includes('👥'));
-    else if(f==='favorites') toast('Les favoris seront disponibles avec les favoris de discussion.');
-    else if(f==='unread') toast('Les discussions non lues seront affichées ici.');
+    document.querySelectorAll('#contacts .contact').forEach(x=>{
+      if(f==='all')x.hidden=false;
+      else if(f==='groups')x.hidden=!x.textContent.includes('👥');
+      else if(f==='favorites')x.hidden=!x.dataset.favorite;
+      else if(f==='unread')x.hidden=!x.dataset.unread;
+    });
   }));
 
   const chatMenu=$('chatMenu');
-  if(chatMenu){
-    chatMenu.onclick=(ev)=>{
-      ev.stopPropagation();
-      document.querySelectorAll('.vibe-chat-menu').forEach(x=>x.remove());
-      const head=document.querySelector('.chathead');
-      if(!head)return;
-      const menu=document.createElement('div');menu.className='vibe-chat-menu';
-      const actions=[
-        ['🔎','Rechercher dans la discussion',()=>{$('message')?.focus()}],
-        ['🔔','Notifications',()=>toast('Les notifications sont gérées par ton navigateur.')],
-        ['🖼️','Médias, liens et documents',()=>toast('Les médias et documents restent accessibles dans cette discussion.')]
-      ];
-      actions.forEach(([icon,label,fn])=>{const b=document.createElement('button');b.type='button';b.textContent=`${icon}  ${label}`;b.onclick=()=>{fn();menu.remove()};menu.appendChild(b)});
-      head.parentElement.style.position='relative';head.parentElement.appendChild(menu);
-    };
-  }
+  if(chatMenu)chatMenu.onclick=ev=>{
+    ev.stopPropagation();
+    document.querySelectorAll('.vibe-chat-menu').forEach(x=>x.remove());
+    const head=document.querySelector('.chathead');if(!head)return;
+    const menu=document.createElement('div');menu.className='vibe-chat-menu';
+    [['🔎','Rechercher dans la discussion',()=>{$('message')?.focus()}],['🔔','Notifications',()=>toast('Notifications activées pour cette discussion.')],['🖼️','Médias, liens et documents',()=>toast('Les médias de cette discussion sont disponibles dans la conversation.')],['⭐','Ajouter aux favoris',()=>{if(window.currentUser){localStorage.setItem('vibe-fav-'+(window.currentUser.uid||window.currentUser.id),'1');toast('Discussion ajoutée aux favoris.')}}]].forEach(([icon,label,fn])=>{const b=document.createElement('button');b.type='button';b.textContent=`${icon}  ${label}`;b.onclick=()=>{fn();menu.remove()};menu.appendChild(b)});
+    head.parentElement.style.position='relative';head.parentElement.appendChild(menu);
+  };
 
-  const emoji=$('emoji');
-  if(emoji) emoji.setAttribute('aria-label','Choisir un emoji');
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.vibe-chat-menu,.vibe-emoji-picker').forEach(x=>x.remove())}});
+  const emoji=$('emoji');if(emoji)emoji.setAttribute('aria-label','Choisir un emoji');
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.vibe-chat-menu,.vibe-emoji-picker').forEach(x=>x.remove())});
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initInteractionFixes);else initInteractionFixes();
