@@ -1,5 +1,5 @@
 // Configuration publique Firebase Web de VIBE.
-// Ne place jamais de secret Gemini dans ce fichier.
+// Ne place jamais de secret Gemini ou de clé privée dans ce fichier.
 export const firebaseConfig={
   apiKey:'AIzaSyC6g40Uc9hq9Ij5DU1nwbO-zwpHqk9L9aQ',
   authDomain:'vibe-749e5.firebaseapp.com',
@@ -9,4 +9,7 @@ export const firebaseConfig={
   appId:'1:17097166235:web:c39c5c082b3cf6a01ee53e',
   measurementId:'G-YXG6TEQHME'
 };
+// À renseigner avec la clé publique VAPID générée dans Firebase Console > Cloud Messaging.
+// Cette clé est publique et peut être exposée dans le frontend.
+export const VIBE_FCM_VAPID_KEY='';
 export const VIBE_AI_URL='https://us-central1-vibe-749e5.cloudfunctions.net/vibeAI';
