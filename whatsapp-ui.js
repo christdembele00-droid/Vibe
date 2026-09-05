@@ -1,12 +1,27 @@
 const $=id=>document.getElementById(id);
-const emojis=['😀','😂','😍','🥰','😎','😭','😡','👍','👎','❤️','💚','💙','🔥','✨','🎉','🙏','👏','🙌','🤝','💯','😊','😉','🤔','😴','😮','😢','😇','🥳','😅','🤣','😘','🤗','😌','😎','🤩','😏','😬','😱','🤯','😋','😜','🤪','🫶','❤️‍🔥','💔','⭐','✅','❌','📌','🎁','🚀','💡','☀️','🌙','🎵','⚡','👀','🙈','🙌','👌','✌️','🤞','💪','🫡','🧠','🤖','🌍','📷','🎤','📞','💬','🟢'];
-function closePopups(except){document.querySelectorAll('.vibe-emoji-picker,.vibe-chat-menu').forEach(x=>{if(x!==except)x.remove()})}
-function setupEmoji(){const btn=$('emoji'),composer=$('composer');if(!btn||!composer)return;btn.onclick=e=>{e.stopPropagation();let p=document.querySelector('.vibe-emoji-picker');if(p){p.remove();return}closePopups();p=document.createElement('div');p.className='vibe-emoji-picker';p.setAttribute('role','dialog');p.setAttribute('aria-label','Choisir un emoji');emojis.forEach(em=>{const b=document.createElement('button');b.type='button';b.textContent=em;b.title=em;b.onclick=()=>{$('message').value+=em;$('message').focus()};p.appendChild(b)});composer.parentElement.style.position='relative';composer.parentElement.appendChild(p)} }
-function setupChatMenu(){const btn=$('chatMenu'),head=document.querySelector('.chathead');if(!btn||!head)return;btn.onclick=e=>{e.stopPropagation();let m=document.querySelector('.vibe-chat-menu');if(m){m.remove();return}closePopups();m=document.createElement('div');m.className='vibe-chat-menu';const items=[['🔎','Rechercher dans la discussion',()=>{$('message')?.focus()}],['🔔','Notifications',()=>window.toast?.('Les notifications sont gérées par le navigateur.')],['🖼️','Médias, liens et documents',()=>window.toast?.('Les médias de cette discussion sont affichés dans la conversation.')],['🧹','Fermer le menu',()=>m.remove()]];items.forEach(([i,t,fn])=>{const b=document.createElement('button');b.type='button';b.textContent=`${i}  ${t}`;b.onclick=()=>{fn();m.remove()};m.appendChild(b)});head.parentElement.style.position='relative';head.parentElement.appendChild(m)}}
-function setupSearch(){const s=$('search'),clear=$('clearSearch');if(!s)return;const sync=()=>{if(clear)clear.hidden=!s.value.trim()};s.addEventListener('input',sync);sync();s.addEventListener('keydown',e=>{if(e.key==='Escape'){s.value='';s.dispatchEvent(new Event('input'));s.blur()}})}
-function setupComposer(){const input=$('message'),mic=$('mic'),send=$('composer')?.querySelector('button[type="submit"]');if(!input||!mic||!send)return;const sync=()=>{const has=input.value.trim();mic.hidden=!!has;send.hidden=!has};input.addEventListener('input',sync);sync();input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('composer')?.requestSubmit()}})}
-function setupTabs(){document.querySelectorAll('.tabs .tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tabs .tab').forEach(x=>x.classList.remove('active'));t.classList.add('active')}))}
-function setupAccessibleTitles(){const labels={newGroup:'Nouveau groupe',newChat:'Nouvelle discussion',theme:'Changer le thème',profile:'Mon profil',google:'Continuer avec Google',github:'Continuer avec GitHub',logout:'Se déconnecter',ai:'Assistant Gemini',audioCall:'Appel audio',videoCall:'Appel vidéo',chatMenu:'Plus d’options',back:'Retour',emoji:'Emoji',mic:'Message vocal'};Object.entries(labels).forEach(([id,label])=>{const e=$(id);if(e){e.setAttribute('aria-label',label);e.title=label}})}
-function setupGlobal(){document.addEventListener('click',e=>{if(!e.target.closest('.vibe-emoji-picker')&&!e.target.closest('#emoji')&&!e.target.closest('.vibe-chat-menu')&&!e.target.closest('#chatMenu'))closePopups()});window.addEventListener('online',()=>window.toast?.('Connexion rétablie.'));window.addEventListener('offline',()=>window.toast?.('Connexion Internet interrompue.'))}
-function init(){setupEmoji();setupChatMenu();setupSearch();setupComposer();setupTabs();setupAccessibleTitles();setupGlobal()}
+
+/*
+ * Couche UI légère : les comportements métier (auth, messages, appels,
+ * emoji, groupes, recherche et composer) sont gérés par app.js,
+ * interaction-fix.js et vibe-groups-emoji.js.
+ * Ce fichier ne redéclare donc plus leurs gestionnaires afin d'éviter
+ * les doubles clics et les menus concurrents.
+ */
+function setupAccessibleTitles(){
+  const labels={
+    newGroup:'Nouveau groupe',newChat:'Nouvelle discussion',theme:'Changer le thème',
+    profile:'Mon profil',google:'Continuer avec Google',github:'Continuer avec GitHub',
+    logout:'Se déconnecter',ai:'Assistant Gemini',audioCall:'Appel audio',
+    videoCall:'Appel vidéo',chatMenu:'Plus d’options',back:'Retour',emoji:'Emoji',mic:'Message vocal'
+  };
+  Object.entries(labels).forEach(([id,label])=>{
+    const e=$(id);
+    if(e){e.setAttribute('aria-label',label);e.title=label}
+  });
+}
+function setupGlobal(){
+  window.addEventListener('online',()=>window.toast?.('Connexion rétablie.'));
+  window.addEventListener('offline',()=>window.toast?.('Connexion Internet interrompue.'));
+}
+function init(){setupAccessibleTitles();setupGlobal()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
