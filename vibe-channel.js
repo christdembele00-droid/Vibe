@@ -33,7 +33,6 @@ function ensureChannelInSidebar() {
   if (existing) return;
   const empty = box.querySelector('.empty');
   if (empty) empty.remove();
-
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'contact';
@@ -47,44 +46,37 @@ function renderMessage(id, message, box) {
   const el = document.createElement('div');
   el.className = 'msg ' + (message.sender === currentUid ? 'sent' : 'received');
   el.dataset.messageId = id;
-
   if (message.deleted) {
     el.classList.add('deleted');
     el.innerHTML = '<span>🚫 Message supprimé</span>';
     box.appendChild(el);
     return;
   }
-
   if (message.sender !== currentUid) {
     const author = document.createElement('small');
     author.className = 'channel-author';
     author.textContent = message.senderName || 'Utilisateur';
     el.appendChild(author);
   }
-
   if (message.text) {
     const text = document.createElement('span');
     text.className = 'message-text';
     text.textContent = message.text;
     el.appendChild(text);
   }
-
   if (message.edited) {
     const edited = document.createElement('em');
     edited.className = 'edited';
     edited.textContent = 'modifié';
     el.appendChild(edited);
   }
-
   const tm = document.createElement('span');
   tm.className = 'time';
   tm.textContent = time(message.createdAt) + (message.sender === currentUid ? ' ✓' : '');
   el.appendChild(tm);
-
   if (message.sender === currentUid) {
     const actions = document.createElement('div');
     actions.className = 'message-actions';
-
     const edit = document.createElement('button');
     edit.type = 'button';
     edit.textContent = '✏️';
@@ -93,13 +85,9 @@ function renderMessage(id, message, box) {
       event.stopPropagation();
       const next = prompt('Modifier le message :', message.text || '');
       if (!next?.trim()) return;
-      updateDoc(doc(db, ...CHANNEL_PATH, id), {
-        text: next.trim().slice(0, 4000),
-        edited: true,
-        editedAt: serverTimestamp()
-      }).catch(error => toast('Modification impossible : ' + (error?.message || 'erreur')));
+      updateDoc(doc(db, ...CHANNEL_PATH, id), { text: next.trim().slice(0, 4000), edited: true, editedAt: serverTimestamp() })
+        .catch(error => toast('Modification impossible : ' + (error?.message || 'erreur')));
     };
-
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = '🗑️';
@@ -107,19 +95,13 @@ function renderMessage(id, message, box) {
     remove.onclick = event => {
       event.stopPropagation();
       if (!confirm('Supprimer ce message pour tous ?')) return;
-      updateDoc(doc(db, ...CHANNEL_PATH, id), {
-        deleted: true,
-        text: '',
-        deletedAt: serverTimestamp(),
-        mediaURL: deleteField()
-      }).then(() => toast('Message supprimé pour tous.'))
+      updateDoc(doc(db, ...CHANNEL_PATH, id), { deleted: true, text: '', deletedAt: serverTimestamp(), mediaURL: deleteField() })
+        .then(() => toast('Message supprimé pour tous.'))
         .catch(error => toast('Suppression impossible : ' + (error?.message || 'erreur')));
     };
-
     actions.append(edit, remove);
     el.appendChild(actions);
   }
-
   box.appendChild(el);
 }
 
@@ -155,7 +137,6 @@ function closeChannel() {
   channelUnsub = null;
   channelActive = false;
   window.VIBE_CHANNEL_ACTIVE = false;
-  if ($('composer')) $('composer').hidden = true;
 }
 
 async function sendChannelMessage(event) {
@@ -181,11 +162,22 @@ async function sendChannelMessage(event) {
 }
 
 function handleClicks(event) {
+  const target = event.target.closest?.('button, a, label');
   const channel = event.target.closest?.('[data-vibe-channel="true"]');
   if (channel) {
     event.preventDefault();
     event.stopImmediatePropagation();
     openChannel();
+    return;
+  }
+  if (channelActive && target?.classList?.contains('contact')) {
+    closeChannel();
+    return;
+  }
+  if (channelActive && (target?.id === 'ai' || target?.id === 'audioCall' || target?.id === 'videoCall' || target?.id === 'mic' || target?.id === 'file')) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    toast('Cette action est disponible dans les discussions privées et les groupes.');
     return;
   }
   if (event.target.closest?.('#back') && channelActive) {
