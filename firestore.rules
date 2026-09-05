@@ -23,7 +23,8 @@ service cloud.firestore {
         allow create: if isMember(roomId) && request.resource.data.sender == request.auth.uid;
         allow update: if isMember(roomId) && (
           resource.data.sender == request.auth.uid ||
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
         );
         allow delete: if isMember(roomId) && resource.data.sender == request.auth.uid;
       }
