@@ -11,6 +11,8 @@ const label = document.getElementById('onlineUsersLabel');
 let unsubscribeUsers = null;
 let heartbeat = null;
 let currentUid = null;
+let currentUser = null;
+const ONLINE_WINDOW = 90_000;
 
 function render(count) {
   if (!counter) return;
@@ -21,10 +23,11 @@ function render(count) {
 }
 
 function isRecentlyOnline(user) {
-  if (!user?.uid || user.uid === currentUid || user.online !== true) return false;
-  const ts = user.lastSeen?.toMillis?.();
-  if (!ts) return false;
-  return Date.now() - ts <= 120_000;
+  if (!user?.uid || user.online !== true) return false;
+  const lastSeenMs = Number(user.lastSeenMs || 0);
+  if (lastSeenMs > 0) return Date.now() - lastSeenMs <= ONLINE_WINDOW;
+  const serverMs = user.lastSeen?.toMillis?.();
+  return !!serverMs && Date.now() - serverMs <= ONLINE_WINDOW;
 }
 
 function startCounter() {
@@ -42,12 +45,14 @@ function startCounter() {
 async function setPresence(user, online) {
   if (!user) return;
   try {
+    const now = Date.now();
     await setDoc(doc(db, 'users', user.uid), {
       uid: user.uid,
       name: user.displayName || user.email?.split('@')[0] || 'Utilisateur',
       email: user.email || '',
       avatar: user.photoURL || 'https://i.pravatar.cc/150?img=12',
       online,
+      lastSeenMs: online ? now : 0,
       lastSeen: serverTimestamp(),
       updatedAt: serverTimestamp()
     }, { merge: true });
@@ -56,16 +61,25 @@ async function setPresence(user, online) {
   }
 }
 
-function startHeartbeat(user) {
+function stopHeartbeat(user) {
   clearInterval(heartbeat);
+  heartbeat = null;
+  if (user) setPresence(user, false);
+}
+
+function startHeartbeat(user) {
+  stopHeartbeat();
   if (!user) return;
+  currentUser = user;
   setPresence(user, true);
-  heartbeat = setInterval(() => setPresence(user, true), 30_000);
-  window.addEventListener('pagehide', () => { setPresence(user, false); }, { once: true });
+  heartbeat = setInterval(() => setPresence(user, true), 20_000);
+  window.addEventListener('pagehide', () => setPresence(user, false), { once: true });
 }
 
 onAuthStateChanged(auth, user => {
+  if (currentUser && (!user || user.uid !== currentUser.uid)) stopHeartbeat(currentUser);
   currentUid = user?.uid || null;
+  currentUser = user || null;
   if (user) startHeartbeat(user);
   else {
     clearInterval(heartbeat);
