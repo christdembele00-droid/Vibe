@@ -1,5 +1,5 @@
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, onSnapshot, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getFirestore, collection, onSnapshot, doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 
@@ -10,6 +10,7 @@ const counter = document.getElementById('onlineCount');
 const label = document.getElementById('onlineUsersLabel');
 let unsubscribeUsers = null;
 let heartbeat = null;
+let currentUid = null;
 
 function render(count) {
   if (!counter) return;
@@ -20,10 +21,10 @@ function render(count) {
 }
 
 function isRecentlyOnline(user) {
-  if (!user?.online) return false;
+  if (!user?.uid || user.uid === currentUid || user.online !== true) return false;
   const ts = user.lastSeen?.toMillis?.();
   if (!ts) return false;
-  return Date.now() - ts <= 90_000;
+  return Date.now() - ts <= 120_000;
 }
 
 function startCounter() {
@@ -32,17 +33,27 @@ function startCounter() {
     let count = 0;
     snap.forEach(d => { if (isRecentlyOnline(d.data())) count++; });
     render(count);
-  }, () => render(0));
+  }, error => {
+    console.error('[VIBE] Presence listener error:', error);
+    render(0);
+  });
 }
 
 async function setPresence(user, online) {
   if (!user) return;
   try {
-    await updateDoc(doc(db, 'users', user.uid), {
+    await setDoc(doc(db, 'users', user.uid), {
+      uid: user.uid,
+      name: user.displayName || user.email?.split('@')[0] || 'Utilisateur',
+      email: user.email || '',
+      avatar: user.photoURL || 'https://i.pravatar.cc/150?img=12',
       online,
-      lastSeen: serverTimestamp()
-    });
-  } catch (_) {}
+      lastSeen: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch (error) {
+    console.error('[VIBE] Presence update error:', error);
+  }
 }
 
 function startHeartbeat(user) {
@@ -54,6 +65,7 @@ function startHeartbeat(user) {
 }
 
 onAuthStateChanged(auth, user => {
+  currentUid = user?.uid || null;
   if (user) startHeartbeat(user);
   else {
     clearInterval(heartbeat);
