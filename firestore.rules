@@ -7,6 +7,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
+      // Utilisateurs authentifies : decouverte realtime des profils.
       allow read: if signedIn();
       allow create: if signedIn() && request.auth.uid == userId;
       allow update, delete: if signedIn() && request.auth.uid == userId;
@@ -17,6 +18,7 @@ service cloud.firestore {
     }
 
     match /presence/{userId} {
+      // Chaque compte ne peut ecrire que sa propre presence.
       allow read: if signedIn();
       allow create, update: if signedIn() && request.auth.uid == userId;
       allow delete: if signedIn() && request.auth.uid == userId;
@@ -45,8 +47,6 @@ service cloud.firestore {
       }
     }
 
-    // Canal public VIBE : tous les utilisateurs authentifies peuvent lire et envoyer.
-    // L'identite du proprietaire est toujours imposee par request.auth.uid.
     match /channels/vibe {
       allow read: if signedIn();
       allow create, update, delete: if false;
@@ -54,8 +54,6 @@ service cloud.firestore {
 
     match /channels/vibe/messages/{messageId} {
       allow read: if signedIn();
-
-      // Nouveaux messages : senderId est obligatoire et doit correspondre a l'utilisateur connecte.
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['senderId', 'senderName', 'senderAvatar', 'text', 'createdAt'])
         && request.resource.data.senderId == request.auth.uid
@@ -68,8 +66,6 @@ service cloud.firestore {
         && request.resource.data.text.size() <= 4000
         && request.resource.data.createdAt is timestamp;
 
-      // Edition : seul le proprietaire peut changer le texte et les metadonnees d'edition.
-      // La compatibilite avec sender conserve les anciens messages deja crees avant senderId.
       allow update: if signedIn()
         && (resource.data.senderId == request.auth.uid || resource.data.sender == request.auth.uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited', 'editedAt'])
@@ -79,7 +75,6 @@ service cloud.firestore {
         && request.resource.data.edited == true
         && request.resource.data.editedAt is timestamp;
 
-      // Suppression : uniquement le proprietaire du message.
       allow delete: if signedIn()
         && (resource.data.senderId == request.auth.uid || resource.data.sender == request.auth.uid);
     }
