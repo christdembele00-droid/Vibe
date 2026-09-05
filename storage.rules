@@ -1,8 +1,9 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
     function member(roomId) {
-      return request.auth != null && request.auth.uid in firestore.get(/databases/(default)/documents/rooms/$(roomId)).data.participants;
+      return signedIn() && request.auth.uid in firestore.get(/databases/(default)/documents/rooms/$(roomId)).data.participants;
     }
     function validSize() { return request.resource.size <= 25 * 1024 * 1024; }
     function validType() {
@@ -19,6 +20,15 @@ service firebase.storage {
       allow create: if member(roomId) && request.auth.uid == ownerUid && validSize() && validType();
       allow update: if false;
       allow delete: if member(roomId) && request.auth.uid == ownerUid;
+    }
+    match /status-media/{ownerUid}/{fileName=**} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+                    && request.auth.uid == ownerUid
+                    && validSize()
+                    && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('video/.*'));
+      allow update: if false;
+      allow delete: if signedIn() && request.auth.uid == ownerUid;
     }
   }
 }
