@@ -1,17 +1,31 @@
 import{getApp}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import{getAuth}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import{getFirestore,doc,updateDoc}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import{getFirestore,doc,updateDoc,collection,getDocs}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 const $=id=>document.getElementById(id);
 const toast=t=>{const e=$('toast');if(!e)return;e.textContent=t;e.style.display='block';clearTimeout(window.__interactionToast);window.__interactionToast=setTimeout(()=>e.style.display='none',2400)};
 
-function applyUserSearch(){
-  const input=$('search'),box=$('contacts');
-  if(!input||!box)return;
-  const term=input.value.trim().toLowerCase();
-  let visible=0;
-  box.querySelectorAll('.contact').forEach(item=>{const text=(item.dataset.search||item.textContent||'').toLowerCase();const match=!term||text.includes(term);item.hidden=!match;if(match)visible++});
-  let empty=box.querySelector('.vibe-search-empty');
-  if(term&&visible===0){if(!empty){empty=document.createElement('div');empty.className='empty vibe-search-empty';box.appendChild(empty)}empty.innerHTML='<i class="fa-solid fa-magnifying-glass"></i><b>Aucun utilisateur trouvé</b><small>Essaie un autre nom.</small>';empty.style.display='grid'}else if(empty)empty.style.display='none';
+function applyUserSearch(){const input=$('search'),box=$('contacts');if(!input||!box)return;const term=input.value.trim().toLowerCase();let visible=0;box.querySelectorAll('.contact').forEach(item=>{const text=(item.dataset.search||item.textContent||'').toLowerCase();const match=!term||text.includes(term);item.hidden=!match;if(match)visible++});let empty=box.querySelector('.vibe-search-empty');if(term&&visible===0){if(!empty){empty=document.createElement('div');empty.className='empty vibe-search-empty';box.appendChild(empty)}empty.innerHTML='<i class="fa-solid fa-magnifying-glass"></i><b>Aucun utilisateur trouvé</b><small>Essaie un autre nom.</small>';empty.style.display='grid'}else if(empty)empty.style.display='none'}
+
+async function openVibeUsers(){
+  const modal=$('modal'),content=$('modalContent');if(!modal||!content)return;
+  content.innerHTML='<div class="vibe-users-panel"><div class="vibe-users-head"><div class="vibe-settings-icon"><i class="fa-solid fa-users"></i></div><div><h2>Utilisateurs VIBE</h2><p>Choisis une personne pour démarrer une discussion.</p></div></div><div id="vibeUsersList" class="vibe-users-list"><div class="empty">Chargement des utilisateurs…</div></div></div>';
+  modal.showModal();
+  const list=$('vibeUsersList');
+  try{
+    const auth=getAuth(getApp()),db=getFirestore(getApp()),me=auth.currentUser;
+    const snap=await getDocs(collection(db,'users'));
+    const users=[];snap.forEach(d=>{const u=d.data();if(!me||u.uid!==me.uid)users.push(u)});
+    users.sort((a,b)=>(a.name||a.email||'').localeCompare(b.name||b.email||'','fr'));
+    if(!users.length){list.innerHTML='<div class="empty"><i class="fa-solid fa-user-slash"></i><b>Aucun autre utilisateur VIBE</b><small>Lorsqu’une personne crée un compte VIBE, elle apparaîtra ici.</small></div>';return}
+    list.innerHTML='';
+    users.forEach(u=>{
+      const item=document.createElement('button');item.type='button';item.className='vibe-user-item';
+      const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      item.innerHTML=`<img src="${safe(u.avatar||'https://i.pravatar.cc/100?img=12')}" alt=""><span><b>${safe(u.name||'Utilisateur')}</b><small>${u.online?'🟢 En ligne':(u.email||'Hors ligne')}</small></span><i class="fa-solid fa-chevron-right"></i>`;
+      item.onclick=()=>{modal.close();if(window.openChat)window.openChat({uid:u.uid,name:u.name||'Utilisateur',avatar:u.avatar,group:false});else document.querySelector(`.contact[data-id="${CSS.escape(u.uid)}"]`)?.click()};
+      list.appendChild(item);
+    });
+  }catch(e){list.innerHTML='<div class="empty"><i class="fa-solid fa-triangle-exclamation"></i><b>Impossible de charger les utilisateurs</b><small>Vérifie ta connexion et les règles Firestore.</small></div>';toast('Liste des utilisateurs indisponible.')}
 }
 
 function initInteractionFixes(){
@@ -38,6 +52,7 @@ function initInteractionFixes(){
     $('settingsLogout').onclick=()=>{$('settingsLogout').disabled=true;toast('Déconnexion…');$('logout')?.click()};
   };
 
+  const newChat=$('newChat');if(newChat)newChat.onclick=()=>openVibeUsers();
   const chats=$('railChats'),stories=$('railStories'),communities=$('railCommunities'),favorites=$('railFavorites'),archive=$('railArchive');
   const activateTab=name=>document.querySelector(`.tab[data-tab="${name}"]`)?.click();
   if(chats)chats.onclick=()=>activateTab('chats');
