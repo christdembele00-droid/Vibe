@@ -1,0 +1,24 @@
+:root{--vibe-blue:#2563eb;--vibe-blue-dark:#1d4ed8;--vibe-blue-soft:#eff6ff;--vibe-blue-border:#dbeafe;--vibe-blue-active:#dbeafe;--vibe-blue-focus:#bfdbfe}
+.brand b,.auth-logo,.welcome>b{background:var(--vibe-blue)!important}
+.rail-button:hover,.rail-button.active,.rail-avatar:hover,.rail-button.active{color:var(--vibe-blue)!important}
+#auth button{background:var(--vibe-blue)!important}
+#auth #github{background:#111827!important}
+.tab.active{color:var(--vibe-blue)!important}
+.tab.active:after{background:var(--vibe-blue)!important}
+.search-wrap:focus-within{outline-color:var(--vibe-blue-focus)!important}
+.quick-actions button{background:var(--vibe-blue-soft)!important;color:var(--vibe-blue-dark)!important;border-color:var(--vibe-blue-border)!important}
+.quick-actions button:hover{background:#dbeafe!important}
+.pill.active{background:var(--vibe-blue-dark)!important;color:#fff!important}
+.contact.active{box-shadow:inset 3px 0 var(--vibe-blue)!important}
+.chat-actions #ai,.chathead .chat-actions button:first-child{color:var(--vibe-blue)!important}
+.attach~button:last-child{background:var(--vibe-blue)!important}
+.attach~button:last-child:hover{background:var(--vibe-blue-dark)!important}
+form input:focus{box-shadow:0 0 0 2px var(--vibe-blue-focus)!important}
+.reply{border-left-color:var(--vibe-blue)!important}
+.call-buttons .accept{background:var(--vibe-blue)!important}
+.dark .sent{background:#1e40af!important;color:#fff!important}
+.dark .tab.active{color:#60a5fa!important}
+.dark .tab.active:after{background:#60a5fa!important}
+.dark .rail-button:hover,.dark .rail-button.active{color:#60a5fa!important}
+.dark .chat-actions #ai,.dark .chathead .chat-actions button:first-child{color:#60a5fa!important}
+.dark .attach~button:last-child{background:#2563eb!important}
