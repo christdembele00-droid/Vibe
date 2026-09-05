@@ -85,8 +85,11 @@ function renderMessage(id, message, box) {
       event.stopPropagation();
       const next = prompt('Modifier le message :', message.text || '');
       if (!next?.trim()) return;
-      updateDoc(doc(db, ...CHANNEL_PATH, id), { text: next.trim().slice(0, 4000), edited: true, editedAt: serverTimestamp() })
-        .catch(error => toast('Modification impossible : ' + (error?.message || 'erreur')));
+      updateDoc(doc(db, ...CHANNEL_PATH, id), {
+        text: next.trim().slice(0, 4000),
+        edited: true,
+        editedAt: serverTimestamp()
+      }).catch(error => toast('Modification impossible : ' + (error?.message || 'erreur')));
     };
     const remove = document.createElement('button');
     remove.type = 'button';
@@ -95,8 +98,12 @@ function renderMessage(id, message, box) {
     remove.onclick = event => {
       event.stopPropagation();
       if (!confirm('Supprimer ce message pour tous ?')) return;
-      updateDoc(doc(db, ...CHANNEL_PATH, id), { deleted: true, text: '', deletedAt: serverTimestamp(), mediaURL: deleteField() })
-        .then(() => toast('Message supprimé pour tous.'))
+      updateDoc(doc(db, ...CHANNEL_PATH, id), {
+        deleted: true,
+        text: '',
+        deletedAt: serverTimestamp(),
+        mediaURL: deleteField()
+      }).then(() => toast('Message supprimé pour tous.'))
         .catch(error => toast('Suppression impossible : ' + (error?.message || 'erreur')));
     };
     actions.append(edit, remove);
@@ -147,11 +154,14 @@ async function sendChannelMessage(event) {
   const text = input?.value.trim();
   if (!text) return;
   const user = auth.currentUser;
+  if (!user || user.uid !== currentUid) return;
+  const senderName = (user.displayName || user.email?.split('@')[0] || 'Utilisateur').trim().slice(0, 120);
+  const senderAvatar = String(user.photoURL || fallback).slice(0, 1000);
   try {
     await addDoc(collection(db, ...CHANNEL_PATH), {
       sender: currentUid,
-      senderName: user?.displayName || user?.email?.split('@')[0] || 'Utilisateur',
-      senderAvatar: user?.photoURL || fallback,
+      senderName,
+      senderAvatar,
       text: text.slice(0, 4000),
       createdAt: serverTimestamp()
     });
