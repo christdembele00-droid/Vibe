@@ -32,6 +32,7 @@ jobs:
           node --check vibe-online.js
           node --check vibe-analytics.js
           node --check vibe-channel.js
+          node --check vibe-user-sync.js
           node --check sw.js
           node --check firebase-config.js
 
@@ -51,6 +52,7 @@ jobs:
           test -f vibe-online.js
           test -f vibe-analytics.js
           test -f vibe-channel.js
+          test -f vibe-user-sync.js
           test -f firebase-config.js
           grep -q 'vibe-runtime.js' index.html
           grep -q 'vibe-ai.js' index.html
@@ -58,6 +60,7 @@ jobs:
           grep -q 'calls.js' index.html
           grep -q 'vibe-analytics.js' index.html
           grep -q 'vibe-channel.js' index.html
+          grep -q 'vibe-user-sync.js' index.html
           ! grep -qE 'vibe-(navigation|spa|native-panels|fixes|core)\\.js' index.html
           ! grep -qE 'vibe-(navigation|spa|native-panels|fixes|core)\\.css' index.html
 
@@ -70,4 +73,5 @@ jobs:
           grep -q "vibe-online.js" sw.js
           grep -q "vibe-analytics.js" sw.js
           grep -q "vibe-channel.js" sw.js
+          grep -q "vibe-user-sync.js" sw.js
           ! grep -qE 'vibe-(navigation|spa|native-panels|fixes|core)' sw.js
