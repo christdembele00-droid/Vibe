@@ -4,9 +4,9 @@ VIBE est une messagerie web temps réel construite autour de Firebase, avec une 
 
 ## Architecture
 
-- `index.html` — shell de l'application et structure responsive.
+- `index.html` — shell unique de l'application et structure responsive.
 - `style.css` — design system unique : desktop, tablette, mobile et mode sombre.
-- `app.js` — cœur de l'application : Auth, utilisateurs, groupes, messages, médias, statuts, recherche et présence.
+- `vibe-runtime.js` — contrôleur frontend unique : Auth, utilisateurs, groupes, messages, médias, statuts, recherche, profil, paramètres et interactions.
 - `calls.js` — gestion WebRTC unique : appel entrant/sortant, ICE bidirectionnel, états et nettoyage.
 - `firebase-config.js` — configuration publique Firebase et URL de la Cloud Function IA.
 - `functions/index.js` — API Gemini sécurisée côté serveur et annuaire VIBE.
@@ -21,7 +21,7 @@ VIBE est une messagerie web temps réel construite autour de Firebase, avec une 
 - Messages texte, images, vidéos, audio et documents.
 - Modification, suppression pour tous et réactions aux messages.
 - Statuts persistants Firebase avec expiration à 24 h.
-- Recherche des utilisateurs/groupes et recherche dans les 100 derniers messages d'une conversation.
+- Recherche des utilisateurs/groupes et recherche dans les messages chargés d'une conversation.
 - Présence en ligne et indicateur de frappe.
 - Appels audio/vidéo WebRTC avec échange ICE dans les deux sens.
 - VIBE AI via Cloud Function Gemini avec authentification Firebase et limitation de 12 requêtes/minute/utilisateur.
@@ -39,6 +39,15 @@ VIBE est une messagerie web temps réel construite autour de Firebase, avec une 
 
 La clé Gemini ne doit jamais être placée dans le frontend.
 
+## Sécurité
+
+- Les appels IA exigent un Firebase ID token.
+- Les clés Gemini restent dans Firebase Secret Manager.
+- Les médias exigent que l'utilisateur appartienne à la conversation.
+- Chaque média est maintenant écrit sous `chat-media/{roomId}/{uid}/...` et Storage vérifie que le dossier propriétaire correspond à l'utilisateur authentifié.
+- Storage limite les fichiers à 25 Mo et autorise uniquement les types nécessaires à VIBE.
+- Les candidats WebRTC sont accessibles uniquement aux deux participants de l'appel.
+
 ## Développement
 
 Un serveur HTTP local est recommandé pour tester les modules ES, le service worker et WebRTC. Par exemple, utilise l'extension Live Server de VS Code ou un serveur statique local.
@@ -47,20 +56,8 @@ Un serveur HTTP local est recommandé pour tester les modules ES, le service wor
 
 Le frontend peut être servi par GitHub Pages. Les fonctions Firebase sont déployées depuis `functions/` avec Firebase CLI.
 
-## Sécurité
-
-- Les appels IA exigent un Firebase ID token.
-- Les clés Gemini restent dans Firebase Secret Manager.
-- Les médias exigent que l'utilisateur appartienne à la conversation.
-- Storage limite les fichiers à 25 Mo et autorise uniquement les types nécessaires à VIBE.
-- Les candidats WebRTC sont accessibles uniquement aux deux participants de l'appel.
-
 ## Limites actuelles
 
 - Les appels de groupe ne sont pas encore activés.
 - La recherche globale de messages reste limitée aux messages chargés d'une conversation ; Firestore n'est pas un moteur full-text.
 - Pour une robustesse WebRTC maximale sur les réseaux restrictifs, un serveur TURN de production doit être ajouté.
-
-## Licence
-
-MIT
