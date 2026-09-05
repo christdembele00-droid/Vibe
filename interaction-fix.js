@@ -36,14 +36,18 @@ function initInteractionFixes(){
   if(localStorage.getItem('vibe-theme')==='dark')document.body.classList.add('dark');
 
   const railProfile=$('railProfile'),profile=$('profile'),railSettings=$('railSettings');
-  if(railProfile&&profile)railProfile.onclick=()=>profile.click();
+  if(railProfile&&railSettings)railProfile.onclick=()=>railSettings.click();
+  if(profile)profile.onclick=()=>railSettings?.click();
   if(railSettings)railSettings.onclick=()=>{
     const modal=$('modal'),content=$('modalContent');if(!modal||!content)return;
     const name=$('meName')?.textContent||'Utilisateur';
-    content.innerHTML=`<div class="vibe-settings-panel"><div class="vibe-settings-head"><div class="vibe-settings-icon"><i class="fa-solid fa-gear"></i></div><div><h2>Paramètres</h2><p>Gère ton compte et tes préférences</p></div></div><button class="vibe-setting-row" id="settingsProfile" type="button"><i class="fa-solid fa-user"></i><span>Mon profil</span><small>${String(name).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</small></button><button class="vibe-setting-row" id="settingsTheme" type="button"><i class="fa-solid fa-moon"></i><span>Apparence</span><small>${document.body.classList.contains('dark')?'Sombre':'Clair'}</small></button><button class="vibe-setting-row vibe-setting-danger" id="settingsLogout" type="button"><i class="fa-solid fa-right-from-bracket"></i><span>Se déconnecter</span><small>Quitter ce compte</small></button></div>`;
+    const avatar=$('meAvatar')?.src||$('railAvatar')?.src||'https://i.pravatar.cc/150?img=12';
+    const status=$('meStatus')?.textContent||'● En ligne';
+    const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    content.innerHTML=`<div class="vibe-settings-panel"><div class="vibe-settings-head"><img class="vibe-settings-avatar" src="${safe(avatar)}" alt="Profil"><div><h2>${safe(name)}</h2><p class="vibe-settings-online">${safe(status)}</p></div></div><div class="vibe-settings-title">Paramètres</div><button class="vibe-setting-row" id="settingsProfile" type="button"><i class="fa-solid fa-user"></i><span>Mon profil</span><small>Modifier</small></button><button class="vibe-setting-row" id="settingsTheme" type="button"><i class="fa-solid fa-moon"></i><span>Apparence</span><small>${document.body.classList.contains('dark')?'Sombre':'Clair'}</small></button><button class="vibe-setting-row vibe-setting-danger" id="settingsLogout" type="button"><i class="fa-solid fa-right-from-bracket"></i><span>Se déconnecter</span><small>Quitter ce compte</small></button></div>`;
     modal.showModal();
-    $('settingsProfile').onclick=()=>{modal.close();profile?.click()};
-    $('settingsTheme').onclick=()=>{theme?.click();const s=$('settingsTheme small');if(s)s.textContent=document.body.classList.contains('dark')?'Sombre':'Clair'};
+    $('settingsProfile').onclick=()=>{modal.close();openModernProfile()};
+    $('settingsTheme').onclick=()=>{theme?.click();const s=$('settingsTheme')?.querySelector('small');if(s)s.textContent=document.body.classList.contains('dark')?'Sombre':'Clair'};
     $('settingsLogout').onclick=()=>{$('settingsLogout').disabled=true;toast('Déconnexion…');$('logout')?.click()};
   };
 
@@ -68,4 +72,15 @@ function initInteractionFixes(){
   const emoji=$('emoji');if(emoji)emoji.setAttribute('aria-label','Choisir un emoji');
   document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.vibe-chat-menu,.vibe-emoji-picker').forEach(x=>x.remove())});
 }
+
+function openModernProfile(){
+  const modal=$('modal'),content=$('modalContent');if(!modal||!content)return;
+  const name=$('meName')?.textContent||'Utilisateur',avatar=$('meAvatar')?.src||$('railAvatar')?.src||'https://i.pravatar.cc/150?img=12';
+  const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  content.innerHTML=`<div class="vibe-profile-card"><div class="vibe-profile-hero"><img class="vibe-profile-avatar" src="${safe(avatar)}" alt="Profil"><div><h2>${safe(name)}</h2><p>Compte VIBE</p><span class="vibe-profile-status"><i class="fa-solid fa-circle"></i> En ligne</span></div></div><div class="vibe-profile-actions"><button class="vibe-profile-action" id="rename"><i class="fa-solid fa-pen"></i><span>Modifier mon nom</span></button><button class="vibe-profile-action" id="backSettings"><i class="fa-solid fa-gear"></i><span>Paramètres du compte</span></button></div></div>`;
+  modal.showModal();
+  $('rename').onclick=async()=>{const n=prompt('Nouveau nom :',$('meName')?.textContent||'Utilisateur');if(!n?.trim())return;const renameButton=$('rename');if(renameButton)renameButton.disabled=true;try{if(typeof window.__vibeRename==='function')await window.__vibeRename(n.trim());else{toast('Nom modifié localement.');$('meName').textContent=n.trim()}}catch(e){toast('Impossible de modifier le nom.')}finally{if(renameButton)renameButton.disabled=false}};
+  $('backSettings').onclick=()=>{modal.close();$('railSettings')?.click()};
+}
+
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initInteractionFixes);else initInteractionFixes();
