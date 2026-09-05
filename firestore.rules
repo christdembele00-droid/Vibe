@@ -45,6 +45,8 @@ service cloud.firestore {
       }
     }
 
+    // Canal public VIBE : lecture et écriture réservées aux utilisateurs authentifiés.
+    // Chaque utilisateur ne peut modifier ou supprimer que ses propres messages.
     match /channels/vibe {
       allow read: if signedIn();
       allow create, update, delete: if false;
@@ -52,8 +54,27 @@ service cloud.firestore {
 
     match /channels/vibe/messages/{messageId} {
       allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.sender == request.auth.uid;
-      allow update, delete: if signedIn() && resource.data.sender == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['sender', 'senderName', 'senderAvatar', 'text', 'createdAt'])
+        && request.resource.data.sender == request.auth.uid
+        && request.resource.data.senderName is string
+        && request.resource.data.senderName.size() <= 120
+        && request.resource.data.senderAvatar is string
+        && request.resource.data.senderAvatar.size() <= 1000
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 4000
+        && request.resource.data.createdAt is timestamp;
+      allow update: if signedIn()
+        && resource.data.sender == request.auth.uid
+        && request.resource.data.sender == resource.data.sender
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited', 'editedAt'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 4000
+        && request.resource.data.edited == true
+        && request.resource.data.editedAt is timestamp;
+      allow delete: if signedIn() && resource.data.sender == request.auth.uid;
     }
 
     match /groups/{groupId} {
