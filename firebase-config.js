@@ -9,7 +9,6 @@ export const firebaseConfig={
   appId:'1:17097166235:web:c39c5c082b3cf6a01ee53e',
   measurementId:'G-YXG6TEQHME'
 };
-// À renseigner avec la clé publique VAPID générée dans Firebase Console > Cloud Messaging.
-// Cette clé est publique et peut être exposée dans le frontend.
-export const VIBE_FCM_VAPID_KEY='';
+// Clé publique VAPID utilisée par Firebase Cloud Messaging sur le Web.
+export const VIBE_FCM_VAPID_KEY='BLtaFgHn6vlVkeXLw8pB7Bv1mDBIMjgdy6Bri_LvZc_kJFX0-jiFxDmYYGqk4Om09XOM6sLc04Fz_lbaCFetz8U';
 export const VIBE_AI_URL='https://us-central1-vibe-749e5.cloudfunctions.net/vibeAI';
