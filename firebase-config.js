@@ -9,6 +9,5 @@ export const firebaseConfig={
   appId:'1:17097166235:web:c39c5c082b3cf6a01ee53e',
   measurementId:'G-YXG6TEQHME'
 };
-// Clé publique VAPID utilisée par Firebase Cloud Messaging sur le Web.
-export const VIBE_FCM_VAPID_KEY='BLtaFgHn6vlVkeXLw8pB7Bv1mDBIMjgdy6Bri_LvZc_kJFX0-jiFxDmYYGqk4Om09XOM6sLc04Fz_lbaCFetz8U';
-export const VIBE_AI_URL='https://us-central1-vibe-749e5.cloudfunctions.net/vibeAI';
+// Endpoint interne intercepté par vibe-ai.js. Aucun appel Cloud Functions.
+export const VIBE_AI_URL='/__vibe_ai__';
