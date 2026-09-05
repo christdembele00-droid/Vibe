@@ -11,5 +11,5 @@ export const firebaseConfig={
   measurementId:'G-YXG6TEQHME'
 };
 
-// URL publique de la fonction Firebase VIBE AI.
-export const VIBE_AI_URL='https://us-central1-vibe-749e5.cloudfunctions.net/vibeAI';
+// Après déploiement de functions/, mets ici l'URL HTTPS de vibeAI.
+export const VIBE_AI_URL='YOUR_VIBE_AI_FUNCTION_URL';

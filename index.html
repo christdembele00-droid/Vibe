@@ -1,1 +1,136 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#2563eb"><meta name="description" content="VIBE — messagerie moderne en temps réel"><link rel="manifest" href="manifest.webmanifest"><title>VIBE — Web</title><link rel="stylesheet" href="vibe-2026.css"><link rel="stylesheet" href="vibe-modern-ui.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><style>:root{--vibe-blue:#2563eb;--vibe-blue-dark:#1d4ed8;--vibe-blue-soft:#dbeafe;--vibe-ink:#172033}body{font-family:"Segoe UI",Helvetica,Arial,sans-serif}.brand strong,.chat-title strong,.vibe-splash-name,#auth h1,.welcome h2{font-family:"Segoe UI",Helvetica,Arial,sans-serif;letter-spacing:0}.brand strong{letter-spacing:.02em;font-weight:700}.brand b,.auth-logo,.welcome>b,.vibe-splash-logo{font-family:"Segoe UI",Helvetica,Arial,sans-serif;font-weight:800}</style></head><body><div id="vibeSplash" aria-label="VIBE" role="status"><div class="vibe-splash-inner"><div class="vibe-splash-logo">V</div><div class="vibe-splash-name">VIBE</div><div class="vibe-splash-sub">Messagerie moderne</div><div class="vibe-splash-loader"></div></div></div><div class="app whatsapp-web-container"><nav class="left-icon-rail" aria-label="Navigation VIBE"><div class="rail-top"><button id="railChats" class="rail-button active" type="button" title="Discussions"><i class="fa-solid fa-comment-alt"></i></button><button id="railStories" class="rail-button" type="button" title="Statuts"><i class="fa-solid fa-circle-notch"></i></button><button id="railCommunities" class="rail-button" type="button" title="Communautés"><i class="fa-solid fa-users"></i></button></div><div class="rail-bottom"><button id="railFavorites" class="rail-button" type="button" title="Favoris"><i class="fa-solid fa-star"></i></button><button id="railArchive" class="rail-button" type="button" title="Archivées"><i class="fa-solid fa-box-archive"></i></button><button id="railSettings" class="rail-button" type="button" title="Paramètres"><i class="fa-solid fa-gear"></i></button><button id="railProfile" class="rail-avatar" type="button" title="Mon profil"><img id="railAvatar" src="https://i.pravatar.cc/150?img=12" alt="Profil"></button></div></nav><aside><header><div class="brand"><strong>VIBE</strong></div><div class="head-actions"><button id="newGroup" title="Nouveau groupe"><i class="fa-solid fa-users"></i></button><button id="newChat" title="Nouvelle discussion"><i class="fa-solid fa-circle-plus"></i></button><button id="theme" title="Changer le thème"><i class="fa-solid fa-ellipsis-vertical"></i></button></div></header><section id="auth"><div class="auth-logo">V</div><h1>Bienvenue sur VIBE</h1><p>Une messagerie moderne, rapide et enrichie par Gemini.</p><button id="google">Continuer avec Google</button><button id="github">Continuer avec GitHub</button><small class="auth-note">Connexion sécurisée par Firebase Authentication</small></section><section id="user" hidden><div class="me"><div class="avatar-wrap"><img id="meAvatar" alt=""><div class="presence-dot"></div></div><div><strong id="meName">Utilisateur</strong><small id="meStatus">● En ligne</small></div><button id="profile" title="Mon profil"><i class="fa-solid fa-gear"></i></button></div><nav class="tabs" aria-label="Sections"><button class="tab active" data-tab="chats" type="button"><i class="fa-solid fa-comment"></i><span>Discussions</span></button><button class="tab" data-tab="stories" type="button"><i class="fa-solid fa-circle-notch"></i><span>Statuts</span></button></nav><div class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="search" placeholder="Rechercher ou démarrer une discussion" autocomplete="off"><button id="clearSearch" type="button" hidden>×</button></div><div class="filter-pills"><button class="pill active" type="button" data-filter="all">Toutes</button><button class="pill" type="button" data-filter="unread">Non lues</button><button class="pill" type="button" data-filter="favorites">Favoris</button><button class="pill" type="button" data-filter="groups">Groupes</button></div><div class="quick-actions"><button id="newGroupQuick" type="button"><i class="fa-solid fa-users"></i> Groupe</button><button id="newStatusQuick" type="button"><i class="fa-solid fa-circle-plus"></i> Statut</button></div><div id="contacts"></div><div id="stories" hidden></div><button id="logout">Se déconnecter</button></section></aside><main><header class="chathead chat-top-header"><button id="back" class="back" title="Retour">‹</button><div class="chat-avatar-wrap"><img id="avatar" alt=""></div><div class="chat-title"><strong id="name">VIBE</strong><small id="status">Messagerie intelligente</small></div><div class="chat-actions chat-top-actions"><button id="ai" title="Assistant Gemini"><i class="fa-solid fa-wand-magic-sparkles"></i></button><button id="audioCall" title="Appel audio"><i class="fa-solid fa-phone"></i></button><button id="videoCall" title="Appel vidéo"><i class="fa-solid fa-video"></i></button><button id="chatMenu" title="Plus d'options"><i class="fa-solid fa-ellipsis-vertical"></i></button></div></header><div id="typing" hidden>écrit…</div><div id="messages"><div class="welcome"><b>V</b><h2>VIBE</h2><p>Connecte-toi puis sélectionne une personne pour discuter.</p><div class="welcome-features"><span>Temps réel</span><span>Sécurisé</span><span>Gemini</span></div></div></div><form id="composer" hidden><label class="attach" title="Photo ou fichier"><i class="fa-solid fa-paperclip"></i><input id="file" type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" hidden></label><button type="button" id="emoji" title="Emoji"><i class="fa-regular fa-face-smile"></i></button><input id="message" maxlength="4000" autocomplete="off" placeholder="Écrire un message…"><button id="mic" type="button" title="Message vocal"><i class="fa-solid fa-microphone"></i></button><button type="submit" title="Envoyer"><i class="fa-solid fa-paper-plane"></i></button></form></main></div><div id="callOverlay" class="call-overlay" hidden><div class="call-card"><div class="call-top"><span>VIBE CALL</span><button id="callClose" type="button" onclick="document.getElementById('endCall').click()">×</button></div><div class="call-stage"><video id="localVideo" class="local-video" autoplay muted playsinline></video><div class="call-avatar-large"><div class="call-ring"></div><div class="call-icon">☎</div></div><video id="remoteVideo" autoplay playsinline></video></div><h2 id="callTitle">Appel entrant</h2><p id="callStatus">Connexion…</p><div class="call-buttons"><button id="acceptCall" class="accept">✓ Accepter</button><button id="rejectCall" class="reject">✕ Refuser</button><button id="endCall" class="end" hidden>Terminer</button></div></div></div><dialog id="modal"><div id="modalContent"></div><button id="closeModal">Fermer</button></dialog><div id="toast"></div><script type="module" src="app.js"></script><script type="module" src="call-fix.js"></script><script type="module" src="auth-fix.js"></script><script type="module" src="interaction-fix.js"></script><script type="module" src="whatsapp-ui.js"></script><script type="module" src="vibe-groups-emoji.js"></script><script>window.setTimeout(()=>document.getElementById('vibeSplash')?.classList.add('hide'),2200)</script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00a884">
+<meta name="description" content="VIBE — messagerie moderne en temps réel">
+<link rel="manifest" href="manifest.webmanifest">
+<title>VIBE — Web</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="ui-polish.css">
+<link rel="stylesheet" href="whatsapp-ui.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style id="vibe-splash-style">
+#vibeSplash{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#00a884;transition:opacity .45s ease,visibility .45s ease}
+#vibeSplash.hide{opacity:0;visibility:hidden;pointer-events:none}
+.vibe-splash-inner{text-align:center;color:#fff;animation:vibeSplashIn .7s ease both}
+.vibe-splash-logo{width:104px;height:104px;margin:0 auto 20px;border-radius:28%;display:grid;place-items:center;background:#fff;color:#00a884;font-size:64px;font-weight:900;box-shadow:0 12px 40px #0002;animation:vibeSplashPulse 1.8s ease-in-out infinite}
+.vibe-splash-name{font-size:30px;font-weight:800;letter-spacing:3px}.vibe-splash-sub{margin-top:8px;font-size:14px;opacity:.9}
+.vibe-splash-loader{width:72px;height:3px;margin:26px auto 0;background:#ffffff55;border-radius:9px;overflow:hidden}.vibe-splash-loader:after{content:"";display:block;width:45%;height:100%;background:#fff;border-radius:9px;animation:vibeSplashLoad 1.1s ease-in-out infinite}
+@keyframes vibeSplashIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}@keyframes vibeSplashPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}@keyframes vibeSplashLoad{0%{transform:translateX(-120%)}100%{transform:translateX(280%)}}
+@media(prefers-reduced-motion:reduce){.vibe-splash-inner,.vibe-splash-logo,.vibe-splash-loader:after{animation:none}}
+</style>
+</head>
+<body>
+<div id="vibeSplash" aria-label="VIBE" role="status"><div class="vibe-splash-inner"><div class="vibe-splash-logo">V</div><div class="vibe-splash-name">VIBE</div><div class="vibe-splash-sub">Messagerie moderne</div><div class="vibe-splash-loader"></div></div></div>
+
+<div class="app whatsapp-web-container">
+  <nav class="left-icon-rail" aria-label="Navigation VIBE">
+    <div class="rail-top">
+      <button id="railChats" class="rail-button active" type="button" title="Discussions" aria-label="Discussions"><i class="fa-solid fa-comment-alt"></i></button>
+      <button id="railStories" class="rail-button" type="button" title="Statuts" aria-label="Statuts"><i class="fa-solid fa-circle-notch"></i></button>
+      <button id="railCommunities" class="rail-button" type="button" title="Communautés" aria-label="Communautés"><i class="fa-solid fa-users"></i></button>
+    </div>
+    <div class="rail-bottom">
+      <button id="railFavorites" class="rail-button" type="button" title="Favoris" aria-label="Favoris"><i class="fa-solid fa-star"></i></button>
+      <button id="railArchive" class="rail-button" type="button" title="Archivées" aria-label="Archivées"><i class="fa-solid fa-box-archive"></i></button>
+      <button id="railSettings" class="rail-button" type="button" title="Paramètres" aria-label="Paramètres"><i class="fa-solid fa-gear"></i></button>
+      <button id="railProfile" class="rail-avatar" type="button" title="Mon profil" aria-label="Mon profil"><img id="railAvatar" src="https://i.pravatar.cc/150?img=12" alt="Profil"></button>
+    </div>
+  </nav>
+
+  <aside>
+    <header>
+      <div class="brand"><b>V</b><strong>VIBE</strong></div>
+      <div class="head-actions">
+        <button id="newGroup" title="Nouveau groupe" aria-label="Nouveau groupe"><i class="fa-solid fa-users"></i></button>
+        <button id="newChat" title="Nouvelle discussion" aria-label="Nouvelle discussion"><i class="fa-solid fa-circle-plus"></i></button>
+        <button id="theme" title="Changer le thème" aria-label="Changer le thème"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+      </div>
+    </header>
+
+    <section id="auth">
+      <div class="auth-logo">V</div><h1>Bienvenue sur VIBE</h1>
+      <p>Une messagerie moderne, rapide et enrichie par Gemini.</p>
+      <button id="google">Continuer avec Google</button>
+      <button id="github">Continuer avec GitHub</button>
+      <small class="auth-note">Connexion sécurisée par Firebase Authentication</small>
+    </section>
+
+    <section id="user" hidden>
+      <div class="me">
+        <div class="avatar-wrap"><img id="meAvatar" alt=""><div class="presence-dot"></div></div>
+        <div><strong id="meName">Utilisateur</strong><small id="meStatus">● En ligne</small></div>
+        <button id="profile" title="Mon profil" aria-label="Mon profil"><i class="fa-solid fa-gear"></i></button>
+      </div>
+
+      <nav class="tabs" aria-label="Sections">
+        <button class="tab active" data-tab="chats" type="button"><i class="fa-solid fa-comment"></i><span>Discussions</span></button>
+        <button class="tab" data-tab="stories" type="button"><i class="fa-solid fa-circle-notch"></i><span>Statuts</span></button>
+      </nav>
+
+      <div class="search-wrap">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="search" placeholder="Rechercher ou démarrer une discussion" autocomplete="off">
+        <button id="clearSearch" type="button" hidden aria-label="Effacer la recherche">×</button>
+      </div>
+
+      <div class="filter-pills" aria-label="Filtres de discussions">
+        <button class="pill active" type="button" data-filter="all">Toutes</button>
+        <button class="pill" type="button" data-filter="unread">Non lues</button>
+        <button class="pill" type="button" data-filter="favorites">Favoris</button>
+        <button class="pill" type="button" data-filter="groups">Groupes</button>
+      </div>
+
+      <div class="quick-actions">
+        <button id="newGroupQuick" type="button"><i class="fa-solid fa-users"></i> Groupe</button>
+        <button id="newStatusQuick" type="button"><i class="fa-solid fa-circle-plus"></i> Statut</button>
+      </div>
+      <button id="openStatusProxy" type="button" hidden></button>
+
+      <div id="contacts"></div>
+      <div id="stories" hidden></div>
+      <button id="logout">Se déconnecter</button>
+    </section>
+  </aside>
+
+  <main>
+    <header class="chathead chat-top-header">
+      <button id="back" class="back" title="Retour" aria-label="Retour">‹</button>
+      <div class="chat-avatar-wrap"><img id="avatar" alt=""></div>
+      <div class="chat-title"><strong id="name">VIBE</strong><small id="status">Messagerie intelligente</small></div>
+      <div class="chat-actions chat-top-actions">
+        <button id="ai" title="Assistant Gemini" aria-label="Assistant Gemini"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+        <button id="audioCall" title="Appel audio" aria-label="Appel audio"><i class="fa-solid fa-phone"></i></button>
+        <button id="videoCall" title="Appel vidéo" aria-label="Appel vidéo"><i class="fa-solid fa-video"></i></button>
+        <button id="chatMenu" title="Plus d'options" aria-label="Plus d'options"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+      </div>
+    </header>
+
+    <div id="typing" hidden>écrit…</div>
+    <div id="messages">
+      <div class="welcome"><b>V</b><h2>VIBE</h2><p>Connecte-toi puis sélectionne une personne pour discuter.</p><div class="welcome-features"><span>Temps réel</span><span>Sécurisé</span><span>Gemini</span></div></div>
+    </div>
+
+    <form id="composer" hidden>
+      <label class="attach" title="Photo ou fichier" aria-label="Photo ou fichier"><i class="fa-solid fa-paperclip"></i><input id="file" type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" hidden></label>
+      <button type="button" id="emoji" title="Emoji" aria-label="Emoji"><i class="fa-regular fa-face-smile"></i></button>
+      <input id="message" maxlength="4000" autocomplete="off" placeholder="Écrire un message…">
+      <button id="mic" type="button" title="Message vocal" aria-label="Message vocal"><i class="fa-solid fa-microphone"></i></button>
+      <button type="submit" title="Envoyer" aria-label="Envoyer"><i class="fa-solid fa-paper-plane"></i></button>
+    </form>
+  </main>
+</div>
+
+<div id="callOverlay" class="call-overlay" hidden><div class="call-card"><div class="call-top"><span>VIBE CALL</span><button id="callClose" type="button" onclick="document.getElementById('endCall').click()">×</button></div><div class="call-stage"><video id="localVideo" class="local-video" autoplay muted playsinline></video><div class="call-avatar-large"><div class="call-ring"></div><div class="call-icon">☎</div></div><video id="remoteVideo" autoplay playsinline></video></div><h2 id="callTitle">Appel entrant</h2><p id="callStatus">Connexion…</p><div class="call-buttons"><button id="acceptCall" class="accept">✓ Accepter</button><button id="rejectCall" class="reject">✕ Refuser</button><button id="endCall" class="end" hidden>Terminer</button></div></div></div>
+<dialog id="modal"><div id="modalContent"></div><button id="closeModal">Fermer</button></dialog>
+<div id="toast"></div>
+<script type="module" src="app.js"></script>
+<script type="module" src="call-fix.js"></script>
+<script type="module" src="auth-fix.js"></script>
+<script type="module" src="whatsapp-ui.js"></script>
+<script type="module" src="interaction-fix.js"></script>
+<script>window.setTimeout(()=>document.getElementById('vibeSplash')?.classList.add('hide'),3000)</script>
+</body>
+</html>

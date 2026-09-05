@@ -21,4 +21,5 @@ async function login(provider){try{await signInWithPopup(auth,provider)}catch(e)
 const google=document.getElementById('google');const github=document.getElementById('github');
 if(google)google.onclick=()=>login(new GoogleAuthProvider());
 if(github)github.onclick=()=>login(new GithubAuthProvider());
+// Expose des helpers sans remplacer l’interface existante.
 window.VIBE_AUTH={auth,loginGoogle:()=>login(new GoogleAuthProvider()),loginGitHub:()=>login(new GithubAuthProvider()),signInEmail:async(e,p)=>{try{return await signInWithEmailAndPassword(auth,e,p)}catch(x){toast(explain(x));throw x}},signUpEmail:async(e,p)=>{try{return await createUserWithEmailAndPassword(auth,e,p)}catch(x){toast(explain(x));throw x}},resetPassword:async e=>{try{await sendPasswordResetEmail(auth,e);toast('E-mail de réinitialisation envoyé.')}catch(x){toast(explain(x));throw x}}};

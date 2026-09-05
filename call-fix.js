@@ -1,39 +1,6 @@
-import{getApps,getApp}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import{getAuth,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import{getFirestore,collection,query,where,onSnapshot,updateDoc,doc}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
-
-const app=getApps().length?getApp():null;
-const auth=app?getAuth(app):null;
-const db=app?getFirestore(app):null;
-const CALL_TTL=45000;
-const timers=new Map();
-
-const createdMillis=c=>{
-  const v=c?.createdAt;
-  if(!v)return 0;
-  if(typeof v.toMillis==='function')return v.toMillis();
-  if(typeof v.seconds==='number')return v.seconds*1000;
-  return 0;
-};
-
-const expire=(id)=>updateDoc(doc(db,'calls',id),{status:'ended'}).catch(()=>{});
-
-function schedule(id,data){
-  const created=createdMillis(data);
-  if(!created)return;
-  const remaining=CALL_TTL-(Date.now()-created);
-  if(remaining<=0){expire(id);return;}
-  clearTimeout(timers.get(id));
-  timers.set(id,setTimeout(()=>{
-    timers.delete(id);
-    expire(id);
-  },remaining));
-}
-
-if(auth&&db)onAuthStateChanged(auth,user=>{
-  timers.forEach(clearTimeout);
-  timers.clear();
-  if(!user)return;
-  const q=query(collection(db,'calls'),where('callee','==',user.uid),where('status','==','ringing'));
-  onSnapshot(q,s=>s.forEach(d=>schedule(d.id,d.data())),()=>{});
-});
+import{getApps,getApp}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';import{getAuth,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';import{getFirestore,collection,query,where,onSnapshot,updateDoc,doc}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';import{firebaseConfig}from'./firebase-config.js';
+const app=getApps().length?getApp():null;const auth=app?getAuth(app):null;const db=app?getFirestore(app):null;const OVERLAY_MAX_AGE=45000;const overlay=()=>document.getElementById('callOverlay');const hide=()=>{const el=overlay();if(el)el.hidden=true};const createdMillis=c=>{const v=c?.createdAt;if(!v)return 0;if(typeof v.toMillis==='function')return v.toMillis();if(typeof v.seconds==='number')return v.seconds*1000;return 0};
+function expireCall(id){return updateDoc(doc(db,'calls',id),{status:'ended'}).catch(()=>{})}
+function handleSnapshot(snapshot){const now=Date.now();snapshot.docChanges().forEach(change=>{if(change.type!=='added'&&change.type!=='modified')return;const data=change.doc.data();if(data.status!=='ringing')return;const age=createdMillis(data);if(!age||now-age>OVERLAY_MAX_AGE){expireCall(change.doc.id);hide();return}const remaining=Math.max(1000,OVERLAY_MAX_AGE-(now-age));setTimeout(()=>{expireCall(change.doc.id);hide()},remaining)});const active=snapshot.docs.find(d=>{const c=d.data();const age=createdMillis(c);return c.status==='ringing'&&age&&now-age<=OVERLAY_MAX_AGE});if(!active)hide()}
+if(auth&&db)onAuthStateChanged(auth,user=>{hide();if(!user)return;const q=query(collection(db,'calls'),where('callee','==',user.uid),where('status','==','ringing'));onSnapshot(q,handleSnapshot,()=>hide())});
+window.addEventListener('load',hide);
