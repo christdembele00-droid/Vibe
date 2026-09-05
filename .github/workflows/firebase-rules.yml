@@ -32,7 +32,9 @@ jobs:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deploy Firestore and Storage rules
+        env:
+          FIREBASE_TOKEN: ""
         run: |
-          npx --yes firebase-tools deploy \
+          npx --yes firebase-tools@15.4.0 deploy \
             --only firestore:rules,storage \
             --project vibe-749e5
