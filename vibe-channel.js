@@ -1,7 +1,6 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, doc, setDoc, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
-import { firebaseConfig } from './firebase-config.js';
+import { getFirestore, collection, doc, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 const app = getApps()[0];
 const auth = getAuth(app);
@@ -128,7 +127,6 @@ function listenChannel() {
   channelUnsub?.();
   const box = $('messages');
   if (!box || !currentUid) return;
-
   const q = query(collection(db, ...CHANNEL_PATH), orderBy('createdAt', 'asc'), limit(300));
   channelUnsub = onSnapshot(q, snap => {
     if (!channelActive) return;
@@ -138,29 +136,16 @@ function listenChannel() {
   }, error => toast('Canal VIBE indisponible : ' + (error?.message || 'erreur')));
 }
 
-async function openChannel() {
+function openChannel() {
   if (!currentUid) return;
   channelActive = true;
   window.VIBE_CHANNEL_ACTIVE = true;
   window.VIBE_CURRENT_USER = { id: CHANNEL_ID, name: 'VIBE', group: false, channel: true };
-
   document.querySelector('.app')?.classList.add('chat-open');
   if ($('name')) $('name').textContent = 'VIBE';
   if ($('status')) $('status').textContent = 'Canal public · tous les utilisateurs';
   if ($('composer')) $('composer').hidden = false;
   if ($('typing')) $('typing').hidden = true;
-
-  try {
-    await setDoc(doc(db, 'channels', CHANNEL_ID), {
-      name: 'VIBE',
-      type: 'public',
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-  } catch (error) {
-    toast('Canal VIBE inaccessible : ' + (error?.message || 'erreur'));
-    return;
-  }
-
   listenChannel();
   $('message')?.focus();
 }
@@ -180,7 +165,6 @@ async function sendChannelMessage(event) {
   const input = $('message');
   const text = input?.value.trim();
   if (!text) return;
-
   const user = auth.currentUser;
   try {
     await addDoc(collection(db, ...CHANNEL_PATH), {
@@ -204,7 +188,6 @@ function handleClicks(event) {
     openChannel();
     return;
   }
-
   if (event.target.closest?.('#back') && channelActive) {
     event.preventDefault();
     event.stopImmediatePropagation();
