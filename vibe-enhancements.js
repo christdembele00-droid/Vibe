@@ -42,18 +42,14 @@ function sortRenderedContacts(){
   const box=$('contacts');if(!box)return;
   const children=[...box.querySelectorAll(':scope > .contact')];
   if(children.length<2)return;
-  sorting=true;
   const rank=el=>{if(el.dataset.vibeChannel==='true')return[-1,''];const id=el.dataset.id;const u=users.find(x=>x.uid===id);if(u)return[Number(!u.online),normalize(u.name)];const g=groups.find(x=>x.id===id);return[2,normalize(g?.name)]};
   children.sort((a,b)=>{const ra=rank(a),rb=rank(b);return ra[0]-rb[0]||ra[1].localeCompare(rb[1],'fr')});
-  children.forEach(el=>box.appendChild(el));
-  sorting=false;
+  // Reorder once when the data snapshot changes. Do not attach a MutationObserver
+  // to this operation: appendChild() itself emits mutations and would feed the
+  // observer back into sortRenderedContacts indefinitely.
+  sorting=true;
+  try{const frag=document.createDocumentFragment();children.forEach(el=>frag.appendChild(el));box.appendChild(frag)}finally{sorting=false}
   if(filter==='unread')rerenderDirectory()
-}
-
-function observeDirectory(){
-  const box=$('contacts');if(!box)return;
-  const observer=new MutationObserver(()=>{if(!internalSearch)sortRenderedContacts()});
-  observer.observe(box,{childList:true})
 }
 
 function setupSearch(){
@@ -104,7 +100,7 @@ function interceptPrivateSend(){
 function trackActiveRoom(){setInterval(()=>{const room=activeRoom();if(room!==lastRoom){lastRoom=room;if(room)clearUnread(room)}},500)}
 
 function boot(){
-  setupSearch();interceptPrivateSend();trackActiveRoom();observeDirectory();
+  setupSearch();interceptPrivateSend();trackActiveRoom();
   onAuthStateChanged(auth,user=>{
     usersUnsub?.();groupsUnsub?.();roomsUnsub?.();roomUnsubs.forEach(u=>u());roomUnsubs.clear();
     uid=user?.uid||null;users=[];groups=[];unread.clear();lastRoom=null;
