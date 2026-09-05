@@ -1,141 +1,52 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, doc, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
-const app = getApps()[0];
-const auth = getAuth(app);
-const db = getFirestore(app);
-const CHANNEL_ID = 'vibe';
-const CHANNEL_PATH = ['channels', CHANNEL_ID, 'messages'];
-const CHANNEL_LOGO = './icons/icon.svg';
-let currentUid = null;
-let channelUnsub = null;
-let channelActive = false;
-let observer = null;
-let booted = false;
-let sending = false;
+const app=getApps()[0],auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
+const fallback='./icons/icon.svg';
+const CHANNELS=[
+  {id:'actualites',name:'VIBE — Actualités',subtitle:'Les informations et nouvelles du moment',icon:'fa-newspaper'},
+  {id:'cote-ivoire',name:'VIBE — Côte d’Ivoire',subtitle:'Actualités et informations ivoiriennes',icon:'fa-flag'},
+  {id:'monde',name:'VIBE — Monde',subtitle:'Actualités internationales',icon:'fa-earth-africa'},
+  {id:'sports',name:'VIBE — Sports',subtitle:'Football, compétitions et sport',icon:'fa-futbol'},
+  {id:'technologie',name:'VIBE — Technologie',subtitle:'IA, informatique et innovations',icon:'fa-microchip'},
+  {id:'gaming',name:'VIBE — Gaming',subtitle:'Jeux vidéo et e-sport',icon:'fa-gamepad'},
+  {id:'musique',name:'VIBE — Musique',subtitle:'Musique et nouveautés',icon:'fa-music'},
+  {id:'divertissement',name:'VIBE — Divertissement',subtitle:'Cinéma, séries et culture',icon:'fa-film'},
+  {id:'science',name:'VIBE — Science',subtitle:'Sciences, découvertes et espace',icon:'fa-flask'},
+  {id:'vibe-ai',name:'VIBE — AI',subtitle:'Nouveautés et intelligence artificielle',icon:'fa-wand-magic-sparkles'}
+];
+let uid=null,current=null,unsub=null,booted=false,sending=false;
+const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+const toast=text=>{const e=$('toast');if(!e)return;e.textContent=text;e.style.display='block';clearTimeout(window.__vibeChannelsToast);window.__vibeChannelsToast=setTimeout(()=>e.style.display='none',2800)};
+const time=v=>v?.toDate?.().toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})||'…';
 
-const $ = id => document.getElementById(id);
-const fallback = 'https://i.pravatar.cc/150?img=12';
-const esc = value => String(value ?? '').replace(/[&<>\"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#39;' }[c]));
-const time = value => value?.toDate?.().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) || '…';
-const toast = text => { const el=$('toast'); if(!el)return; el.textContent=text; el.style.display='block'; clearTimeout(window.__vibeChannelToast); window.__vibeChannelToast=setTimeout(()=>el.style.display='none',2800); };
-
-function ensureChannelInSidebar(){
-  const box=$('contacts'); if(!box||!currentUid||channelActive)return;
-  if(box.querySelector('[data-vibe-channel="true"]'))return;
-  box.querySelector('.empty')?.remove();
-  const button=document.createElement('button');
-  button.type='button';
-  button.className='contact';
-  button.dataset.id=CHANNEL_ID;
-  button.dataset.vibeChannel='true';
-  button.setAttribute('aria-label','Ouvrir le Canal Public VIBE');
-  button.innerHTML=`<img src="${CHANNEL_LOGO}" alt="VIBE"><span><b>VIBE — Canal Public</b><small>Communauté VIBE</small></span>`;
-  button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();openChannel();});
-  box.prepend(button);
+function ensureChannels(){
+  const box=$('contacts');if(!box||!uid)return;
+  box.querySelectorAll('[data-vibe-channel-item]').forEach(e=>e.remove());
+  const anchor=box.firstElementChild;
+  const frag=document.createDocumentFragment();
+  CHANNELS.forEach(ch=>{
+    const b=document.createElement('button');b.type='button';b.className='contact';b.dataset.id=`channel:${ch.id}`;b.dataset.vibeChannel='true';b.dataset.vibeChannelItem=ch.id;b.innerHTML=`<img src="${fallback}" alt=""><span><b>${esc(ch.name)}</b><small>${esc(ch.subtitle)}</small></span>`;
+    b.querySelector('img').style.padding='10px';b.querySelector('img').src=fallback;
+    b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openChannel(ch)},true);frag.appendChild(b)
+  });
+  if(anchor)box.insertBefore(frag,anchor);else box.appendChild(frag);
 }
 
-function setChannelHeader(){
-  const avatar=$('avatar');
-  if(avatar){avatar.src=CHANNEL_LOGO;avatar.alt='Logo VIBE — Canal Public';}
-  const name=$('name');
-  if(name)name.textContent='VIBE — Canal Public';
-  const status=$('status');
-  if(status)status.textContent='Espace de discussion global de la communauté';
-  const title=$('chatMenu');
-  if(title)title.title='Rechercher dans le Canal Public VIBE';
-  const ai=$('ai');
-  if(ai)ai.title='VIBE AI';
+function header(ch){$('avatar')&&( $('avatar').src=fallback,$('avatar').alt=ch.name);$('name')&&($('name').textContent=ch.name);$('status')&&($('status').textContent=ch.subtitle);$('typing')&&($('typing').hidden=true);$('composer')&&($('composer').hidden=false)}
+function renderPost(id,m,box){
+  const mine=m.senderId===uid,el=document.createElement('div');el.className=`msg ${mine?'sent':'received'}`;el.dataset.channelMessage=id;
+  if(!mine){const a=document.createElement('small');a.className='channel-author';a.textContent=m.senderName||'Utilisateur';el.appendChild(a)}
+  const t=document.createElement('span');t.className='message-text';t.textContent=m.text||'';el.appendChild(t);
+  if(m.edited){const e=document.createElement('em');e.className='edited';e.textContent='modifié';el.appendChild(e)}
+  const tm=document.createElement('span');tm.className='time';tm.textContent=time(m.createdAt);el.appendChild(tm);
+  if(mine){const actions=document.createElement('div');actions.className='message-actions';const edit=document.createElement('button');edit.type='button';edit.textContent='✏️';edit.title='Modifier';edit.onclick=e=>{e.stopPropagation();const n=prompt('Modifier la publication :',m.text||'');if(!n?.trim())return;updateDoc(doc(db,'channels',current.id,'messages',id),{text:n.trim().slice(0,4000),edited:true,editedAt:serverTimestamp()}).catch(x=>toast(x?.message||'Modification impossible'))};const del=document.createElement('button');del.type='button';del.textContent='🗑️';del.title='Supprimer';del.onclick=async e=>{e.stopPropagation();if(!confirm('Supprimer cette publication ?'))return;try{await deleteDoc(doc(db,'channels',current.id,'messages',id))}catch(x){toast(x?.message||'Suppression impossible')}};actions.append(edit,del);el.appendChild(actions)}
+  box.appendChild(el)
 }
-
-function renderChannelWelcome(box){
-  const welcome=document.createElement('div');
-  welcome.className='welcome';
-  welcome.innerHTML=`<img src="${CHANNEL_LOGO}" alt="VIBE" style="width:72px;height:72px;border-radius:50%;object-fit:cover"><h2>Bienvenue sur le Canal Public VIBE</h2><p>Tous les utilisateurs authentifiés peuvent échanger ici en temps réel.</p><div class="welcome-features"><span>Temps réel</span><span>Communauté</span><span>VIBE AI</span></div>`;
-  box.appendChild(welcome);
-}
-
-function renderMessage(id,message,box){
-  const ownerId=message.senderId||message.sender||'';
-  const el=document.createElement('div'); el.className='msg '+(ownerId===currentUid?'sent':'received'); el.dataset.messageId=id;
-  if(message.deleted){el.classList.add('deleted');el.innerHTML='<span>🚫 Message supprimé</span>';box.appendChild(el);return;}
-  if(ownerId!==currentUid){const author=document.createElement('small');author.className='channel-author';author.textContent=message.senderName||'Utilisateur';el.appendChild(author);}
-  if(message.text){const text=document.createElement('span');text.className='message-text';text.textContent=message.text;el.appendChild(text);}
-  if(message.edited){const edited=document.createElement('em');edited.className='edited';edited.textContent='modifié';el.appendChild(edited);}
-  const tm=document.createElement('span');tm.className='time';tm.textContent=time(message.createdAt)+(ownerId===currentUid?' ✓':'');el.appendChild(tm);
-  if(ownerId===currentUid){
-    const actions=document.createElement('div');actions.className='message-actions';
-    const edit=document.createElement('button');edit.type='button';edit.textContent='✏️';edit.title='Modifier';
-    edit.onclick=event=>{event.stopPropagation();const next=prompt('Modifier le message :',message.text||'');if(!next?.trim())return;updateDoc(doc(db,...CHANNEL_PATH,id),{text:next.trim().slice(0,4000),edited:true,editedAt:serverTimestamp()}).catch(error=>toast('Modification impossible : '+(error?.message||'erreur')));};
-    const remove=document.createElement('button');remove.type='button';remove.textContent='🗑️';remove.title='Supprimer';
-    remove.onclick=async event=>{event.stopPropagation();if(!confirm('Supprimer ce message pour tous ?'))return;try{await deleteDoc(doc(db,...CHANNEL_PATH,id));toast('Message supprimé pour tous.');}catch(error){toast('Suppression impossible : '+(error?.message||'erreur'));}};
-    actions.append(edit,remove);el.appendChild(actions);
-  }
-  box.appendChild(el);
-}
-
-function listenChannel(){
-  channelUnsub?.();
-  const box=$('messages'); if(!box||!currentUid)return;
-  const q=query(collection(db,...CHANNEL_PATH),orderBy('createdAt','asc'),limit(300));
-  channelUnsub=onSnapshot(q,snap=>{
-    if(!channelActive)return;
-    box.replaceChildren();
-    if(snap.empty){renderChannelWelcome(box);return;}
-    snap.forEach(item=>renderMessage(item.id,item.data(),box));
-    box.scrollTop=box.scrollHeight;
-  },error=>toast('Canal VIBE indisponible : '+(error?.code||error?.message||'erreur')));
-}
-
-function openChannel(){
-  if(!currentUid)return toast('Connecte-toi pour accéder au Canal Public VIBE.');
-  channelUnsub?.();
-  channelActive=true;
-  window.VIBE_CHANNEL_ACTIVE=true;
-  window.VIBE_CURRENT_USER={id:CHANNEL_ID,name:'VIBE — Canal Public',group:false,channel:true};
-  document.querySelector('.app')?.classList.add('chat-open');
-  setChannelHeader();
-  const composer=$('composer'); if(composer)composer.hidden=false;
-  const typing=$('typing'); if(typing)typing.hidden=true;
-  const messages=$('messages'); if(messages)messages.replaceChildren();
-  listenChannel();
-  $('message')?.focus();
-}
-function closeChannel(){channelUnsub?.();channelUnsub=null;channelActive=false;window.VIBE_CHANNEL_ACTIVE=false;}
-
-async function sendChannelMessage(event){
-  event.preventDefault();
-  event.stopPropagation();
-  if(!channelActive||!currentUid||sending)return;
-  const input=$('message'); const text=input?.value.trim(); if(!text)return;
-  const user=auth.currentUser;
-  if(!user||user.uid!==currentUid)return toast('Session Firebase indisponible. Reconnecte-toi.');
-  sending=true;
-  try{
-    await addDoc(collection(db,...CHANNEL_PATH),{senderId:user.uid,senderName:(user.displayName||user.email?.split('@')[0]||'Utilisateur').trim().slice(0,120),senderAvatar:String(user.photoURL||fallback).slice(0,1000),text:text.slice(0,4000),createdAt:serverTimestamp()});
-    input.value='';input.focus();
-  }catch(error){console.error('[VIBE] public channel send',error);toast('Message non envoyé : '+(error?.code||error?.message||'erreur Firestore'));}
-  finally{sending=false;}
-}
-
-function handleClicks(event){
-  const target=event.target.closest?.('button,a,label');
-  const channel=event.target.closest?.('[data-vibe-channel="true"]');
-  if(channel){event.preventDefault();event.stopImmediatePropagation();openChannel();return;}
-  if(channelActive&&target?.classList?.contains('contact')){closeChannel();return;}
-  if(channelActive&&(target?.id==='ai'||target?.id==='audioCall'||target?.id==='videoCall'||target?.id==='mic'||target?.id==='file')){event.preventDefault();event.stopImmediatePropagation();toast('Cette action est disponible dans les discussions privées et les groupes.');return;}
-  if(event.target.closest?.('#back')&&channelActive){event.preventDefault();event.stopImmediatePropagation();closeChannel();document.querySelector('.app')?.classList.remove('chat-open');window.VIBE_CURRENT_USER=null;}
-}
-function handleSubmit(event){if(event.target?.id==='composer'&&channelActive)sendChannelMessage(event);}
-function boot(){
-  if(booted)return;booted=true;
-  document.addEventListener('click',handleClicks,true);
-  document.addEventListener('submit',handleSubmit,true);
-  document.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&document.activeElement?.id==='message'&&channelActive){event.preventDefault();$('composer')?.requestSubmit();}},true);
-  observer=new MutationObserver(()=>ensureChannelInSidebar());
-  const contacts=$('contacts');if(contacts)observer.observe(contacts,{childList:true});
-  onAuthStateChanged(auth,user=>{currentUid=user?.uid||null;closeChannel();if(currentUid)setTimeout(ensureChannelInSidebar,100);});
-}
+function openChannel(ch){if(!uid)return toast('Connecte-toi pour accéder aux chaînes.');current=ch;unsub?.();window.VIBE_CHANNEL_ACTIVE=true;window.VIBE_CURRENT_USER={id:`channel:${ch.id}`,name:ch.name,channel:true,group:false};document.querySelector('.app')?.classList.add('chat-open');header(ch);const box=$('messages');box?.replaceChildren();const q=query(collection(db,'channels',ch.id,'messages'),orderBy('createdAt','asc'),limit(300));unsub=onSnapshot(q,s=>{if(!current)return;box?.replaceChildren();if(s.empty){const w=document.createElement('div');w.className='welcome';w.innerHTML=`<img src="${fallback}" alt="VIBE" style="width:72px;height:72px;border-radius:50%;object-fit:cover"><h2>${esc(ch.name)}</h2><p>${esc(ch.subtitle)}.</p><div class="welcome-features"><span>Temps réel</span><span>Communauté</span><span>VIBE AI</span></div>`;box?.appendChild(w)}else s.forEach(d=>renderPost(d.id,d.data(),box));if(box)box.scrollTop=box.scrollHeight},e=>toast('Chaîne indisponible : '+(e?.code||e?.message||'erreur')));$('message')?.focus()}
+function closeChannel(){unsub?.();unsub=null;current=null;window.VIBE_CHANNEL_ACTIVE=false}
+async function send(e){if(!current||!uid||sending)return;e.preventDefault();e.stopImmediatePropagation();const input=$('message'),text=input?.value.trim();if(!text)return;sending=true;try{const u=auth.currentUser;await addDoc(collection(db,'channels',current.id,'messages'),{senderId:uid,senderName:(u?.displayName||u?.email?.split('@')[0]||'Utilisateur').slice(0,120),senderAvatar:String(u?.photoURL||fallback).slice(0,1000),text:text.slice(0,4000),createdAt:serverTimestamp()});input.value='';input.focus()}catch(x){toast('Publication impossible : '+(x?.code||x?.message||'erreur'))}finally{sending=false}}
+function boot(){if(booted)return;booted=true;document.addEventListener('submit',e=>{if(e.target?.id==='composer'&&current)send(e)},true);document.addEventListener('keydown',e=>{if(current&&e.key==='Enter'&&!e.shiftKey&&document.activeElement?.id==='message'){e.preventDefault();$('composer')?.requestSubmit()}},true);onAuthStateChanged(auth,u=>{uid=u?.uid||null;closeChannel();if(uid)setTimeout(ensureChannels,150)});const contacts=$('contacts');if(contacts)new MutationObserver(()=>{if(uid)ensureChannels()}).observe(contacts,{childList:true})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-window.VIBE_OPEN_CHANNEL=openChannel;window.VIBE_CLOSE_CHANNEL=closeChannel;
+window.VIBE_OPEN_CHANNEL=openChannel;window.VIBE_CLOSE_CHANNEL=closeChannel;window.VIBE_CHANNELS=CHANNELS;
