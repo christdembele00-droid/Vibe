@@ -1,8 +1,8 @@
-import{getAuth,GoogleAuthProvider,GithubAuthProvider,signInWithPopup,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';import{firebaseConfig}from'./firebase-config.js';
+import{getAuth,GoogleAuthProvider,GithubAuthProvider,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail}from'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 const auth=getAuth();
 const toast=t=>{const el=document.getElementById('toast');if(!el)return;el.textContent=t;el.style.display='block';clearTimeout(window.__authToast);window.__authToast=setTimeout(()=>el.style.display='none',4200)};
 const explain=e=>{const c=e?.code||'';const m={
-'auth/unauthorized-domain':'Firebase : ce domaine n’est pas autorisé. Vérifie christdembele00-droid.github.io dans Authentication > Paramètres > Domaines autorisés.',
+'auth/unauthorized-domain':'Firebase : ce domaine n’est pas autorisé. Ajoute christdembele00-droid.github.io dans Authentication > Settings > Authorized domains.',
 'auth/popup-blocked':'La fenêtre de connexion a été bloquée. Autorise les fenêtres pop-up pour VIBE.',
 'auth/popup-closed-by-user':'Connexion annulée.',
 'auth/cancelled-popup-request':'Une autre fenêtre de connexion est déjà ouverte.',
@@ -17,9 +17,15 @@ const explain=e=>{const c=e?.code||'';const m={
 'auth/weak-password':'Le mot de passe doit contenir au moins 6 caractères.',
 'auth/email-already-in-use':'Cette adresse e-mail est déjà utilisée.',
 'auth/invalid-login-credentials':'E-mail ou mot de passe incorrect.'};return m[c]||('Authentification Firebase impossible'+(c?` (${c})`:'.'))};
-async function login(provider){try{await signInWithPopup(auth,provider)}catch(e){console.error('VIBE Firebase Auth',e);toast(explain(e))}}
-const google=document.getElementById('google');const github=document.getElementById('github');
-if(google)google.onclick=()=>login(new GoogleAuthProvider());
-if(github)github.onclick=()=>login(new GithubAuthProvider());
-// Expose des helpers sans remplacer l’interface existante.
-window.VIBE_AUTH={auth,loginGoogle:()=>login(new GoogleAuthProvider()),loginGitHub:()=>login(new GithubAuthProvider()),signInEmail:async(e,p)=>{try{return await signInWithEmailAndPassword(auth,e,p)}catch(x){toast(explain(x));throw x}},signUpEmail:async(e,p)=>{try{return await createUserWithEmailAndPassword(auth,e,p)}catch(x){toast(explain(x));throw x}},resetPassword:async e=>{try{await sendPasswordResetEmail(auth,e);toast('E-mail de réinitialisation envoyé.')}catch(x){toast(explain(x));throw x}}};
+
+// Google et GitHub sont gérés par app.js. Ce fichier ne rattache volontairement
+// aucun onclick aux boutons afin d’éviter deux popups simultanées.
+window.VIBE_AUTH={
+ auth,
+ GoogleAuthProvider,
+ GithubAuthProvider,
+ signInEmail:async(e,p)=>{try{return await signInWithEmailAndPassword(auth,e,p)}catch(x){toast(explain(x));throw x}},
+ signUpEmail:async(e,p)=>{try{return await createUserWithEmailAndPassword(auth,e,p)}catch(x){toast(explain(x));throw x}},
+ resetPassword:async e=>{try{await sendPasswordResetEmail(auth,e);toast('E-mail de réinitialisation envoyé.')}catch(x){toast(explain(x));throw x}},
+ explainAuthError:explain
+};
