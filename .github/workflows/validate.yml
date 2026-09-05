@@ -1,0 +1,53 @@
+name: Validate VIBE
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check vibe-runtime.js
+          node --check calls.js
+          node --check sw.js
+          node --check functions/index.js
+          node --check firebase-config.js
+
+      - name: Check JSON files
+        run: |
+          node -e "for (const f of ['firebase.json','manifest.webmanifest','functions/package.json']) JSON.parse(require('fs').readFileSync(f,'utf8')); console.log('JSON OK')"
+
+      - name: Check frontend references
+        run: |
+          test -f index.html
+          test -f style.css
+          test -f vibe-runtime.js
+          test -f calls.js
+          test -f firebase-config.js
+          grep -q 'vibe-runtime.js' index.html
+          grep -q 'calls.js' index.html
+          ! grep -qE 'vibe-(navigation|spa|native-panels|fixes|core)\\.js' index.html
+          ! grep -qE 'vibe-(navigation|spa|native-panels|fixes|core)\\.css' index.html
+
+      - name: Check PWA cache references
+        run: |
+          grep -q "vibe-runtime.js" sw.js
+          grep -q "calls.js" sw.js
+          ! grep -qE 'vibe-(navigation|spa|native-panels|fixes|core)' sw.js
