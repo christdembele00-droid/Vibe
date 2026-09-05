@@ -1,63 +1,74 @@
 # VIBE
 
-VIBE est une messagerie web temps réel construite autour de Firebase, avec une interface responsive, groupes, statuts, partage de médias, appels WebRTC et assistant VIBE AI.
+VIBE est une messagerie web temps réel construite autour de Firebase, avec une interface responsive, groupes, statuts, partage de médias, appels WebRTC, chaînes thématiques et assistant VIBE AI.
 
 ## Architecture
 
 - `index.html` — shell unique de l'application et structure responsive.
-- `style.css` — design system unique : desktop, tablette, mobile et mode sombre.
-- `vibe-runtime.js` — contrôleur frontend unique : Auth, utilisateurs, groupes, messages, médias, statuts, recherche, profil, paramètres et interactions.
-- `calls.js` — gestion WebRTC unique : appel entrant/sortant, ICE bidirectionnel, états et nettoyage.
-- `firebase-config.js` — configuration publique Firebase et URL de la Cloud Function IA.
-- `functions/index.js` — API Gemini sécurisée côté serveur et annuaire VIBE.
+- `style.css`, `vibe-actions.css`, `vibe-redesign.css` — styles existants de l'interface VIBE.
+- `vibe-runtime.js` — contrôleur principal : Auth, utilisateurs, groupes, messages, médias, statuts, recherche et interactions.
+- `vibe-enhancements.js` — synchronisation avancée de recherche, non-lues et conversations Firestore.
+- `vibe-actions.js` — groupes, statuts, profil, paramètres et actions intégrées à l'application.
+- `calls.js` — gestion WebRTC des appels audio/vidéo individuels.
+- `vibe-online.js` — présence et compteur d'utilisateurs en ligne.
+- `vibe-local-notifications.js` — notifications locales pour les nouveaux messages.
+- `vibe-channel.js` — chaînes VIBE et assistant VIBE AI intégré.
+- `vibe-ai.js` — intégration Firebase AI Logic avec Gemini et Google Search grounding.
+- `vibe-analytics.js` — Analytics Firebase lorsqu'il est disponible.
+- `firebase-config.js` — configuration publique Firebase et endpoint interne intercepté par VIBE AI.
 - `firestore.rules` — contrôle d'accès Firestore.
 - `storage.rules` — contrôle d'accès aux médias, taille maximale et types MIME.
 - `manifest.webmanifest`, `sw.js`, `icons/icon.svg` — support PWA.
+- `server.js`, `Dockerfile` — serveur statique optionnel pour Render ou un autre hébergeur.
 
 ## Fonctionnalités
 
 - Authentification Google et GitHub via Firebase Authentication.
-- Conversations privées et groupes.
+- Conversations privées et groupes en temps réel.
 - Messages texte, images, vidéos, audio et documents.
 - Modification, suppression pour tous et réactions aux messages.
-- Statuts persistants Firebase avec expiration à 24 h.
-- Recherche des utilisateurs/groupes et recherche dans les messages chargés d'une conversation.
+- Statuts Firebase avec expiration à 24 h.
+- Recherche des utilisateurs et groupes.
 - Présence en ligne et indicateur de frappe.
-- Appels audio/vidéo WebRTC avec échange ICE dans les deux sens.
-- VIBE AI via Cloud Function Gemini avec authentification Firebase et limitation de 12 requêtes/minute/utilisateur.
-- Interface responsive pensée pour grands écrans et mobiles.
+- Appels audio/vidéo WebRTC individuels avec échange ICE.
+- Chaînes Actualités, Côte d'Ivoire, Monde, Sports, Technologie, Gaming, Musique, Divertissement, Science et VIBE AI.
+- VIBE AI avec Gemini 3.7 Flash via Firebase AI Logic.
+- Recherche Web Google grounding pour les flux d'actualités, avec affichage des sources retournées par le modèle.
 - Installation PWA et cache du shell de l'application.
 
 ## Firebase
 
-1. Crée ou utilise le projet Firebase `vibe-749e5`.
-2. Active Google et GitHub dans Authentication.
-3. Ajoute le domaine GitHub Pages dans les domaines autorisés Firebase Authentication.
-4. Déploie Firestore et Storage Rules.
-5. Configure le secret `GEMINI_API_KEY` pour Cloud Functions.
-6. Déploie `functions/`.
+Projet : `vibe-749e5`.
 
-La clé Gemini ne doit jamais être placée dans le frontend.
+1. Active Google et GitHub dans Firebase Authentication.
+2. Ajoute le domaine GitHub Pages dans les domaines autorisés Firebase Authentication.
+3. Déploie `firestore.rules` et `storage.rules`.
+4. Le frontend utilise Firebase AI Logic avec le backend Gemini Developer API ; aucun secret Gemini n'est placé dans `firebase-config.js`.
+
+La configuration Firebase Web présente dans le frontend est une configuration publique. Les secrets privés et comptes de service ne doivent jamais être ajoutés au dépôt.
 
 ## Sécurité
 
-- Les appels IA exigent un Firebase ID token.
-- Les clés Gemini restent dans Firebase Secret Manager.
-- Les médias exigent que l'utilisateur appartienne à la conversation.
-- Chaque média est maintenant écrit sous `chat-media/{roomId}/{uid}/...` et Storage vérifie que le dossier propriétaire correspond à l'utilisateur authentifié.
-- Storage limite les fichiers à 25 Mo et autorise uniquement les types nécessaires à VIBE.
+- Les conversations Firestore sont limitées aux participants.
+- Les messages sont validés par les règles Firestore.
+- Les médias sont écrits sous `chat-media/{roomId}/{uid}/...` et Storage vérifie le propriétaire.
+- Storage limite les fichiers à 25 Mo et les types MIME autorisés.
 - Les candidats WebRTC sont accessibles uniquement aux deux participants de l'appel.
+- Les utilisateurs ne peuvent modifier ou supprimer que leurs propres publications de chaîne ou leurs propres messages selon les règles correspondantes.
 
 ## Développement
 
-Un serveur HTTP local est recommandé pour tester les modules ES, le service worker et WebRTC. Par exemple, utilise l'extension Live Server de VS Code ou un serveur statique local.
+Un serveur HTTP local est recommandé pour tester les modules ES, le service worker et WebRTC. GitHub Pages sert directement le frontend.
 
 ## Déploiement
 
-Le frontend peut être servi par GitHub Pages. Les fonctions Firebase sont déployées depuis `functions/` avec Firebase CLI.
+Le workflow `Validate VIBE` vérifie automatiquement la syntaxe de tous les fichiers JavaScript, les fichiers JSON, les références frontend et les ressources du cache PWA.
+
+Le workflow `Deploy Firebase Rules` déploie uniquement les règles Firestore et Storage.
 
 ## Limites actuelles
 
 - Les appels de groupe ne sont pas encore activés.
-- La recherche globale de messages reste limitée aux messages chargés d'une conversation ; Firestore n'est pas un moteur full-text.
+- La recherche globale de messages reste limitée aux conversations chargées ; Firestore n'est pas un moteur full-text.
 - Pour une robustesse WebRTC maximale sur les réseaux restrictifs, un serveur TURN de production doit être ajouté.
+- Les chaînes thématiques peuvent accepter des publications d'utilisateurs authentifiés ; un véritable mode diffusion réservé à un administrateur nécessiterait une politique d'administration dédiée.
