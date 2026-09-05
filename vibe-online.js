@@ -8,9 +8,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const counter = document.getElementById('onlineCount');
 const label = document.getElementById('onlineUsersLabel');
-let unsubscribeUsers = null;
+let unsubscribePresence = null;
 let heartbeat = null;
-let currentUid = null;
 let currentUser = null;
 const ONLINE_WINDOW = 90_000;
 
@@ -31,8 +30,8 @@ function isRecentlyOnline(user) {
 }
 
 function startCounter() {
-  unsubscribeUsers?.();
-  unsubscribeUsers = onSnapshot(collection(db, 'users'), snap => {
+  unsubscribePresence?.();
+  unsubscribePresence = onSnapshot(collection(db, 'presence'), snap => {
     let count = 0;
     snap.forEach(d => { if (isRecentlyOnline(d.data())) count++; });
     render(count);
@@ -46,10 +45,9 @@ async function setPresence(user, online) {
   if (!user) return;
   try {
     const now = Date.now();
-    await setDoc(doc(db, 'users', user.uid), {
+    await setDoc(doc(db, 'presence', user.uid), {
       uid: user.uid,
       name: user.displayName || user.email?.split('@')[0] || 'Utilisateur',
-      email: user.email || '',
       avatar: user.photoURL || 'https://i.pravatar.cc/150?img=12',
       online,
       lastSeenMs: online ? now : 0,
@@ -78,7 +76,6 @@ function startHeartbeat(user) {
 
 onAuthStateChanged(auth, user => {
   if (currentUser && (!user || user.uid !== currentUser.uid)) stopHeartbeat(currentUser);
-  currentUid = user?.uid || null;
   currentUser = user || null;
   if (user) startHeartbeat(user);
   else {
