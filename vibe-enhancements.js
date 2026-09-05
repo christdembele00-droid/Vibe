@@ -17,7 +17,6 @@ function setUnread(room,n){n=Math.max(0,Number(n)||0);unread.set(room,n);if(n)lo
 function clearUnread(room){if(room)setUnread(room,0)}
 function activeTarget(){const t=window.VIBE_CURRENT_USER;return t&&!t.channel?t:null}
 function activeRoom(){const t=activeTarget();if(!uid||!t)return null;return t.group?t.id:roomId(uid,t.uid)}
-function escapeHtml(value){return String(value??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]))}
 
 function rerenderDirectory(){
   const input=$('search');if(!input)return;
@@ -62,7 +61,7 @@ function setupSearch(){
   input.addEventListener('input',e=>{if(internalSearch)return;e.stopImmediatePropagation();rerenderDirectory()},true);
   input.addEventListener('keydown',e=>{if(e.key==='Escape'){input.value='';internalSearch=true;input.dispatchEvent(new Event('input',{bubbles:true}));setTimeout(()=>internalSearch=false,0)}},true);
   $('clearSearch')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();input.value='';internalSearch=true;input.dispatchEvent(new Event('input',{bubbles:true}));setTimeout(()=>{internalSearch=false;input.focus()},0)},true);
-  document.querySelectorAll('.pill').forEach(p=>p.addEventListener('click',e=>{e.stopImmediatePropagation();filter=p.dataset.filter||'all';setTimeout(rerenderDirectory,0)},true))
+  document.querySelectorAll('.pill').forEach(p=>p.addEventListener('click',()=>{filter=p.dataset.filter||'all';setTimeout(rerenderDirectory,0)},true))
 }
 
 function watchRoom(room){
