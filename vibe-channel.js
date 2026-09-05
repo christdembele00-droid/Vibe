@@ -1,6 +1,6 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, doc, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 const app = getApps()[0];
 const auth = getAuth(app);
@@ -12,6 +12,7 @@ let channelUnsub = null;
 let channelActive = false;
 let observer = null;
 let booted = false;
+let sending = false;
 
 const $ = id => document.getElementById(id);
 const fallback = 'https://i.pravatar.cc/150?img=12';
@@ -43,8 +44,9 @@ function ensureChannelInSidebar() {
 }
 
 function renderMessage(id, message, box) {
+  const ownerId = message.senderId || message.sender || '';
   const el = document.createElement('div');
-  el.className = 'msg ' + (message.sender === currentUid ? 'sent' : 'received');
+  el.className = 'msg ' + (ownerId === currentUid ? 'sent' : 'received');
   el.dataset.messageId = id;
   if (message.deleted) {
     el.classList.add('deleted');
@@ -52,7 +54,7 @@ function renderMessage(id, message, box) {
     box.appendChild(el);
     return;
   }
-  if (message.sender !== currentUid) {
+  if (ownerId !== currentUid) {
     const author = document.createElement('small');
     author.className = 'channel-author';
     author.textContent = message.senderName || 'Utilisateur';
@@ -72,9 +74,9 @@ function renderMessage(id, message, box) {
   }
   const tm = document.createElement('span');
   tm.className = 'time';
-  tm.textContent = time(message.createdAt) + (message.sender === currentUid ? ' ✓' : '');
+  tm.textContent = time(message.createdAt) + (ownerId === currentUid ? ' ✓' : '');
   el.appendChild(tm);
-  if (message.sender === currentUid) {
+  if (ownerId === currentUid) {
     const actions = document.createElement('div');
     actions.className = 'message-actions';
     const edit = document.createElement('button');
@@ -95,16 +97,15 @@ function renderMessage(id, message, box) {
     remove.type = 'button';
     remove.textContent = '🗑️';
     remove.title = 'Supprimer';
-    remove.onclick = event => {
+    remove.onclick = async event => {
       event.stopPropagation();
       if (!confirm('Supprimer ce message pour tous ?')) return;
-      updateDoc(doc(db, ...CHANNEL_PATH, id), {
-        deleted: true,
-        text: '',
-        deletedAt: serverTimestamp(),
-        mediaURL: deleteField()
-      }).then(() => toast('Message supprimé pour tous.'))
-        .catch(error => toast('Suppression impossible : ' + (error?.message || 'erreur')));
+      try {
+        await deleteDoc(doc(db, ...CHANNEL_PATH, id));
+        toast('Message supprimé pour tous.');
+      } catch (error) {
+        toast('Suppression impossible : ' + (error?.message || 'erreur'));
+      }
     };
     actions.append(edit, remove);
     el.appendChild(actions);
@@ -149,7 +150,7 @@ function closeChannel() {
 async function sendChannelMessage(event) {
   event.preventDefault();
   event.stopImmediatePropagation();
-  if (!channelActive || !currentUid) return;
+  if (!channelActive || !currentUid || sending) return;
   const input = $('message');
   const text = input?.value.trim();
   if (!text) return;
@@ -157,9 +158,10 @@ async function sendChannelMessage(event) {
   if (!user || user.uid !== currentUid) return;
   const senderName = (user.displayName || user.email?.split('@')[0] || 'Utilisateur').trim().slice(0, 120);
   const senderAvatar = String(user.photoURL || fallback).slice(0, 1000);
+  sending = true;
   try {
     await addDoc(collection(db, ...CHANNEL_PATH), {
-      sender: currentUid,
+      senderId: currentUid,
       senderName,
       senderAvatar,
       text: text.slice(0, 4000),
@@ -168,6 +170,8 @@ async function sendChannelMessage(event) {
     input.value = '';
   } catch (error) {
     toast('Message non envoyé : ' + (error?.message || 'erreur'));
+  } finally {
+    sending = false;
   }
 }
 
