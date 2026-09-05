@@ -41,12 +41,13 @@ jobs:
           const expected=[
             'vibe-runtime.js','vibe-enhancements.js','vibe-ai.js','calls.js',
             'vibe-actions.js','vibe-online.js','vibe-analytics.js',
-            'vibe-local-notifications.js','vibe-channel.js','firebase-config.js'
+            'vibe-local-notifications.js','vibe-channel.js'
           ];
           for(const file of expected){
             if(!fs.existsSync(file)) throw new Error(`Missing file: ${file}`);
             if(!html.includes(file)) throw new Error(`Missing index.html reference: ${file}`);
           }
+          if(!fs.existsSync('firebase-config.js')) throw new Error('Missing file: firebase-config.js');
           const forbidden=['vibe-navigation.js','vibe-spa.js','vibe-native-panels.js','vibe-fixes.js','vibe-core.js','vibe-navigation.css','vibe-spa.css','vibe-native-panels.css','vibe-fixes.css','vibe-core.css'];
           for(const file of forbidden){
             if(html.includes(file)) throw new Error(`Forbidden stale reference: ${file}`);
