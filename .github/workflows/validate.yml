@@ -25,29 +25,34 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check vibe-runtime.js
+          node --check vibe-ai.js
+          node --check vibe-local-notifications.js
           node --check calls.js
           node --check vibe-actions.js
           node --check vibe-online.js
           node --check vibe-analytics.js
           node --check sw.js
-          node --check functions/index.js
           node --check firebase-config.js
 
       - name: Check JSON files
         run: |
-          node -e "for (const f of ['firebase.json','manifest.webmanifest','functions/package.json']) JSON.parse(require('fs').readFileSync(f,'utf8')); console.log('JSON OK')"
+          node -e "for (const f of ['firebase.json','manifest.webmanifest']) JSON.parse(require('fs').readFileSync(f,'utf8')); console.log('JSON OK')"
 
       - name: Check frontend references
         run: |
           test -f index.html
           test -f style.css
           test -f vibe-runtime.js
+          test -f vibe-ai.js
+          test -f vibe-local-notifications.js
           test -f calls.js
           test -f vibe-actions.js
           test -f vibe-online.js
           test -f vibe-analytics.js
           test -f firebase-config.js
           grep -q 'vibe-runtime.js' index.html
+          grep -q 'vibe-ai.js' index.html
+          grep -q 'vibe-local-notifications.js' index.html
           grep -q 'calls.js' index.html
           grep -q 'vibe-analytics.js' index.html
           ! grep -qE 'vibe-(navigation|spa|native-panels|fixes|core)\\.js' index.html
@@ -56,6 +61,8 @@ jobs:
       - name: Check PWA cache references
         run: |
           grep -q "vibe-runtime.js" sw.js
+          grep -q "vibe-ai.js" sw.js
+          grep -q "vibe-local-notifications.js" sw.js
           grep -q "calls.js" sw.js
           grep -q "vibe-online.js" sw.js
           grep -q "vibe-analytics.js" sw.js
