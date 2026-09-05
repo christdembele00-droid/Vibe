@@ -14,11 +14,11 @@ service firebase.storage {
         || request.resource.contentType == 'application/msword'
         || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     }
-    match /chat-media/{roomId}/{fileName=**} {
+    match /chat-media/{roomId}/{ownerUid}/{fileName=**} {
       allow read: if member(roomId);
-      allow create: if member(roomId) && validSize() && validType();
+      allow create: if member(roomId) && request.auth.uid == ownerUid && validSize() && validType();
       allow update: if false;
-      allow delete: if member(roomId);
+      allow delete: if member(roomId) && request.auth.uid == ownerUid;
     }
   }
 }
