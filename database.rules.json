@@ -3,6 +3,7 @@
     ".read": false,
     ".write": false,
     ".validate": false,
+
     "presence": {
       "$uid": {
         ".read": "auth != null",
@@ -23,24 +24,37 @@
         }
       }
     },
-    "messages": {
+
+    "chatMembers": {
       "$chatId": {
-        ".read": "auth != null",
-        "$messageId": {
-          ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid",
-          ".validate": "newData.hasChildren(['uid','createdAt','type']) && newData.child('uid').isString() && newData.child('createdAt').isNumber() && newData.child('type').isString() && (!newData.hasChild('text') || newData.child('text').isString())"
+        ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true",
+        ".write": false,
+        "$uid": {
+          ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true"
         }
       }
     },
+
+    "messages": {
+      "$chatId": {
+        ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true",
+        "$messageId": {
+          ".write": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true && !data.exists() && newData.child('uid').val() === auth.uid",
+          ".validate": "newData.hasChildren(['uid','createdAt','type']) && newData.child('uid').isString() && newData.child('createdAt').isNumber() && newData.child('type').isString() && (!newData.hasChild('text') || (newData.child('text').isString() && newData.child('text').val().length <= 20000)) && (!newData.hasChild('fileName') || newData.child('fileName').isString()) && (!newData.hasChild('fileUrl') || newData.child('fileUrl').isString())"
+        }
+      }
+    },
+
     "typing": {
       "$chatId": {
         "$uid": {
-          ".read": "auth != null",
-          ".write": "auth != null && auth.uid === $uid",
+          ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true",
+          ".write": "auth != null && auth.uid === $uid && root.child('chatMembers').child($chatId).child(auth.uid).val() === true",
           ".validate": "newData.isBoolean()"
         }
       }
     },
+
     "events": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
