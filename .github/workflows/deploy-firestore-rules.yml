@@ -1,4 +1,4 @@
-name: Deploy Firestore Rules
+name: Deploy Firebase Rules
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - firestore.rules
+      - storage.rules
       - firebase.json
   workflow_dispatch:
 
@@ -40,8 +41,8 @@ jobs:
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-service-account.json" >> "$GITHUB_ENV"
 
-      - name: Deploy Firestore rules
-        run: npx --yes firebase-tools@latest deploy --only firestore:rules --project vibe-749e5
+      - name: Deploy Firestore and Storage rules
+        run: npx --yes firebase-tools@latest deploy --only firestore:rules,storage --project vibe-749e5
 
       - name: Cleanup credentials
         if: always()
