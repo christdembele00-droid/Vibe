@@ -40,7 +40,7 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow read: if isMember(roomId);
         allow create: if isMember(roomId)
-          && request.resource.data.keys().hasOnly(['sender','receiver','text','createdAt','readBy','deliveredTo','status','mediaURL','mediaType','fileName','reactions'])
+          && request.resource.data.keys().hasOnly(['sender','receiver','text','createdAt','readBy','deliveredTo','status','mediaURL','mediaType','fileName','reactions','replyTo','replyText','replySender'])
           && request.resource.data.sender == request.auth.uid
           && request.resource.data.createdAt is timestamp
           && request.resource.data.readBy is list
@@ -53,7 +53,10 @@ service cloud.firestore {
           && (!('mediaURL' in request.resource.data) || (request.resource.data.mediaURL is string && request.resource.data.mediaURL.size() <= 2000))
           && (!('mediaType' in request.resource.data) || (request.resource.data.mediaType is string && request.resource.data.mediaType.size() <= 120))
           && (!('fileName' in request.resource.data) || (request.resource.data.fileName is string && request.resource.data.fileName.size() <= 200))
-          && (!('reactions' in request.resource.data) || (request.resource.data.reactions is map && request.resource.data.reactions.keys().size() <= participantCount(roomId)));
+          && (!('reactions' in request.resource.data) || (request.resource.data.reactions is map && request.resource.data.reactions.keys().size() <= participantCount(roomId)))
+          && (!('replyTo' in request.resource.data) || (request.resource.data.replyTo is string && request.resource.data.replyTo.size() <= 200))
+          && (!('replyText' in request.resource.data) || (request.resource.data.replyText is string && request.resource.data.replyText.size() <= 500))
+          && (!('replySender' in request.resource.data) || (request.resource.data.replySender is string && request.resource.data.replySender.size() <= 120));
 
         allow update: if isMember(roomId) && (
           (resource.data.sender == request.auth.uid
