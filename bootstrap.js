@@ -1,4 +1,4 @@
-const VERSION = '20260906k';
+const VERSION = '20260906l';
 
 const showBootError = (label, error) => {
   console.error(`[Vibe] ${label} impossible à charger:`, error);
@@ -28,7 +28,3 @@ await loadModule('appels', './webrtc-calls.js');
 await loadModule('fonctionnalités', './vibe-features.js');
 await loadModule('interface', './vibe-polish.js');
 await loadModule('menu', './whatsapp-menu.js');
-await loadModule('actions des messages', './whatsapp-message-actions.js');
-await loadModule('médias', './media-extras.js');
-await loadModule('recherche et améliorations', './vibe-enhancements.js');
-await loadModule('navigation', './vibe-right-pane.js');
