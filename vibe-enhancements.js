@@ -1,4 +1,4 @@
-import { auth, db, onAuthStateChanged, collection, doc, getDocs, addDoc, setDoc, query, where, limit, serverTimestamp, onSnapshot } from './firebase-client.js';
+import { auth, db, onAuthStateChanged, collection, doc, getDocs, addDoc, setDoc, query, where, orderBy, limit, serverTimestamp, onSnapshot } from './firebase-client.js';
 
 const $ = id => document.getElementById(id);
 let user = null;
@@ -23,20 +23,13 @@ async function indexUser(next) {
   const name = next.displayName || next.email?.split('@')[0] || 'Utilisateur';
   try {
     await setDoc(doc(db, 'userSearch', next.uid), {
-      uid: next.uid,
-      displayName: name,
-      displayNameLower: name.toLocaleLowerCase('fr-FR'),
-      photoURL: next.photoURL || null,
-      updatedAt: serverTimestamp()
+      uid: next.uid, displayName: name, displayNameLower: name.toLocaleLowerCase('fr-FR'),
+      photoURL: next.photoURL || null, updatedAt: serverTimestamp()
     }, { merge: true });
-  } catch (error) {
-    console.warn('Index utilisateur:', error);
-  }
+  } catch (error) { console.warn('Index utilisateur:', error); }
 }
 
-function restoreChats() {
-  if (window.VibeApp?.getChats) renderResults([...window.VibeApp.getChats()]);
-}
+function restoreChats() { if (window.VibeApp?.getChats) renderResults([...window.VibeApp.getChats()]); }
 
 function renderResults(chats, users = []) {
   const list = $('conversationList');
@@ -44,12 +37,7 @@ function renderResults(chats, users = []) {
   const chatHtml = chats.map(chat => `<button type="button" class="conversation-item" data-chat-id="${esc(chat.id)}"><div class="avatar">${esc((chat.name || 'V').charAt(0).toUpperCase())}</div><div><strong>${esc(chat.name || 'Discussion')}</strong><span>Discussion Vibe</span></div></button>`).join('');
   const userHtml = users.map(item => `<button type="button" class="conversation-item" data-user-result="${esc(item.uid)}"><div class="avatar">${esc((item.displayName || 'U').charAt(0).toUpperCase())}</div><div><strong>${esc(item.displayName || 'Utilisateur')}</strong><span>Utilisateur Vibe</span></div></button>`).join('');
   list.innerHTML = chatHtml + userHtml;
-  if (!chatHtml && !userHtml) {
-    const empty = document.createElement('div');
-    empty.className = 'conversation-item vibe-search-empty';
-    empty.innerHTML = '<div><strong>Aucun résultat</strong><span>Essayez un autre nom ou une autre discussion.</span></div>';
-    list.appendChild(empty);
-  }
+  if (!chatHtml && !userHtml) list.innerHTML = '<div class="conversation-item vibe-search-empty"><div><strong>Aucun résultat</strong><span>Essayez un autre nom ou une autre discussion.</span></div></div>';
 }
 
 async function search(value) {
@@ -57,19 +45,10 @@ async function search(value) {
   const generation = ++searchGeneration;
   const list = $('conversationList');
   if (!list) return;
-  if (!term) {
-    restoreChats();
-    return;
-  }
-
+  if (!term) { restoreChats(); return; }
   const chats = (window.VibeApp?.getChats?.() || []).filter(chat => String(chat.name || '').toLocaleLowerCase('fr-FR').includes(term));
   try {
-    const q = query(
-      collection(db, 'userSearch'),
-      where('displayNameLower', '>=', term),
-      where('displayNameLower', '<=', term + '\uf8ff'),
-      limit(20)
-    );
+    const q = query(collection(db, 'userSearch'), where('displayNameLower', '>=', term), where('displayNameLower', '<=', term + '\uf8ff'), limit(20));
     const snap = await getDocs(q);
     if (generation !== searchGeneration || $('searchInput')?.value.trim().toLocaleLowerCase('fr-FR') !== term) return;
     const users = snap.docs.map(item => item.data()).filter(item => item.uid !== user?.uid);
@@ -82,10 +61,7 @@ async function search(value) {
   }
 }
 
-function scheduleSearch(value) {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => void search(value), 180);
-}
+function scheduleSearch(value) { clearTimeout(searchTimer); searchTimer = setTimeout(() => void search(value), 180); }
 
 async function openUserResult(targetUid) {
   if (!user || !targetUid || targetUid === user.uid) return;
@@ -94,9 +70,7 @@ async function openUserResult(targetUid) {
     let found = null;
     snap.forEach(item => {
       const data = item.data();
-      if (!found && Array.isArray(data.participantIds) && data.participantIds.length === 2 && data.participantIds.includes(targetUid)) {
-        found = { id: item.id, ...data };
-      }
+      if (!found && Array.isArray(data.participantIds) && data.participantIds.length === 2 && data.participantIds.includes(targetUid)) found = { id: item.id, ...data };
     });
     if (!found) {
       const peer = await getDocs(query(collection(db, 'userSearch'), where('uid', '==', targetUid), limit(1)));
@@ -104,23 +78,14 @@ async function openUserResult(targetUid) {
       if (!profile) return toast('Utilisateur introuvable.');
       const chatId = `private_${[user.uid, targetUid].sort().join('_')}`;
       const ref = doc(db, 'conversations', chatId);
-      const existing = await getDocs(query(collection(db, 'conversations'), where('participantIds', 'array-contains', user.uid), limit(100)));
-      existing.forEach(item => {
-        if (!found && item.id === chatId) found = { id: item.id, ...item.data() };
-      });
-      if (!found) {
+      const existing = await getDoc(ref);
+      if (existing.exists()) found = { id: existing.id, ...existing.data() };
+      else {
         const inviteToken = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
-        await setDoc(ref, {
-          name: profile.displayName || 'Discussion',
-          ownerId: user.uid,
-          participantIds: [user.uid, targetUid],
-          inviteToken,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          type: 'private'
-        }, { merge: true });
+        const chatData = { name: `Discussion avec ${profile.displayName || 'Utilisateur'}`, ownerId: user.uid, participantIds: [user.uid, targetUid], inviteToken, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), type: 'private' };
+        await setDoc(ref, chatData, { merge: true });
         await setDoc(doc(db, 'users', user.uid, 'conversations', chatId), { chatId, updatedAt: serverTimestamp() }, { merge: true });
-        found = { id: chatId, name: profile.displayName || 'Discussion', participantIds: [user.uid, targetUid], type: 'private' };
+        found = { id: chatId, ...chatData };
       }
     }
     window.VibeApp?.openChat(found.id, found);
@@ -149,7 +114,7 @@ function watchNotifications() {
   onSnapshot(root, snap => {
     stops.splice(0).forEach(stop => stop());
     snap.forEach(chatDoc => {
-      const mq = query(collection(db, 'conversations', chatDoc.id, 'messages'), limit(1));
+      const mq = query(collection(db, 'conversations', chatDoc.id, 'messages'), orderBy('createdAt', 'desc'), limit(1));
       stops.push(onSnapshot(mq, ms => {
         if (!notificationReady || document.visibilityState === 'visible') return;
         const item = ms.docs[0];
@@ -159,7 +124,7 @@ function watchNotifications() {
         if (sessionStorage.getItem(key)) return;
         sessionStorage.setItem(key, '1');
         new Notification(chatDoc.data().name || 'Vibe', { body: String(message.text || 'Nouveau message').slice(0, 120) });
-      }));
+      }, error => console.warn('Notification messages:', error)));
     });
   }, error => console.warn('Notifications Vibe:', error));
 }
@@ -172,33 +137,22 @@ async function loadCallHistory() {
     const snap = await getDocs(query(collection(db, 'callHistory', user.uid, 'items'), limit(50)));
     const rows = snap.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
     list.innerHTML = rows.map(call => `<div class="conversation-item"><div class="avatar">${call.kind === 'video' ? '▣' : '☎'}</div><div><strong>${esc(call.peerName || 'Appel')}</strong><span>${call.status === 'missed' ? 'Appel manqué' : call.status === 'rejected' ? 'Refusé' : 'Appel terminé'} · ${call.kind === 'video' ? 'Vidéo' : 'Audio'}</span></div></div>`).join('') || '<div class="conversation-item"><div><strong>Aucun appel</strong><span>Votre historique apparaîtra ici</span></div></div>';
-  } catch (error) {
-    console.warn('Historique appels:', error);
-    toast(`Historique indisponible : ${error.message}`);
-  }
+  } catch (error) { console.warn('Historique appels:', error); toast(`Historique indisponible : ${error.message}`); }
 }
 
 function bind() {
   const input = $('searchInput');
   input?.addEventListener('input', event => scheduleSearch(event.target.value));
   input?.addEventListener('focus', () => void enableNotifications());
-  $('conversationList')?.addEventListener('click', event => {
-    const userRow = event.target.closest('[data-user-result]');
-    if (userRow) void openUserResult(userRow.dataset.userResult);
-  });
-  document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
-    if (tab.dataset.view === 'calls') setTimeout(() => void loadCallHistory(), 0);
-  }));
+  $('conversationList')?.addEventListener('click', event => { const userRow = event.target.closest('[data-user-result]'); if (userRow) void openUserResult(userRow.dataset.userResult); });
+  document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => { if (tab.dataset.view === 'calls') setTimeout(() => void loadCallHistory(), 0); }));
 }
 
 onAuthStateChanged(auth, next => {
   user = next;
   stopNotifications?.();
   stopNotifications = null;
-  if (user) {
-    void indexUser(user);
-    watchNotifications();
-  }
+  if (user) { void indexUser(user); watchNotifications(); }
 });
 
 bind();
