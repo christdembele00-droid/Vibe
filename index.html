@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#00a884">
+  <title>Vibe - Messagerie</title>
+  <link rel="stylesheet" href="vibe-whatsapp-final.css?v=1">
+</head>
+<body>
+  <div class="app-shell" id="app-shell">
+    <aside class="left-sidebar">
+      <header class="sidebar-header">
+        <div class="user-block">
+          <div class="user-avatar" id="current-user-avatar">V</div>
+          <div>
+            <strong id="current-user-name">Vibe</strong>
+            <small id="connection-status">Connexion…</small>
+          </div>
+        </div>
+        <div class="sidebar-actions">
+          <button id="btn-status" type="button" title="Statuts">◉</button>
+          <button id="btn-calls" type="button" title="Appels">☎</button>
+          <button id="btn-settings" type="button" title="Paramètres">⚙</button>
+        </div>
+      </header>
+
+      <div class="search-container">
+        <label class="search-input-wrapper" for="search-chat">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" id="search-chat" placeholder="Rechercher ou démarrer une discussion" autocomplete="off">
+        </label>
+      </div>
+
+      <div class="chats-list" id="chats-list-container" aria-live="polite"></div>
+    </aside>
+
+    <main class="main-chat-panel" id="main-chat-panel">
+      <section class="welcome-screen" id="welcome-screen">
+        <div class="welcome-illustration" aria-hidden="true">◌</div>
+        <h1>Vibe Web</h1>
+        <p>Une messagerie en temps réel propulsée par Firestore.</p>
+        <small>Choisissez une discussion pour commencer.</small>
+      </section>
+
+      <section class="chat-view hidden" id="chat-view">
+        <header class="chat-header">
+          <div class="chat-avatar" id="chat-avatar">V</div>
+          <div class="chat-title-wrap">
+            <strong id="chat-title">Discussion</strong>
+            <small id="chat-presence">hors ligne</small>
+          </div>
+        </header>
+        <div class="messages" id="messages" aria-live="polite"></div>
+        <form class="composer" id="message-form">
+          <input id="message-input" type="text" maxlength="2000" placeholder="Écrire un message" autocomplete="off">
+          <button type="submit" title="Envoyer">➤</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <input id="toast" class="toast" aria-live="assertive" readonly>
+  <script type="module" src="firebase-client.js?v=1"></script>
+</body>
+</html>
