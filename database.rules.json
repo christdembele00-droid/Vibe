@@ -30,7 +30,9 @@
         ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true",
         ".write": false,
         "$uid": {
-          ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true"
+          ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true",
+          ".write": "auth != null && auth.uid === $uid && !data.exists() && newData.val() === true",
+          ".validate": "newData.isBoolean() && newData.val() === true"
         }
       }
     },
