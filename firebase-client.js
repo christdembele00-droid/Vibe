@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, GithubAuthProvider, linkWithPopup, linkWithRedirect } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, GithubAuthProvider, EmailAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, linkWithPopup, linkWithRedirect } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { getDatabase, ref as databaseRef, onValue, set, push, remove, onDisconnect, serverTimestamp as databaseServerTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
 import { firebaseConfig } from './firebase-config.js';
 
@@ -10,33 +10,6 @@ const db = getDatabase(app, firebaseConfig.databaseURL);
 const rtdb = db;
 const googleProvider = new GoogleAuthProvider();
 const githubProvider = new GithubAuthProvider();
-
-// Compatibilité avec l'ancien code : aucune connexion anonyme automatique.
-// L'utilisateur doit ouvrir une vraie session depuis l'interface d'authentification.
-async function signInAnonymously() {
-  return auth.currentUser ?? null;
-}
-
-export {
-  FIREBASE_ENABLED,
-  app,
-  auth,
-  db,
-  rtdb,
-  databaseRef,
-  onValue,
-  set,
-  push,
-  remove,
-  onDisconnect,
-  databaseServerTimestamp,
-  onAuthStateChanged,
-  signInAnonymously,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  googleProvider,
-  githubProvider,
-  linkWithPopup,
-  linkWithRedirect
-};
+const emailProvider = new EmailAuthProvider();
+async function signInAnonymously(){ return auth.currentUser ?? null; }
+export { FIREBASE_ENABLED, app, auth, db, rtdb, databaseRef, onValue, set, push, remove, onDisconnect, databaseServerTimestamp, onAuthStateChanged, signInAnonymously, signInWithPopup, signInWithRedirect, getRedirectResult, googleProvider, githubProvider, emailProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, linkWithPopup, linkWithRedirect };
