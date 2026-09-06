@@ -1,0 +1,88 @@
+import { auth, db, collection, onSnapshot, query, orderBy, limit } from './firebase-client.js';
+
+let panel = null;
+let stopChannels = null;
+
+const icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5z"/><path d="m9 8 6 4-6 4z"/></svg>';
+
+function ensurePanel() {
+  if (panel) return panel;
+  panel = document.createElement('section');
+  panel.id = 'vibeMediaPanel';
+  panel.className = 'vibe-media-panel hidden';
+  panel.innerHTML = `<header class="vibe-media-header"><button class="glass-btn" id="vibeMediaClose" type="button" aria-label="Fermer les médias">‹</button><div><strong>Média</strong><span>Chaînes Vibe</span></div></header><div class="vibe-media-body"><div class="vibe-media-intro"><div class="vibe-media-icon">${icon}</div><div><strong>Chaînes</strong><span>Découvrez les chaînes disponibles sur Vibe.</span></div></div><div id="vibeMediaChannels" class="vibe-media-channels"><div class="vibe-media-empty">Chargement des chaînes…</div></div></div>`;
+  document.getElementById('chatPanel')?.appendChild(panel);
+  panel.querySelector('#vibeMediaClose')?.addEventListener('click', closeMedia);
+  return panel;
+}
+
+function renderChannels(channels) {
+  const list = ensurePanel().querySelector('#vibeMediaChannels');
+  if (!list) return;
+  if (!channels.length) {
+    list.innerHTML = '<div class="vibe-media-empty">Aucune chaîne disponible pour le moment.</div>';
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  channels.forEach(channel => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'vibe-channel-card';
+    const avatar = document.createElement('div');
+    avatar.className = 'vibe-channel-avatar';
+    if (channel.photoURL) {
+      const img = document.createElement('img'); img.src = channel.photoURL; img.alt = ''; avatar.appendChild(img);
+    } else avatar.textContent = (channel.name || 'C')[0].toUpperCase();
+    const copy = document.createElement('span');
+    const name = document.createElement('strong'); name.textContent = channel.name || 'Chaîne Vibe';
+    const description = document.createElement('small'); description.textContent = channel.description || 'Chaîne Vibe';
+    copy.append(name, description);
+    const arrow = document.createElement('b'); arrow.textContent = '›';
+    button.append(avatar, copy, arrow);
+    button.addEventListener('click', () => openChannel(channel));
+    fragment.appendChild(button);
+  });
+  list.replaceChildren(fragment);
+}
+
+function subscribeChannels() {
+  if (!auth?.currentUser || stopChannels) return;
+  try {
+    const q = query(collection(db, 'channels'), orderBy('updatedAt', 'desc'), limit(50));
+    stopChannels = onSnapshot(q, snap => {
+      renderChannels(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, error => {
+      console.warn('Chaînes Vibe:', error);
+      const list = ensurePanel().querySelector('#vibeMediaChannels');
+      if (list) list.innerHTML = '<div class="vibe-media-empty">Impossible de charger les chaînes.</div>';
+    });
+  } catch (error) { console.warn('Chaînes Vibe:', error); }
+}
+
+function openChannel(channel) {
+  const list = ensurePanel().querySelector('#vibeMediaChannels');
+  if (list) {
+    list.innerHTML = `<div class="vibe-channel-detail"><div class="vibe-channel-avatar large">${(channel.name || 'C')[0].toUpperCase()}</div><h3></h3><p></p><button type="button" class="vibe-media-back">Retour aux chaînes</button></div>`;
+    list.querySelector('h3').textContent = channel.name || 'Chaîne Vibe';
+    list.querySelector('p').textContent = channel.description || 'Bienvenue sur cette chaîne.';
+    list.querySelector('.vibe-media-back').addEventListener('click', () => subscribeChannels());
+  }
+}
+
+function openMedia() {
+  const el = ensurePanel();
+  el.classList.remove('hidden');
+  document.getElementById('chatView')?.classList.add('hidden');
+  document.getElementById('emptyState')?.classList.add('hidden');
+  subscribeChannels();
+}
+
+function closeMedia() {
+  panel?.classList.add('hidden');
+  document.getElementById('chatView')?.classList.remove('hidden');
+}
+
+document.addEventListener('click', event => {
+  if (event.target.closest('#vibeMediaBtn')) openMedia();
+});
+document.addEventListener('vibe:auth-changed', () => { if (!auth?.currentUser) stopChannels?.(); stopChannels = null; });
