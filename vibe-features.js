@@ -1,5 +1,4 @@
 import { db } from './firebase-client.js';
-import './vibe-customization.js';
 
 const $ = (id) => document.getElementById(id);
 
