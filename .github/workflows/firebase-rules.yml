@@ -14,9 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,6 +35,4 @@ jobs:
         run: npm install --global firebase-tools
 
       - name: Deploy Realtime Database rules
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: firebase deploy --only database --token "$FIREBASE_TOKEN" --non-interactive
+        run: firebase deploy --only database --project vibe-749e5 --non-interactive
