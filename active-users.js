@@ -10,13 +10,15 @@ const list = () => document.getElementById('activeUsersList');
 let stop = null;
 let currentUid = null;
 
-const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>\"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#39;' }[c]));
 
 function render(users) {
   const el = list();
   if (!el) return;
   const rows = users.filter((u) => u.uid !== currentUid);
-  const count = rows.length + (currentUid ? 1 : 0);
+  // Le compteur doit refléter uniquement les documents réellement online dans Firestore.
+  // On ne rajoute plus artificiellement l'utilisateur courant.
+  const count = users.length;
   el.dataset.count = String(count);
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 11px;margin:3px 2px 7px;border:1px solid rgba(255,255,255,.07);border-radius:15px;background:linear-gradient(135deg,rgba(255,122,24,.12),rgba(255,255,255,.025));">
@@ -40,7 +42,10 @@ function watch() {
     snap.forEach((item) => users.push({ uid: item.id, ...item.data() }));
     users.sort((a, b) => String(a.displayName || a.uid).localeCompare(String(b.displayName || b.uid), 'fr'));
     queueMicrotask(() => render(users));
-  }, () => render([]));
+  }, (error) => {
+    console.warn('Présence Firestore:', error);
+    render([]);
+  });
 }
 
 onAuthStateChanged(auth, (user) => { currentUid = user?.uid || null; watch(); });
