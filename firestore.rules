@@ -44,7 +44,11 @@ service cloud.firestore {
       allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
-    match /presence/{uid} { allow read: if signedIn(); allow create, update, delete: if isUser(uid) && request.resource.data.uid == uid; }
+    match /presence/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isUser(uid) && request.resource.data.uid == uid;
+      allow delete: if isUser(uid);
+    }
 
     match /calls/{id} {
       allow read: if signedIn() && (resource.data.callerUid == request.auth.uid || resource.data.calleeUid == request.auth.uid);
@@ -66,7 +70,11 @@ service cloud.firestore {
     match /favorites/{uid}/items/{id} { allow read, write: if isUser(uid); }
     match /archives/{uid}/items/{id} { allow read, write: if isUser(uid); }
     match /pinnedMessages/{uid}/items/{id} { allow read, write: if isUser(uid); }
-    match /callHistory/{uid}/items/{id} { allow read: if isUser(uid); allow create, update, delete: if isUser(uid) && request.resource.data.uid == request.auth.uid; }
+    match /callHistory/{uid}/items/{id} {
+      allow read: if isUser(uid);
+      allow create, update: if isUser(uid) && request.resource.data.uid == request.auth.uid;
+      allow delete: if isUser(uid);
+    }
     match /reports/{id} { allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid; allow read: if signedIn() && resource.data.reporterId == request.auth.uid; }
     match /appConfig/{id} { allow read: if signedIn(); allow write: if false; }
     match /{document=**} { allow read, write: if false; }
