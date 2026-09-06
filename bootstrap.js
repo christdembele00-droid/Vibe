@@ -1,3 +1,5 @@
+const VERSION = '20260906i';
+
 const showBootError = (label, error) => {
   console.error(`[Vibe] ${label} impossible à charger:`, error);
   const toast = document.getElementById('toast');
@@ -9,7 +11,7 @@ const showBootError = (label, error) => {
 
 const loadModule = async (label, path) => {
   try {
-    await import(path);
+    await import(`${path}?v=${VERSION}`);
     return true;
   } catch (error) {
     showBootError(label, error);
@@ -17,8 +19,8 @@ const loadModule = async (label, path) => {
   }
 };
 
-// Un seul module actif par responsabilité : le cœur Firebase/messagerie est
-// chargé avant les modules UI et les enrichissements qui dépendent de lui.
+// Un seul module actif par responsabilité. Le cache-buster est appliqué à
+// chaque module dynamique pour éviter qu'un ancien app.js reste en mémoire.
 await loadModule('Firebase', './firebase-client.js');
 await loadModule('authentification', './auth-ui.js');
 await loadModule('messagerie', './app.js');
