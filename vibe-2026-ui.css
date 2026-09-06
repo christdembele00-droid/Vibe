@@ -1,3 +1,5 @@
+@import url("./vibe-whatsapp-layout.css?v=20260906a");
+
 /* VIBE — UI messagerie, inspirée du comportement visuel de WhatsApp. */
 :root{--vibe-ease:cubic-bezier(.22,1,.36,1);--vibe-fast:150ms;--vibe-med:220ms;--wa-green:#008069;--wa-green-dark:#006d5b;--wa-bg:#efeae2;--wa-header:#f0f2f5;--wa-text:#111b21;--wa-muted:#667781}
 .app-shell{animation:vibePageIn .25s ease both}@keyframes vibePageIn{from{opacity:.98}to{opacity:1}}
@@ -11,32 +13,6 @@
 .message{animation:vibeMessageIn .12s ease both;transition:none}@keyframes vibeMessageIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}.message:hover{transform:none;box-shadow:0 1px 1px rgba(0,0,0,.12)}
 .online-dot{animation:none}.composer{transition:box-shadow var(--vibe-fast) ease}.composer:focus-within{transform:none}.send-btn{transition:background var(--vibe-fast) ease,transform var(--vibe-fast) ease}.send-btn:hover{transform:none;box-shadow:none}
 button:focus-visible,input:focus-visible{outline-color:#53bdeb}
-
-/* Mobile : comportement de panneau unique, avec glissement comme une messagerie native. */
-@media(max-width:760px){
-  .app-shell{position:relative;isolation:isolate;overflow:hidden}
-  .sidebar,.chat-panel{transition:transform var(--vibe-med) var(--vibe-ease),opacity var(--vibe-med) ease}
-  .sidebar{transform:translate3d(0,0,0);opacity:1}
-  .chat-panel{position:absolute;inset:0;z-index:10;display:flex!important;transform:translate3d(100%,0,0);opacity:0;pointer-events:none;visibility:hidden}
-  .app-shell.chat-open .sidebar{display:flex;transform:translate3d(-18%,0,0);opacity:0;pointer-events:none}
-  .app-shell.chat-open .chat-panel{transform:translate3d(0,0,0);opacity:1;pointer-events:auto;visibility:visible}
-  .app-shell:not(.chat-open) .chat-view{display:none!important}
-  .app-shell.chat-open .chat-view{display:flex!important}
-  .chat-header{height:60px;min-height:60px;padding:6px 8px}
-  .chat-header .back-btn{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px}
-  .chat-title{margin-left:4px}
-  .chat-actions{gap:0}
-  .messages{padding:12px 8px 10px;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
-  .message{max-width:82%;border-radius:7.5px}
-  .message.in{border-top-left-radius:0}.message.out,.message.mine{border-top-right-radius:0}
-  .composer{margin:5px 6px;padding:4px 5px;border-radius:22px;gap:2px;padding-bottom:max(4px,env(safe-area-inset-bottom))}
-  .composer input{min-height:40px}
-  .conversation-item,.conversation{touch-action:manipulation}
-  .conversation-item:active,.conversation:active{background:#e9edef;transform:none}
-  .side-header{height:58px;min-height:58px}
-  .search-box{margin:7px 12px;height:42px}
-  .main-tabs{display:none}
-  .conversation-item{min-height:72px;padding:10px 14px}
-}
+@media(max-width:760px){.app-shell{position:relative;isolation:isolate;overflow:hidden}.sidebar,.chat-panel{transition:transform var(--vibe-med) var(--vibe-ease),opacity var(--vibe-med) ease}.sidebar{transform:translate3d(0,0,0);opacity:1}.chat-panel{position:absolute;inset:0;z-index:10;display:flex!important;transform:translate3d(100%,0,0);opacity:0;pointer-events:none;visibility:hidden}.app-shell.chat-open .sidebar{display:flex;transform:translate3d(-18%,0,0);opacity:0;pointer-events:none}.app-shell.chat-open .chat-panel{transform:translate3d(0,0,0);opacity:1;pointer-events:auto;visibility:visible}.app-shell:not(.chat-open) .chat-view{display:none!important}.app-shell.chat-open .chat-view{display:flex!important}.chat-header{height:60px;min-height:60px;padding:6px 8px}.chat-header .back-btn{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px}.chat-title{margin-left:4px}.chat-actions{gap:0}.messages{padding:12px 8px 10px;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}.message{max-width:82%;border-radius:7.5px}.message.in{border-top-left-radius:0}.message.out,.message.mine{border-top-right-radius:0}.composer{margin:5px 6px;padding:4px 5px;border-radius:22px;gap:2px;padding-bottom:max(4px,env(safe-area-inset-bottom))}.composer input{min-height:40px}.conversation-item,.conversation{touch-action:manipulation}.conversation-item:active,.conversation:active{background:#e9edef;transform:none}.side-header{height:58px;min-height:58px}.search-box{margin:7px 12px;height:42px}.main-tabs{display:none}.conversation-item{min-height:72px;padding:10px 14px}}
 @media(max-width:420px){.message{max-width:86%}.chat-actions .glass-btn{width:42px;flex-basis:42px}.welcome{padding:24px 18px}.welcome h1{font-size:30px}}
 @media(prefers-reduced-motion:reduce){.app-shell,.message{animation:none!important}.glass-btn,.composer-btn,.back-btn,.conversation-item,.conversation,.composer,.send-btn,.sidebar,.chat-panel{transition:none!important}}
