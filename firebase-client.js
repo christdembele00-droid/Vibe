@@ -8,15 +8,26 @@ import { firebaseConfig } from './firebase-config.js';
 const FIREBASE_ENABLED = Boolean(firebaseConfig?.apiKey && firebaseConfig?.projectId);
 const app = getApps()[0] ?? initializeApp(firebaseConfig);
 
-let db;
-try {
-  db = initializeFirestore(app, {
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-  });
-} catch (error) {
-  console.warn('[Firebase Firestore] persistence unavailable, fallback to default cache:', error);
-  db = getFirestore(app);
+// Plusieurs modules Vibe peuvent charger ce fichier avec des URLs différentes
+// (par exemple avec/sans ?v=...). Les modules ES sont alors évalués séparément.
+// Firestore doit néanmoins être initialisé une seule fois pour la même app.
+const shared = globalThis.__VIBE_FIREBASE__ || (globalThis.__VIBE_FIREBASE__ = {});
+let db = shared.firestore;
+
+if (!db) {
+  try {
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+  } catch (error) {
+    // Si un autre module a déjà créé Firestore avec les options par défaut,
+    // on réutilise cette instance au lieu de relancer initializeFirestore().
+    console.warn('[Firebase Firestore] persistence unavailable, using existing/default cache:', error);
+    db = getFirestore(app);
+  }
+  shared.firestore = db;
 }
+
 const firestore = db;
 const storage = getStorage(app);
 const auth = getAuth(app);
