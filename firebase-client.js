@@ -2,7 +2,7 @@ import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.1.
 import {
   getAuth,
   onAuthStateChanged,
-  signInAnonymously,
+  signInAnonymously as firebaseSignInAnonymously,
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
@@ -39,6 +39,12 @@ if (FIREBASE_ENABLED) {
 
 const googleProvider = new GoogleAuthProvider();
 const githubProvider = new GithubAuthProvider();
+
+// Compatibilité avec l'ancien app.js : Vibe ne crée plus de comptes anonymes.
+// L'accès réel passe par Google/GitHub (ou e-mail/mot de passe configuré dans Firebase).
+async function signInAnonymously() {
+  return auth?.currentUser ?? null;
+}
 
 export {
   auth,
