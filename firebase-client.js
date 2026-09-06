@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAnalytics, isSupported as analyticsIsSupported } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, GithubAuthProvider, EmailAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, linkWithPopup, linkWithRedirect } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch, arrayUnion } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js';
 import { firebaseConfig } from './firebase-config.js';
 
@@ -29,7 +29,7 @@ async function signInAnonymously(){ return auth.currentUser ?? null; }
 export {
   FIREBASE_ENABLED, app, auth, db, firestore, storage, analytics, analyticsReady,
   collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs,
-  onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch, arrayUnion,
+  onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch, arrayUnion, arrayRemove,
   ref, uploadBytes, getDownloadURL,
   onAuthStateChanged, signInAnonymously, signInWithPopup, signInWithRedirect,
   getRedirectResult, googleProvider, githubProvider, emailProvider,
