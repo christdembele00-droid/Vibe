@@ -20,3 +20,4 @@ await loadModule('thème Vibe 2026', './vibe-2026-theme.js');
 await loadModule('menu', './whatsapp-menu.js');
 await loadModule('médias et chaînes', './vibe-media-channels.js');
 await loadModule('discussions privées', './vibe-direct-chat.js');
+await loadModule('améliorations des fonctions', './vibe-function-improvements.js');
