@@ -1,4 +1,4 @@
-name: Deploy Firebase Realtime Database rules
+name: Validate Firebase Realtime Database rules
 
 on:
   workflow_dispatch:
@@ -9,30 +9,28 @@ on:
       - 'firebase.json'
 
 jobs:
-  deploy-rtdb-rules:
-    name: Deploy Realtime Database rules
+  validate-rtdb-rules:
+    name: Validate Realtime Database rules
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v3
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install Firebase CLI
-        run: npm install --global firebase-tools
+      - name: Validate rules JSON
+        run: node -e "const fs=require('fs'); const p='database.rules.json'; const data=JSON.parse(fs.readFileSync(p,'utf8')); if(!data || typeof data.rules!=='object' || Array.isArray(data.rules)) throw new Error('database.rules.json doit contenir un objet rules'); console.log('Firebase Realtime Database rules JSON: OK');"
 
-      - name: Deploy Realtime Database rules
-        run: firebase deploy --only database --project vibe-749e5 --non-interactive
+      - name: Verify Firebase project configuration
+        run: node -e "const fs=require('fs'); const f=JSON.parse(fs.readFileSync('firebase.json','utf8')); if(!f.database || f.database.rules!=='database.rules.json') throw new Error('firebase.json ne référence pas database.rules.json'); console.log('Firebase configuration: OK');"
+
+      - name: Report
+        run: |
+          echo "Firebase rules validation completed."
+          echo "No FIREBASE_TOKEN, Google Cloud credentials, or deployment credentials are required."
+          echo "Production publication remains managed from Firebase Console."
