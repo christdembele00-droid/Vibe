@@ -8,143 +8,56 @@
   <meta name="robots" content="index,follow">
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="canonical" href="https://christdembele00-droid.github.io/Vibe/">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Vibe">
-  <meta property="og:title" content="Vibe — Messenger">
-  <meta property="og:description" content="Messagerie, statuts, appels et chaînes.">
-  <meta property="og:url" content="https://christdembele00-droid.github.io/Vibe/">
-  <meta property="og:locale" content="fr_FR">
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Vibe — Messenger">
-  <meta name="twitter:description" content="Messagerie, statuts, appels et chaînes.">
-  <link rel="stylesheet" href="styles.css?v=20260906r9">
-  <link rel="stylesheet" href="auth-ui.css?v=20260906r9">
-  <link rel="stylesheet" href="vibe-settings.css?v=20260906r9">
-  <link rel="stylesheet" href="active-users.css?v=20260906r9">
-  <link rel="stylesheet" href="responsive.css?v=20260906r9">
-  <link rel="stylesheet" href="visual-enhancements.css?v=20260906r9">
-  <link rel="stylesheet" href="vibe-features.css?v=20260906r9">
-  <link rel="stylesheet" href="whatsapp-menu.css?v=20260906r9">
-  <link rel="stylesheet" href="vibe-2026-ui.css?v=20260906r9">
-  <link rel="stylesheet" href="vibe-2026-theme.css?v=20260906r9">
-  <link rel="stylesheet" href="vibe-whatsapp-polish.css?v=20260906r9">
-  <link rel="stylesheet" href="vibe-whatsapp-identity.css?v=20260906r9">
-  <link rel="stylesheet" href="vibe-whatsapp-final.css?v=20260906r9">
+  <meta property="og:type" content="website"><meta property="og:site_name" content="Vibe"><meta property="og:title" content="Vibe — Messenger"><meta property="og:description" content="Messagerie, statuts, appels et chaînes."><meta property="og:url" content="https://christdembele00-droid.github.io/Vibe/"><meta property="og:locale" content="fr_FR">
+  <meta name="twitter:card" content="summary"><meta name="twitter:title" content="Vibe — Messenger"><meta name="twitter:description" content="Messagerie, statuts, appels et chaînes.">
+  <link rel="stylesheet" href="styles.css?v=20260906r10">
+  <link rel="stylesheet" href="auth-ui.css?v=20260906r10">
+  <link rel="stylesheet" href="vibe-settings.css?v=20260906r10">
+  <link rel="stylesheet" href="active-users.css?v=20260906r10">
+  <link rel="stylesheet" href="responsive.css?v=20260906r10">
+  <link rel="stylesheet" href="visual-enhancements.css?v=20260906r10">
+  <link rel="stylesheet" href="vibe-features.css?v=20260906r10">
+  <link rel="stylesheet" href="whatsapp-menu.css?v=20260906r10">
+  <link rel="stylesheet" href="vibe-2026-ui.css?v=20260906r10">
+  <link rel="stylesheet" href="vibe-2026-theme.css?v=20260906r10">
+  <link rel="stylesheet" href="vibe-whatsapp-polish.css?v=20260906r10">
+  <link rel="stylesheet" href="vibe-whatsapp-identity.css?v=20260906r10">
+  <link rel="stylesheet" href="vibe-whatsapp-final.css?v=20260906r10">
   <link rel="stylesheet" href="vibe-fullscreen-whatsapp.css?v=20260906r10">
+  <link rel="stylesheet" href="vibe-fullscreen-fix.css?v=20260906r11">
   <title>Vibe — Messenger</title>
 </head>
 <body>
   <div class="app-shell" id="appShell">
     <aside class="vibe-rail" aria-label="Navigation principale">
-      <div class="rail-top">
-        <div class="rail-brand" title="Vibe"><span class="vibe-mark">V</span></div>
-      </div>
+      <div class="rail-top"><div class="rail-brand" title="Vibe"><span class="vibe-mark">V</span></div></div>
       <nav class="rail-nav" aria-label="Sections">
-        <button class="rail-item active" type="button" data-view="chats" title="Discussions" aria-label="Discussions">
-          <span class="rail-svg chat-icon" aria-hidden="true"></span><span class="rail-label">Discussions</span><b id="unreadBadge" hidden>0</b>
-        </button>
-        <button class="rail-item" type="button" data-view="status" title="Statuts" aria-label="Statuts">
-          <span class="rail-svg status-icon" aria-hidden="true"></span><span class="rail-label">Statuts</span>
-        </button>
-        <button class="rail-item" type="button" data-view="calls" title="Appels" aria-label="Appels">
-          <span class="rail-svg calls-icon" aria-hidden="true"></span><span class="rail-label">Appels</span>
-        </button>
-        <button class="rail-item" type="button" data-view="channels" title="Chaînes" aria-label="Chaînes">
-          <span class="rail-svg channels-icon" aria-hidden="true"></span><span class="rail-label">Chaînes</span>
-        </button>
+        <button class="rail-item active" type="button" data-view="chats" title="Discussions" aria-label="Discussions"><span class="rail-svg chat-icon" aria-hidden="true"></span><span class="rail-label">Discussions</span><b id="unreadBadge" hidden>0</b></button>
+        <button class="rail-item" type="button" data-view="status" title="Statuts" aria-label="Statuts"><span class="rail-svg status-icon" aria-hidden="true"></span><span class="rail-label">Statuts</span></button>
+        <button class="rail-item" type="button" data-view="calls" title="Appels" aria-label="Appels"><span class="rail-svg calls-icon" aria-hidden="true"></span><span class="rail-label">Appels</span></button>
+        <button class="rail-item" type="button" data-view="channels" title="Chaînes" aria-label="Chaînes"><span class="rail-svg channels-icon" aria-hidden="true"></span><span class="rail-label">Chaînes</span></button>
       </nav>
       <div class="rail-spacer"></div>
-      <button class="rail-item rail-account" id="profileRailBtn" type="button" title="Profil" aria-label="Profil">
-        <span class="rail-avatar avatar-user">V</span><span class="rail-label">Profil</span>
-      </button>
-      <button class="rail-item" id="settingsRailBtn" type="button" title="Paramètres" aria-label="Paramètres">
-        <span class="rail-svg settings-icon" aria-hidden="true"></span><span class="rail-label">Paramètres</span>
-      </button>
+      <button class="rail-item rail-account" id="profileRailBtn" type="button" title="Profil" aria-label="Profil"><span class="rail-avatar avatar-user">V</span><span class="rail-label">Profil</span></button>
+      <button class="rail-item" id="settingsRailBtn" type="button" title="Paramètres" aria-label="Paramètres"><span class="rail-svg settings-icon" aria-hidden="true"></span><span class="rail-label">Paramètres</span></button>
     </aside>
-
     <section class="workspace" id="workspace">
       <aside class="inbox-panel" id="sidebar">
-        <header class="inbox-header">
-          <div class="inbox-title-row">
-            <h1>Discussions</h1>
-            <div class="header-actions">
-              <button class="icon-btn" id="newChatBtn" type="button" title="Nouvelle discussion" aria-label="Nouvelle discussion"><span class="svg-new-chat"></span></button>
-              <button class="icon-btn" id="menuBtn" type="button" title="Menu" aria-label="Menu"><span class="svg-more"></span></button>
-            </div>
-          </div>
-          <div class="smart-search">
-            <span class="svg-search" aria-hidden="true"></span>
-            <input id="searchInput" type="search" placeholder="Rechercher ou démarrer une discussion" autocomplete="off">
-          </div>
-          <div class="chat-filters" role="tablist" aria-label="Filtres des discussions">
-            <button class="filter-chip active" type="button" data-filter="all">Toutes</button>
-            <button class="filter-chip" type="button" data-filter="unread">Non lues</button>
-            <button class="filter-chip" type="button" data-filter="favorites">Favoris</button>
-            <button class="filter-chip" type="button" data-filter="groups">Groupes</button>
-          </div>
-        </header>
-        <section class="quick-strip" aria-label="Accès rapides">
-          <button class="quick-card" type="button" data-view="status"><span class="quick-icon pink">S</span><span><strong>Statuts</strong><small>Voir les nouveautés</small></span></button>
-          <button class="quick-card" type="button" data-view="channels"><span class="quick-icon blue">C</span><span><strong>Chaînes</strong><small>Découvrir</small></span></button>
-        </section>
-        <section class="active-users" id="activeUsersList" aria-label="Utilisateurs actifs"></section>
-        <section class="conversation-list" id="conversationList" aria-label="Discussions"></section>
-        <footer class="inbox-footer">
-          <div class="profile-mini"><span class="rail-avatar avatar-user">V</span><span><strong id="profileName">Mon profil</strong><small id="profileStatus">Connectez-vous pour synchroniser</small></span></div>
-          <button class="icon-btn small" id="profileBtn" type="button" title="Profil / connexion" aria-label="Profil / connexion"><span class="svg-chevron"></span></button>
-        </footer>
+        <header class="inbox-header"><div class="inbox-title-row"><h1>Discussions</h1><div class="header-actions"><button class="icon-btn" id="newChatBtn" type="button" title="Nouvelle discussion" aria-label="Nouvelle discussion"><span class="svg-new-chat"></span></button><button class="icon-btn" id="menuBtn" type="button" title="Menu" aria-label="Menu"><span class="svg-more"></span></button></div></div><div class="smart-search"><span class="svg-search" aria-hidden="true"></span><input id="searchInput" type="search" placeholder="Rechercher ou démarrer une discussion" autocomplete="off"></div><div class="chat-filters" role="tablist" aria-label="Filtres des discussions"><button class="filter-chip active" type="button" data-filter="all">Toutes</button><button class="filter-chip" type="button" data-filter="unread">Non lues</button><button class="filter-chip" type="button" data-filter="favorites">Favoris</button><button class="filter-chip" type="button" data-filter="groups">Groupes</button></div></header>
+        <section class="quick-strip" aria-label="Accès rapides"><button class="quick-card" type="button" data-view="status"><span class="quick-icon pink">S</span><span><strong>Statuts</strong><small>Voir les nouveautés</small></span></button><button class="quick-card" type="button" data-view="channels"><span class="quick-icon blue">C</span><span><strong>Chaînes</strong><small>Découvrir</small></span></button></section>
+        <section class="active-users" id="activeUsersList" aria-label="Utilisateurs actifs"></section><section class="conversation-list" id="conversationList" aria-label="Discussions"></section>
+        <footer class="inbox-footer"><div class="profile-mini"><span class="rail-avatar avatar-user">V</span><span><strong id="profileName">Mon profil</strong><small id="profileStatus">Connectez-vous pour synchroniser</small></span></div><button class="icon-btn small" id="profileBtn" type="button" title="Profil / connexion" aria-label="Profil / connexion"><span class="svg-chevron"></span></button></footer>
       </aside>
-
       <main class="content-panel" id="chatPanel">
-        <section class="welcome" id="emptyState">
-          <div class="welcome-center">
-            <div class="welcome-vibe-mark">V</div>
-            <h2>Vibe pour le Web</h2>
-            <p>Envoyez et recevez des messages sans quitter votre téléphone.</p>
-            <small>Vos discussions apparaîtront ici.</small>
-          </div>
-        </section>
-        <section class="chat-view hidden" id="chatView">
-          <header class="chat-header modern-chat-header">
-            <button class="back-btn" id="backBtn" type="button" aria-label="Retour"><span class="svg-back"></span></button>
-            <div class="chat-identity">
-              <div class="avatar" id="chatAvatar">V</div>
-              <div><strong id="chatName">Discussion</strong><span id="chatPresence">en ligne</span></div>
-            </div>
-            <div class="chat-actions">
-              <button class="glass-btn" type="button" title="Rechercher" aria-label="Rechercher"><span class="svg-search"></span></button>
-              <button class="glass-btn" type="button" title="Appel audio" aria-label="Appel audio"><span class="svg-phone"></span></button>
-              <button class="glass-btn" type="button" title="Appel vidéo" aria-label="Appel vidéo"><span class="svg-video"></span></button>
-              <button class="glass-btn" id="chatMoreBtn" type="button" title="Plus" aria-label="Plus"><span class="svg-more"></span></button>
-            </div>
-          </header>
-          <div class="pinned-banner" id="pinnedBanner" hidden><span class="svg-pin"></span><div><small>Message épinglé</small><strong id="pinnedText">Aucun message épinglé</strong></div></div>
-          <div class="messages" id="messages"></div>
-          <form class="composer modern-composer" id="messageForm">
-            <button type="button" class="composer-btn" id="attachBtn" title="Joindre un fichier" aria-label="Joindre un fichier"><span class="svg-attach"></span></button>
-            <input id="messageInput" maxlength="2000" placeholder="Écrire un message" autocomplete="off">
-            <button type="button" class="composer-btn voice-btn" id="voiceBtn" title="Message vocal" aria-label="Message vocal"><span class="svg-mic"></span></button>
-            <button class="send-btn" type="submit" aria-label="Envoyer"><span class="svg-send"></span></button>
-          </form>
-        </section>
-        <section class="module-view hidden" id="statusView">
-          <header class="module-topbar"><button class="module-back" type="button" data-view="chats" aria-label="Retour"><span class="svg-back"></span></button><div><h2>Statuts</h2><p>Partagez un moment avec vos contacts</p></div><button class="module-action" id="newStatusBtn" type="button">Nouveau</button></header>
-          <div class="status-body"><div class="status-my-row"><div class="status-avatar-wrap"><span class="status-avatar">V</span><b>+</b></div><div><strong>Mon statut</strong><small>Ajouter une mise à jour</small></div></div><div class="status-section-title">Mises à jour récentes</div><div class="status-grid" id="statusGrid"></div></div>
-        </section>
-        <section class="module-view hidden" id="callsView">
-          <header class="module-topbar"><button class="module-back" type="button" data-view="chats" aria-label="Retour"><span class="svg-back"></span></button><div><h2>Appels</h2><p>Vos appels récents</p></div></header>
-          <div class="calls-body"><div class="call-action-row"><div class="call-action-icon"><span class="svg-phone"></span></div><div><strong>Créer un lien d’appel</strong><small>Partagez un lien pour appeler</small></div></div><div class="call-section-title">Récents</div><div class="feature-grid"><article><span class="feature-icon"><span class="svg-phone"></span></span><div><h3>Appels audio</h3><p>Appelez vos contacts depuis vos discussions.</p></div></article><article><span class="feature-icon"><span class="svg-video"></span></span><div><h3>Appels vidéo</h3><p>Appelez en vidéo depuis une conversation.</p></div></article></div></div>
-        </section>
-        <section class="module-view hidden" id="channelsView">
-          <header class="module-topbar"><button class="module-back" type="button" data-view="chats" aria-label="Retour"><span class="svg-back"></span></button><div><h2>Chaînes</h2><p>Découvrez les actualités qui vous intéressent</p></div><button class="module-action" id="newChannelBtn" type="button">Créer</button></header>
-          <div class="channel-layout"><div class="channel-categories"><button class="active">À la une</button><button>Musique</button><button>Sport</button><button>Actualités</button><button>Créateurs</button><button>Vidéos</button></div><div class="channel-grid" id="channelGrid"></div></div>
-        </section>
+        <section class="welcome" id="emptyState"><div class="welcome-center"><div class="welcome-vibe-mark">V</div><h2>Vibe pour le Web</h2><p>Envoyez et recevez des messages sans quitter votre téléphone.</p><small>Vos discussions apparaîtront ici.</small></div></section>
+        <section class="chat-view hidden" id="chatView"><header class="chat-header modern-chat-header"><button class="back-btn" id="backBtn" type="button" aria-label="Retour"><span class="svg-back"></span></button><div class="chat-identity"><div class="avatar" id="chatAvatar">V</div><div><strong id="chatName">Discussion</strong><span id="chatPresence">en ligne</span></div></div><div class="chat-actions"><button class="glass-btn" type="button" title="Rechercher" aria-label="Rechercher"><span class="svg-search"></span></button><button class="glass-btn" type="button" title="Appel audio" aria-label="Appel audio"><span class="svg-phone"></span></button><button class="glass-btn" type="button" title="Appel vidéo" aria-label="Appel vidéo"><span class="svg-video"></span></button><button class="glass-btn" id="chatMoreBtn" type="button" title="Plus" aria-label="Plus"><span class="svg-more"></span></button></div></header><div class="pinned-banner" id="pinnedBanner" hidden><span class="svg-pin"></span><div><small>Message épinglé</small><strong id="pinnedText">Aucun message épinglé</strong></div></div><div class="messages" id="messages"></div><form class="composer modern-composer" id="messageForm"><button type="button" class="composer-btn" id="attachBtn" title="Joindre un fichier" aria-label="Joindre un fichier"><span class="svg-attach"></span></button><input id="messageInput" maxlength="2000" placeholder="Écrire un message" autocomplete="off"><button type="button" class="composer-btn voice-btn" id="voiceBtn" title="Message vocal" aria-label="Message vocal"><span class="svg-mic"></span></button><button class="send-btn" type="submit" aria-label="Envoyer"><span class="svg-send"></span></button></form></section>
+        <section class="module-view hidden" id="statusView"><header class="module-topbar"><button class="module-back" type="button" data-view="chats" aria-label="Retour"><span class="svg-back"></span></button><div><h2>Statuts</h2><p>Partagez un moment avec vos contacts</p></div><button class="module-action" id="newStatusBtn" type="button">Nouveau</button></header><div class="status-body"><div class="status-my-row"><div class="status-avatar-wrap"><span class="status-avatar">V</span><b>+</b></div><div><strong>Mon statut</strong><small>Ajouter une mise à jour</small></div></div><div class="status-section-title">Mises à jour récentes</div><div class="status-grid" id="statusGrid"></div></div></section>
+        <section class="module-view hidden" id="callsView"><header class="module-topbar"><button class="module-back" type="button" data-view="chats" aria-label="Retour"><span class="svg-back"></span></button><div><h2>Appels</h2><p>Vos appels récents</p></div></header><div class="calls-body"><div class="call-action-row"><div class="call-action-icon"><span class="svg-phone"></span></div><div><strong>Créer un lien d’appel</strong><small>Partagez un lien pour appeler</small></div></div><div class="call-section-title">Récents</div><div class="feature-grid"><article><span class="feature-icon"><span class="svg-phone"></span></span><div><h3>Appels audio</h3><p>Appelez vos contacts depuis vos discussions.</p></div></article><article><span class="feature-icon"><span class="svg-video"></span></span><div><h3>Appels vidéo</h3><p>Appelez en vidéo depuis une conversation.</p></div></article></div></div></section>
+        <section class="module-view hidden" id="channelsView"><header class="module-topbar"><button class="module-back" type="button" data-view="chats" aria-label="Retour"><span class="svg-back"></span></button><div><h2>Chaînes</h2><p>Découvrez les actualités qui vous intéressent</p></div><button class="module-action" id="newChannelBtn" type="button">Créer</button></header><div class="channel-layout"><div class="channel-categories"><button class="active">À la une</button><button>Musique</button><button>Sport</button><button>Actualités</button><button>Créateurs</button><button>Vidéos</button></div><div class="channel-grid" id="channelGrid"></div></div></section>
       </main>
       <aside class="details-panel" id="detailsPanel" aria-label="Détails"></aside>
     </section>
   </div>
-  <div class="toast" id="toast" role="status"></div>
-  <input type="file" id="fileInput" hidden>
-  <script type="module" src="bootstrap.js?v=20260906r9"></script>
+  <div class="toast" id="toast" role="status"></div><input type="file" id="fileInput" hidden><script type="module" src="bootstrap.js?v=20260906r9"></script>
 </body>
 </html>
