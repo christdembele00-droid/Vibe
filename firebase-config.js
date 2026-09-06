@@ -4,7 +4,6 @@
 export const firebaseConfig = Object.freeze({
   apiKey: 'AIzaSyC6g40Uc9hq9Ij5DU1nwbO-zwpHqk9L9aQ',
   authDomain: 'vibe-749e5.firebaseapp.com',
-  databaseURL: 'https://vibe-749e5-default-rtdb.firebaseio.com',
   projectId: 'vibe-749e5',
   storageBucket: 'vibe-749e5.firebasestorage.app',
   messagingSenderId: '17097166235',
