@@ -1,4 +1,4 @@
-import { auth, db, collection, doc, addDoc, getDoc, onSnapshot, storage, ref, uploadBytes, getDownloadURL } from './firebase-client.js';
+import { auth, db, collection, doc, addDoc, getDoc, onSnapshot, serverTimestamp, storage, ref, uploadBytes, getDownloadURL } from './firebase-client.js';
 
 const $ = id => document.getElementById(id);
 const uid = () => auth?.currentUser?.uid || null;
@@ -49,7 +49,7 @@ async function handleMedia(event) {
       mimeType: file.type || 'application/octet-stream',
       fileName: file.name,
       fileSize: file.size,
-      createdAt: (await import('./firebase-client.js')).serverTimestamp(),
+      createdAt: serverTimestamp(),
       viewOnce: false
     });
     toast('Média envoyé.');
