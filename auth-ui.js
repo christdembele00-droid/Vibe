@@ -85,7 +85,9 @@ async function authenticate(providerName,dialog){
 const profileButton=document.querySelector('#profileBtn');
 if(profileButton){
   profileButton.addEventListener('click',()=>{
-    if(auth.currentUser?.isAnonymous)openLogin();
+    // L'utilisateur peut maintenant se connecter même lorsqu'il n'existe
+    // encore aucune session Firebase locale.
+    if(!auth.currentUser || auth.currentUser.isAnonymous)openLogin();
   });
 }
 
@@ -93,7 +95,12 @@ onAuthStateChanged(auth,user=>{
   const profileCopy=document.querySelector('.profile-copy span');
   const profileName=document.querySelector('.profile-copy strong');
   const avatar=document.querySelector('.avatar-user');
-  if(!user)return;
+  if(!user){
+    if(profileName)profileName.textContent='Mon profil';
+    if(profileCopy)profileCopy.textContent='Se connecter';
+    if(avatar)avatar.textContent='V';
+    return;
+  }
 
   if(user.isAnonymous){
     if(profileName)profileName.textContent='Mon profil';
