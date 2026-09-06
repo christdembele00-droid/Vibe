@@ -12,6 +12,16 @@
       }
     },
 
+    "userChats": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$chatId": {
+          ".write": "auth != null && auth.uid === $uid && newData.val() === true",
+          ".validate": "newData.isBoolean() && newData.val() === true"
+        }
+      }
+    },
+
     "presence": {
       "$uid": {
         ".read": "auth != null",
