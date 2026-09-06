@@ -13,5 +13,30 @@
 .online-dot{animation:none}.composer{transition:box-shadow var(--vibe-fast) ease}.composer:focus-within{transform:none;box-shadow:0 1px 3px rgba(11,20,26,.10)}.send-btn{transition:transform var(--vibe-fast) var(--vibe-ease),background var(--vibe-fast) ease}.send-btn:hover{transform:scale(1.03);box-shadow:none}
 .status-card,.calls-card{transition:background var(--vibe-fast) ease,border-color var(--vibe-fast) ease}.status-card:hover,.calls-card:hover{transform:none;box-shadow:none;border-color:#d9dfe2}
 button:focus-visible,input:focus-visible{outline-color:#53bdeb}
-@media(max-width:760px){.conversation-item:hover,.conversation:hover{transform:none;padding-left:14px}.message:hover{transform:none;box-shadow:0 1px 1px rgba(0,0,0,.12)}}
-@media(prefers-reduced-motion:reduce){.app-shell,.welcome-orb,.welcome h1,.welcome-text,.welcome-chips,.message{animation:none!important}.glass-btn,.composer-btn,.back-btn,.conversation-item,.conversation,.composer,.send-btn,.welcome-chips span{transition:none!important}}
+
+/* Navigation mobile : même logique de panneau unique que les messageries mobiles. */
+@media(max-width:760px){
+  .app-shell{position:relative;isolation:isolate}
+  .sidebar,.chat-panel{transition:transform var(--vibe-med) var(--vibe-ease),opacity var(--vibe-med) ease}
+  .sidebar{transform:translateX(0);opacity:1}
+  .chat-panel{display:flex;transform:translateX(100%);opacity:0;pointer-events:none;visibility:hidden}
+
+  /* app.js masque déjà .chatView avec .hidden au démarrage. Dès qu'une discussion
+     est ouverte, :has() fait passer automatiquement l'interface sur le panneau chat. */
+  .app-shell:has(.chat-view:not(.hidden)) .sidebar{display:none;transform:translateX(-12%);opacity:0;pointer-events:none}
+  .app-shell:has(.chat-view:not(.hidden)) .chat-panel{display:flex;transform:translateX(0);opacity:1;pointer-events:auto;visibility:visible}
+
+  .chat-panel .chat-view{transform:translateX(0);opacity:1}
+  .chat-header .back-btn{display:grid;place-items:center}
+  .messages{overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+  .composer{transform:translateZ(0)}
+  .composer input{min-height:40px}
+  .conversation-item,.conversation{touch-action:manipulation}
+  .conversation-item:active,.conversation:active{transform:scale(.998)}
+}
+
+@media(max-width:420px){
+  .message{max-width:82%}
+}
+
+@media(prefers-reduced-motion:reduce){.app-shell,.welcome-orb,.welcome h1,.welcome-text,.welcome-chips,.message{animation:none!important}.glass-btn,.composer-btn,.back-btn,.conversation-item,.conversation,.composer,.send-btn,.welcome-chips span,.sidebar,.chat-panel{transition:none!important}}
