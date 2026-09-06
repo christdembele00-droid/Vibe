@@ -12,12 +12,16 @@ service firebase.storage {
       allow read, write: if own(uid) && validFile();
     }
 
+    // Media attached to messages: anyone authenticated can read, only the uploader can write.
     match /messages/{uid}/{fileName} {
-      allow read, write: if own(uid) && validFile();
+      allow read: if signedIn();
+      allow write: if own(uid) && validFile();
     }
 
+    // Voice messages follow the same read/write model as message media.
     match /voice/{uid}/{fileName} {
-      allow read, write: if own(uid) && validFile();
+      allow read: if signedIn();
+      allow write: if own(uid) && validFile();
     }
 
     match /statuses/{uid}/{fileName} {
