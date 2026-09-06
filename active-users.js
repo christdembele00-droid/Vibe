@@ -20,7 +20,6 @@ async function findExistingPrivateChat(memberUid) {
   const direct = await getDoc(doc(db, 'conversations', directId));
   if (direct.exists()) return { id: direct.id, ...direct.data() };
 
-  // Compatibilité avec les anciennes discussions créées avec un ID aléatoire.
   const q = query(collection(db, 'conversations'), where('participantIds', 'array-contains', currentUid), limit(100));
   const snap = await getDocs(q);
   let existing = null;
@@ -47,7 +46,6 @@ async function openMemberChat(member) {
       return;
     }
 
-    // ID déterministe : les deux utilisateurs ouvrent exactement la même discussion.
     const chatId = privateChatId(currentUid, member.uid);
     const name = member.displayName || `Utilisateur ${String(member.uid).slice(0, 8)}`;
     const currentName = auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'Utilisateur';
@@ -96,17 +94,17 @@ function render(users) {
   const rows = users.filter((u) => u.uid !== currentUid);
   const count = users.length;
   el.dataset.count = String(count);
+
+  // Les utilisateurs actifs sont représentés uniquement par leur avatar/logo.
+  // Le nom reste disponible via aria-label/title pour l'accessibilité, sans texte visible.
   el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 11px;margin:3px 2px 7px;border:1px solid rgba(255,255,255,.07);border-radius:15px;background:linear-gradient(135deg,rgba(255,122,24,.12),rgba(255,255,255,.025));">
-      <div style="width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:rgba(255,122,24,.16);color:#ffb45a;font-weight:800;font-size:14px;box-shadow:0 0 18px rgba(255,122,24,.12)">●</div>
-      <div style="min-width:0;flex:1"><strong style="display:block;font-size:12px">${count} en ligne</strong><span style="display:flex;align-items:center;gap:5px;margin-top:3px;color:#7f8795;font-size:10px"><i class="online-dot"></i> Actifs maintenant</span></div>
-      <span style="font-size:18px;line-height:1">${count}</span>
-    </div>
-    ${rows.map((u) => {
-      const name = u.displayName || `Utilisateur ${String(u.uid).slice(0, 8)}`;
-      const initial = [...name.trim()][0]?.toUpperCase() || 'V';
-      return `<button type="button" class="conversation-item" data-active-uid="${escapeAttr(u.uid)}" aria-label="Ouvrir une discussion avec ${escapeAttr(name)}"><div class="avatar">${escapeHtml(initial)}</div><div><strong>${escapeHtml(name)}</strong><span><i class="online-dot"></i> En ligne</span></div></button>`;
-    }).join('')}`;
+    <div class="active-users-avatars" aria-label="Utilisateurs actuellement en ligne">
+      ${rows.map((u) => {
+        const name = u.displayName || `Utilisateur ${String(u.uid).slice(0, 8)}`;
+        const initial = [...name.trim()][0]?.toUpperCase() || 'V';
+        return `<button type="button" class="active-user-avatar" data-active-uid="${escapeAttr(u.uid)}" aria-label="Ouvrir une discussion avec ${escapeAttr(name)}" title="${escapeAttr(name)}"><span class="avatar">${escapeHtml(initial)}</span><i class="online-dot" aria-hidden="true"></i></button>`;
+      }).join('')}
+    </div>`;
 }
 
 function watch() {
@@ -128,7 +126,7 @@ list()?.addEventListener('click', (event) => {
   const item = event.target.closest('[data-active-uid]');
   if (!item) return;
   const uid = item.dataset.activeUid;
-  const name = item.querySelector('strong')?.textContent || 'Utilisateur';
+  const name = item.getAttribute('title') || 'Utilisateur';
   openMemberChat({ uid, displayName: name });
 });
 
