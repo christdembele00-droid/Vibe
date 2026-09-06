@@ -1,6 +1,6 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, onSnapshot, query, where, limit } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, getDocs, onSnapshot, query, where, limit, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 const app = getApps()[0];
 if (!app) throw new Error('Firebase doit être initialisé avant active-users.js');
@@ -11,13 +11,72 @@ let stop = null;
 let currentUid = null;
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>\"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#39;' }[c]));
+const escapeAttr = (value) => escapeHtml(value).replace(/`/g, '&#96;');
+const makeInviteToken = () => crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
+
+async function openMemberChat(member) {
+  if (!currentUid || !member?.uid || member.uid === currentUid) return;
+  const appApi = window.VibeApp;
+  if (!appApi?.openChat) return;
+
+  try {
+    // Réutiliser une discussion privée existante avec ce membre.
+    const q = query(collection(db, 'conversations'), where('participantIds', 'array-contains', currentUid), limit(100));
+    const snap = await getDocs(q);
+    let existing = null;
+    snap.forEach((item) => {
+      if (existing) return;
+      const data = item.data();
+      if (data.type === 'private' && Array.isArray(data.participantIds) && data.participantIds.includes(member.uid)) {
+        existing = { id: item.id, ...data };
+      }
+    });
+
+    if (existing) {
+      appApi.getChats?.();
+      appApi.openChat(existing.id, existing);
+      return;
+    }
+
+    // Créer automatiquement une discussion privée entre les deux membres.
+    const name = member.displayName || `Utilisateur ${String(member.uid).slice(0, 8)}`;
+    const inviteToken = makeInviteToken();
+    const ref = await addDoc(collection(db, 'conversations'), {
+      name,
+      ownerId: currentUid,
+      participantIds: [currentUid, member.uid],
+      inviteToken,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      type: 'private'
+    });
+
+    await setDoc(doc(db, 'conversationInvites', inviteToken), {
+      token: inviteToken,
+      chatId: ref.id,
+      name,
+      ownerId: currentUid,
+      createdAt: serverTimestamp()
+    });
+
+    const chat = { id: ref.id, name, ownerId: currentUid, participantIds: [currentUid, member.uid], inviteToken, type: 'private' };
+    appApi.openChat(ref.id, chat);
+  } catch (error) {
+    console.error('Ouverture discussion membre:', error);
+    const toast = document.getElementById('toast');
+    if (toast) {
+      toast.textContent = `Discussion impossible : ${error.message}`;
+      toast.classList.add('show');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+  }
+}
 
 function render(users) {
   const el = list();
   if (!el) return;
   const rows = users.filter((u) => u.uid !== currentUid);
-  // Le compteur doit refléter uniquement les documents réellement online dans Firestore.
-  // On ne rajoute plus artificiellement l'utilisateur courant.
   const count = users.length;
   el.dataset.count = String(count);
   el.innerHTML = `
@@ -29,7 +88,7 @@ function render(users) {
     ${rows.map((u) => {
       const name = u.displayName || `Utilisateur ${String(u.uid).slice(0, 8)}`;
       const initial = [...name.trim()][0]?.toUpperCase() || 'V';
-      return `<div class="conversation-item" style="cursor:default"><div class="avatar">${escapeHtml(initial)}</div><div><strong>${escapeHtml(name)}</strong><span><i class="online-dot"></i> En ligne</span></div></div>`;
+      return `<button type="button" class="conversation-item" data-active-uid="${escapeAttr(u.uid)}" aria-label="Ouvrir une discussion avec ${escapeAttr(name)}"><div class="avatar">${escapeHtml(initial)}</div><div><strong>${escapeHtml(name)}</strong><span><i class="online-dot"></i> En ligne</span></div></button>`;
     }).join('')}`;
 }
 
@@ -47,6 +106,14 @@ function watch() {
     render([]);
   });
 }
+
+list()?.addEventListener('click', (event) => {
+  const item = event.target.closest('[data-active-uid]');
+  if (!item) return;
+  const uid = item.dataset.activeUid;
+  const name = item.querySelector('strong')?.textContent || 'Utilisateur';
+  openMemberChat({ uid, displayName: name });
+});
 
 onAuthStateChanged(auth, (user) => { currentUid = user?.uid || null; watch(); });
 document.addEventListener('vibe:auth-changed', (event) => { currentUid = event.detail?.user?.uid || auth.currentUser?.uid || null; watch(); });
