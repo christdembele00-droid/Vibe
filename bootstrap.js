@@ -1,4 +1,4 @@
-const VERSION = '20260906n';
+const VERSION = '20260906o';
 
 const showBootError = (label, error) => {
   console.error(`[Vibe] ${label} impossible à charger:`, error);
@@ -11,6 +11,7 @@ await loadModule('authentification', './auth-ui.js');
 await loadModule('messagerie', './app.js');
 await loadModule('utilisateurs actifs', './active-users.js');
 await loadModule('paramètres', './vibe-settings.js');
+await loadModule('profil', './vibe-profile.js');
 await loadModule('appels', './webrtc-calls.js');
 await loadModule('fonctionnalités', './vibe-features.js');
 await loadModule('interface', './vibe-polish.js');
