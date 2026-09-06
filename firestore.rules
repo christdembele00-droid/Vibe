@@ -1,44 +1,74 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
-    }
-
-    function isParticipant(conversationId) {
-      return signedIn()
-        && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
-    }
+    function signedIn() { return request.auth != null; }
+    function isUser(uid) { return signedIn() && request.auth.uid == uid; }
+    function conversationExists(id) { return exists(/databases/$(database)/documents/conversations/$(id)); }
+    function member(id) { return signedIn() && conversationExists(id) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(id)).data.participantIds; }
+    function owner(id) { return signedIn() && conversationExists(id) && get(/databases/$(database)/documents/conversations/$(id)).data.ownerId == request.auth.uid; }
 
     match /users/{uid} {
       allow read: if signedIn();
-      allow create, update: if signedIn() && request.auth.uid == uid;
-      allow delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if isUser(uid) && request.resource.data.uid == uid;
+      allow delete: if isUser(uid);
+      match /settings/{id} { allow read, write: if isUser(uid); }
+      match /conversations/{id} { allow read, write: if isUser(uid); }
+      match /notifications/{id} { allow read, update, delete: if isUser(uid); allow create: if signedIn() && request.resource.data.recipientId == uid; }
+      match /blocked/{id} { allow read, write: if isUser(uid); }
+      match /sessions/{id} { allow read, write: if isUser(uid); }
     }
 
-    match /conversations/{conversationId} {
-      allow read: if isParticipant(conversationId);
-      allow create: if signedIn() && request.auth.uid in request.resource.data.participants;
-      allow update: if isParticipant(conversationId);
-      allow delete: if isParticipant(conversationId);
+    match /conversations/{id} {
+      allow read: if member(id);
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && request.auth.uid in request.resource.data.participantIds && request.resource.data.participantIds.size() >= 1 && request.resource.data.participantIds.size() <= 100;
+      allow update: if member(id) && request.resource.data.ownerId == resource.data.ownerId && request.resource.data.participantIds.size() <= 100;
+      allow delete: if owner(id);
 
       match /messages/{messageId} {
-        allow read: if isParticipant(conversationId);
-        allow create: if isParticipant(conversationId)
-          && request.resource.data.senderId == request.auth.uid;
-        allow update, delete: if isParticipant(conversationId)
-          && resource.data.senderId == request.auth.uid;
+        allow read: if member(id);
+        allow create: if member(id) && request.resource.data.uid == request.auth.uid && request.resource.data.type is string && request.resource.data.type.size() <= 32 && request.resource.data.createdAt is timestamp && (!request.resource.data.keys().hasAny(['text']) || (request.resource.data.text is string && request.resource.data.text.size() <= 20000)) && (!request.resource.data.keys().hasAny(['fileName']) || request.resource.data.fileName.size() <= 180) && (!request.resource.data.keys().hasAny(['mimeType']) || request.resource.data.mimeType.size() <= 120) && (!request.resource.data.keys().hasAny(['dataUrl']) || request.resource.data.dataUrl.size() <= 1100000) && (!request.resource.data.keys().hasAny(['viewOnce']) || request.resource.data.viewOnce is bool);
+        allow update: if member(id) && resource.data.uid == request.auth.uid && request.resource.data.uid == resource.data.uid;
+        allow delete: if member(id) && resource.data.uid == request.auth.uid;
+      }
+      match /reactions/{reactionId} {
+        allow read: if member(id);
+        allow create, update: if member(id) && request.resource.data.uid == request.auth.uid && request.resource.data.emoji is string && request.resource.data.emoji.size() <= 16;
+        allow delete: if member(id) && resource.data.uid == request.auth.uid;
       }
     }
 
-    // Temporary compatibility with the current web prototype.
-    match /chats/{chatId} {
-      allow read, write: if signedIn();
-      match /messages/{messageId} {
-        allow read: if signedIn();
-        allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
-        allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
-      }
+    match /stories/{storyId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid && request.resource.data.createdAt is timestamp && request.resource.data.expiresAt is timestamp && request.resource.data.expiresAt > request.resource.data.createdAt && request.resource.data.expiresAt <= request.resource.data.createdAt + duration.value(24, 'h') && (!request.resource.data.keys().hasAny(['text']) || request.resource.data.text.size() <= 2000) && (!request.resource.data.keys().hasAny(['dataUrl']) || request.resource.data.dataUrl.size() <= 1100000);
+      allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
+
+    match /presence/{uid} { allow read: if signedIn(); allow create, update, delete: if isUser(uid) && request.resource.data.uid == uid; }
+
+    match /calls/{id} {
+      allow read: if signedIn() && (resource.data.callerUid == request.auth.uid || resource.data.calleeUid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.callerUid == request.auth.uid && request.resource.data.calleeUid != request.auth.uid && request.resource.data.kind in ['audio','video'] && request.resource.data.createdAt is timestamp;
+      allow update: if signedIn() && (resource.data.callerUid == request.auth.uid || resource.data.calleeUid == request.auth.uid) && request.resource.data.callerUid == resource.data.callerUid && request.resource.data.calleeUid == resource.data.calleeUid && request.resource.data.chatId == resource.data.chatId && request.resource.data.kind == resource.data.kind;
+      allow delete: if signedIn() && (resource.data.callerUid == request.auth.uid || resource.data.calleeUid == request.auth.uid);
+      match /candidates/{uid}/{candidateId} { allow read, create: if signedIn() && (uid == request.auth.uid || get(/databases/$(database)/documents/calls/$(id)).data.callerUid == request.auth.uid || get(/databases/$(database)/documents/calls/$(id)).data.calleeUid == request.auth.uid); allow delete: if isUser(uid); }
+    }
+
+    match /incomingCalls/{uid}/calls/{id} {
+      allow read, update, delete: if isUser(uid);
+      allow create: if signedIn() && request.resource.data.calleeUid == uid && request.resource.data.callerUid == request.auth.uid && request.resource.data.kind in ['audio','video'];
+    }
+
+    match /notifications/{id} { allow read, update, delete: if signedIn() && resource.data.recipientId == request.auth.uid; allow create: if signedIn() && request.resource.data.recipientId is string; }
+    match /joinRequests/{id} { allow create: if signedIn() && request.resource.data.uid == request.auth.uid; allow read, update, delete: if signedIn() && resource.data.uid == request.auth.uid; }
+    match /userSearch/{id} { allow read: if signedIn(); allow create, update, delete: if signedIn() && request.resource.data.uid == request.auth.uid; }
+    match /contacts/{uid}/items/{id} { allow read, write: if isUser(uid); }
+    match /favorites/{uid}/items/{id} { allow read, write: if isUser(uid); }
+    match /archives/{uid}/items/{id} { allow read, write: if isUser(uid); }
+    match /pinnedMessages/{uid}/items/{id} { allow read, write: if isUser(uid); }
+    match /callHistory/{uid}/items/{id} { allow read: if isUser(uid); allow create, update, delete: if isUser(uid) && request.resource.data.uid == request.auth.uid; }
+    match /reports/{id} { allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid; allow read: if signedIn() && resource.data.reporterId == request.auth.uid; }
+    match /appConfig/{id} { allow read: if signedIn(); allow write: if false; }
+    match /{document=**} { allow read, write: if false; }
   }
 }
