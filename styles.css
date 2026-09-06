@@ -1,107 +1,88 @@
-@import url('https://googleapis.com');
-
 :root {
-  /* Charte de couleurs officielle WhatsApp Android (Thème Clair) */
-  --bg: #efeae2;                /* Fond de la zone de discussion (Beige) */
-  --panel: #008069;             /* Vert foncé de l'en-tête principal */
-  --panel-2: #ffffff;           /* Fond blanc de la liste des contacts */
-  --card: #ffffff;              /* Fond des éléments internes blancs */
-  --line: #e9edef;              /* Lignes de séparation grises discrètes */
-  --text: #111b21;              /* Texte principal (Presque noir) */
-  --muted: #667781;             /* Texte secondaire / Heure / Statut */
-  --soft: #8596a0;              /* Couleur des icônes désactivées */
-  --accent: #00a884;            /* Vert vif (Boutons d'action, notifications) */
-  --accent-2: #e7ffdb;          /* Vert très clair pour les bulles de messages envoyés */
-  --bubble: #ffffff;            /* Blanc pour les bulles de messages reçus */
-  
+  --bg: #efeae2;
+  --panel: #008069;
+  --panel-2: #ffffff;
+  --card: #ffffff;
+  --line: #e9edef;
+  --text: #111b21;
+  --muted: #667781;
+  --soft: #8596a0;
+  --accent: #00a884;
+  --accent-2: #e7ffdb;
+  --bubble: #ffffff;
   --shadow: 0 1px 2px rgba(11,20,26,.08);
-  --radius-xl: 0px;             /* Les écrans de discussion Android n'ont pas de bords arrondis */
+  --radius-xl: 0px;
   --tap: 48px;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   width: 100%;
   height: 100%;
-  font-family: 'Roboto', system-ui, sans-serif;
-  background: #f0f2f5;           /* Fond de la page extérieure si affiché sur PC */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f0f2f5;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
-button, input {
-  font: inherit;
-}
+button, input { font: inherit; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+body { overflow: hidden; }
 
-button {
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-body {
-  overflow: hidden;
-}
-
-/* Conteneur principal adapté pour le format Smartphone Android */
 .app-shell {
   height: 100dvh;
   width: 100%;
-  max-width: 412px;             /* Taille standard d'un écran Android moderne */
+  max-width: 412px;
   margin: 0 auto;
   display: flex;
-  flex-direction: column;       /* Une seule colonne sur mobile (la sidebar et le chat alternent) */
+  flex-direction: column;
   padding: 0;
   gap: 0;
   background: var(--bg);
 }
 
-/* --- BARRE SUPÉRIEURE (Top App Bar Android) --- */
 .side-header, .chat-header {
-  min-height: 56px !important;  /* Hauteur Material Design Android */
+  min-height: 56px !important;
   background: var(--panel) !important;
-  color: #ffffff;
+  color: #fff;
   padding: 0 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: none;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,.1);
 }
 
 .brand {
-  color: #ffffff !important;
+  color: #fff !important;
   font-weight: 500;
   font-size: 20px;
   letter-spacing: normal;
 }
 
-/* Style des icônes du haut */
 .glass-btn, .composer-btn {
   width: 40px;
   height: 40px;
   border: none;
   background: transparent;
-  color: #ffffff;
+  color: #fff;
   border-radius: 50%;
 }
 
 .glass-btn svg, .composer-btn svg {
-  stroke: #ffffff;
+  stroke: currentColor;
   width: 22px;
   height: 22px;
 }
 
 .glass-btn:hover, .composer-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255,255,255,.1);
   transform: none;
   box-shadow: none;
 }
 
-/* --- LISTE DES CONVERSATIONS (Écran d'accueil) --- */
 .sidebar {
   width: 100%;
   height: 100%;
@@ -112,62 +93,16 @@ body {
   box-shadow: none;
 }
 
-.conversation-list {
-  background: var(--panel-2);
-  padding: 0;
-}
+.conversation-list { background: var(--panel-2); padding: 0; }
+.conversation { padding: 12px 16px; border-radius: 0; border-bottom: 1px solid var(--line); }
+.conversation:hover { background: #f0f2f5; transform: none; }
+.conversation.active { background: #f5f6f6; box-shadow: none; }
+.avatar { border-radius: 50% !important; width: 48px; height: 48px; }
+.conv-row strong { color: var(--text); font-size: 16px; font-weight: 500; }
+.conv-time { color: var(--muted); }
+.conv-preview { color: var(--muted); font-size: 14px; }
+.unread { background: var(--accent) !important; color: #fff !important; border-radius: 50%; font-weight: 700; }
 
-.conversation {
-  padding: 12px 16px;
-  border-radius: 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.conversation:hover {
-  background: #f0f2f5;
-  transform: none;
-}
-
-.conversation.active {
-  background: #f5f6f6;
-  box-shadow: none;
-}
-
-/* Avatars */
-.avatar {
-  border-radius: 50% !important; /* Cercles parfaits comme sur WhatsApp Android */
-  width: 48px;
-  height: 48px;
-}
-
-.conversation:nth-child(any) .avatar {
-  background: #aebac1; /* Couleur neutre par défaut pour les avatars WhatsApp */
-}
-
-.conv-row strong {
-  color: var(--text);
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.conv-time {
-  color: var(--muted);
-}
-
-.conv-preview {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-/* Pastille de notification verte */
-.unread {
-  background: var(--accent) !important;
-  color: #ffffff !important;
-  border-radius: 50%;
-  font-weight: 700;
-}
-
-/* --- FENÊTRE DE DISCUSSION (Chat View) --- */
 .chat-panel {
   width: 100%;
   height: 100%;
@@ -175,50 +110,29 @@ body {
   border-radius: 0;
   box-shadow: none;
   background-color: var(--bg);
-  /* Intégration du motif Doodle WhatsApp officiel en opacité très légère */
-  background-image: url("https://githubusercontent.com");
-  background-blend-mode: overlay;
+  background-image: none;
 }
 
-/* Style des Bulles Android */
 .message-bubble {
   max-width: 75%;
   border-radius: 8px;
-  padding: 8px 12px 20px 12px;
+  padding: 8px 12px 20px;
   box-shadow: var(--shadow);
   color: var(--text);
 }
+.received .message-bubble { background-color: var(--bubble); border-top-left-radius: 0; }
+.sent .message-bubble { background-color: var(--accent-2); border-top-right-radius: 0; }
+.message-time { color: var(--muted); font-size: 11px; }
 
-/* Bulle Gauche (Reçu) */
-.received .message-bubble {
-  background-color: var(--bubble);
-  border-top-left-radius: 0; /* Forme de pointe WhatsApp Android */
-}
-
-/* Bulle Droite (Envoyé) */
-.sent .message-bubble {
-  background-color: var(--accent-2);
-  border-top-right-radius: 0;
-}
-
-/* Heure dans la bulle */
-.message-time {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-/* --- ZONE DE SAISIE ANDROID (Barre Basse) --- */
 .android-input-container {
   padding: 8px;
   display: flex;
   align-items: center;
   background: transparent;
 }
-
-/* La pilule blanche pour le texte */
 .android-input-pill {
   flex: 1;
-  background: #ffffff;
+  background: #fff;
   border-radius: 24px;
   height: 48px;
   display: flex;
@@ -226,7 +140,6 @@ body {
   padding: 0 8px;
   box-shadow: var(--shadow);
 }
-
 .android-input {
   flex: 1;
   border: none;
@@ -236,12 +149,11 @@ body {
   background: transparent;
   color: var(--text);
 }
-
-/* Le bouton d'action circulaire vert à droite (FAB) */
 .android-fab-send {
   width: 48px;
   height: 48px;
   background-color: var(--accent);
+  color: #fff;
   border-radius: 50%;
   border: none;
   display: grid;
