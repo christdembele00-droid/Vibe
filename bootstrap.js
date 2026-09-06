@@ -17,8 +17,7 @@ const loadModule = async (label, path) => {
   }
 };
 
-// Le cœur est chargé en premier. Les modules optionnels restent isolés afin
-// qu'une erreur secondaire ne bloque jamais les autres fonctionnalités.
+// Ordre volontaire : Firebase et le cœur avant les modules qui les enrichissent.
 await loadModule('Firebase', './firebase-client.js');
 await loadModule('authentification', './auth-ui.js');
 await loadModule('messagerie', './app.js');
@@ -30,4 +29,6 @@ await loadModule('interface', './vibe-polish.js');
 await loadModule('menu', './whatsapp-menu.js');
 await loadModule('actions des messages', './whatsapp-message-actions.js');
 await loadModule('médias', './media-extras.js');
+await loadModule('recherche et améliorations', './vibe-enhancements.js');
+await loadModule('correctifs complémentaires', './vibe-fixes.js');
 await loadModule('navigation', './vibe-right-pane.js');
