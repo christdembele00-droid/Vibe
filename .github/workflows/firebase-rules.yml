@@ -1,0 +1,32 @@
+name: Deploy Firebase Realtime Database rules
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'database.rules.json'
+      - 'firebase.json'
+
+jobs:
+  deploy-rtdb-rules:
+    name: Deploy Realtime Database rules
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+
+      - name: Deploy Realtime Database rules
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: firebase deploy --only database --token "$FIREBASE_TOKEN" --non-interactive
