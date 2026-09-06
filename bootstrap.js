@@ -1,4 +1,4 @@
-const VERSION = '20260906i';
+const VERSION = '20260906k';
 
 const showBootError = (label, error) => {
   console.error(`[Vibe] ${label} impossible à charger:`, error);
@@ -19,8 +19,6 @@ const loadModule = async (label, path) => {
   }
 };
 
-// Un seul module actif par responsabilité. Le cache-buster est appliqué à
-// chaque module dynamique pour éviter qu'un ancien app.js reste en mémoire.
 await loadModule('Firebase', './firebase-client.js');
 await loadModule('authentification', './auth-ui.js');
 await loadModule('messagerie', './app.js');
