@@ -27,6 +27,12 @@ let unsubscribeMessages = null;
 let selectedChat = null;
 let allMessages = [];
 
+const defaultChats = [{
+  id: 'general',
+  name: 'Discussion générale',
+  lastMessage: 'Bienvenue sur Vibe'
+}];
+
 function notify(text) {
   if (!toast) return;
   toast.value = text;
@@ -60,13 +66,9 @@ function renderMessages() {
   messages.scrollTop = messages.scrollHeight;
 }
 
-function renderChats(items) {
+function renderChats(items = defaultChats) {
   if (!chats) return;
   chats.innerHTML = '';
-  if (!items.length) {
-    chats.innerHTML = '<div class="empty-state">Aucune discussion pour le moment.</div>';
-    return;
-  }
   for (const item of items) {
     const node = document.createElement('button');
     node.type = 'button';
@@ -89,12 +91,13 @@ async function ensureAuth() {
   } catch (error) {
     console.error('[Vibe] Authentification:', error);
     status.textContent = 'Erreur de connexion';
-    notify('Connexion Firebase impossible.');
+    notify('Active l’authentification anonyme dans Firebase.');
   }
 }
 
 function listenToChat(chatId) {
   unsubscribeMessages?.();
+  if (!db) return;
   const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
   unsubscribeMessages = onSnapshot(q, snapshot => {
     allMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -108,19 +111,23 @@ function listenToChat(chatId) {
 function openChat(chatId, chatName) {
   selectedChat = chatId;
   title.textContent = chatName;
-  presence.textContent = 'Discussion Vibe';
+  presence.textContent = currentUser ? 'connecté à Vibe' : 'Firebase requis';
   avatar.textContent = chatName.slice(0, 1).toUpperCase();
   welcome?.classList.add('hidden');
   chatView?.classList.remove('hidden');
   shell?.classList.add('chat-open');
   listenToChat(chatId);
   input?.focus();
+  renderChats(defaultChats);
 }
 
 async function sendMessage(event) {
   event.preventDefault();
   const text = input?.value.trim();
-  if (!text || !selectedChat || !currentUser) return;
+  if (!text || !selectedChat || !currentUser || !db) {
+    if (!currentUser) notify('Connecte Firebase pour envoyer un message.');
+    return;
+  }
   try {
     await addDoc(collection(db, 'chats', selectedChat, 'messages'), {
       uid: currentUser.uid,
@@ -134,27 +141,25 @@ async function sendMessage(event) {
   }
 }
 
-function initSearch() {
-  search?.addEventListener('input', event => {
-    const term = event.target.value.toLowerCase().trim();
-    const buttons = chats?.querySelectorAll('.chat-item') ?? [];
-    buttons.forEach(button => {
-      button.hidden = !button.textContent.toLowerCase().includes(term);
-    });
+search?.addEventListener('input', event => {
+  const term = event.target.value.toLowerCase().trim();
+  chats?.querySelectorAll('.chat-item').forEach(button => {
+    button.hidden = !button.textContent.toLowerCase().includes(term);
   });
-}
+});
+
+renderChats(defaultChats);
 
 if (configured && auth) {
   onAuthStateChanged(auth, user => {
     currentUser = user;
     status.textContent = user ? 'connecté' : 'déconnecté';
+    if (selectedChat) presence.textContent = user ? 'connecté à Vibe' : 'Firebase requis';
   });
   ensureAuth();
 } else {
-  renderChats([]);
+  status.textContent = 'Firebase non configuré';
 }
 
 form?.addEventListener('submit', sendMessage);
-initSearch();
-
 window.VibeFirebase = { auth, db, openChat, sendMessage };
