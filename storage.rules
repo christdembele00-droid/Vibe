@@ -4,29 +4,33 @@ service firebase.storage {
     function signedIn() { return request.auth != null; }
     function own(uid) { return signedIn() && request.auth.uid == uid; }
     function validFile() {
-      return request.resource.size <= 25 * 1024 * 1024
+      return request.resource != null
+        && request.resource.size <= 25 * 1024 * 1024
         && request.resource.contentType != null;
     }
 
     match /users/{uid}/uploads/{fileName} {
-      allow read, write: if own(uid) && validFile();
+      allow read: if own(uid);
+      allow create, update: if own(uid) && validFile();
+      allow delete: if own(uid);
     }
 
-    // Media attached to messages: anyone authenticated can read, only the uploader can write.
     match /messages/{uid}/{fileName} {
       allow read: if signedIn();
-      allow write: if own(uid) && validFile();
+      allow create, update: if own(uid) && validFile();
+      allow delete: if own(uid);
     }
 
-    // Voice messages follow the same read/write model as message media.
     match /voice/{uid}/{fileName} {
       allow read: if signedIn();
-      allow write: if own(uid) && validFile();
+      allow create, update: if own(uid) && validFile();
+      allow delete: if own(uid);
     }
 
     match /statuses/{uid}/{fileName} {
       allow read: if signedIn();
-      allow write: if own(uid) && validFile();
+      allow create, update: if own(uid) && validFile();
+      allow delete: if own(uid);
     }
 
     match /{allPaths=**} {
