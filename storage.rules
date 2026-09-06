@@ -9,6 +9,13 @@ service firebase.storage {
         && request.resource.contentType != null;
     }
 
+    // Profile pictures are readable by signed-in Vibe users and writable only by the owner.
+    match /profilePhotos/{uid}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if own(uid) && validFile() && request.resource.contentType.matches('image/.*') && request.resource.size <= 8 * 1024 * 1024;
+      allow delete: if own(uid);
+    }
+
     match /users/{uid}/uploads/{fileName} {
       allow read: if own(uid);
       allow create, update: if own(uid) && validFile();
