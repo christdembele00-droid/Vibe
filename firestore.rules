@@ -5,12 +5,12 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function isUser(uid) { return signedIn() && request.auth.uid == uid; }
     function conversationExists(id) { return exists(/databases/$(database)/documents/conversations/$(id)); }
-    function member(id) { return signedIn() && conversationExists(id) && get(/databases/$(database)/documents/conversations/$(id)).data.participantIds is list && request.auth.uid in get(/databases/$(database)/documents/conversations/$(id)).data.participantIds; }
+    function member(id) { return signedIn() && conversationExists(id) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(id)).data.participantIds; }
     function owner(id) { return signedIn() && conversationExists(id) && get(/databases/$(database)/documents/conversations/$(id)).data.ownerId == request.auth.uid; }
     function callParticipant(id) { return member(id); }
     function channelExists(id) { return exists(/databases/$(database)/documents/channels/$(id)); }
-    function channelMember(id) { return signedIn() && channelExists(id) && get(/databases/$(database)/documents/channels/$(id)).data.followerIds is list && request.auth.uid in get(/databases/$(database)/documents/channels/$(id)).data.followerIds; }
-    function channelAdmin(id) { return signedIn() && channelExists(id) && get(/databases/$(database)/documents/channels/$(id)).data.adminIds is list && request.auth.uid in get(/databases/$(database)/documents/channels/$(id)).data.adminIds; }
+    function channelMember(id) { return signedIn() && channelExists(id) && request.auth.uid in get(/databases/$(database)/documents/channels/$(id)).data.followerIds; }
+    function channelAdmin(id) { return signedIn() && channelExists(id) && request.auth.uid in get(/databases/$(database)/documents/channels/$(id)).data.adminIds; }
 
     match /users/{uid} {
       allow read: if isUser(uid);
@@ -26,7 +26,7 @@ service cloud.firestore {
     }
 
     match /conversations/{id} {
-      allow read: if signedIn() && resource.data.participantIds is list && request.auth.uid in resource.data.participantIds;
+      allow read: if signedIn() && request.auth.uid in resource.data.participantIds;
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && request.auth.uid in request.resource.data.participantIds && request.resource.data.participantIds.size() >= 1 && request.resource.data.participantIds.size() <= 100 && request.resource.data.name is string && request.resource.data.name.size() <= 120 && request.resource.data.inviteToken is string && request.resource.data.inviteToken.size() >= 32;
       allow update: if (member(id) && request.resource.data.ownerId == resource.data.ownerId && request.resource.data.participantIds.size() <= 100 && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'updatedAt'])) || (signedIn() && !(request.auth.uid in resource.data.participantIds) && request.resource.data.participantIds.size() == resource.data.participantIds.size() + 1 && request.auth.uid in request.resource.data.participantIds && request.resource.data.inviteToken == resource.data.inviteToken && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'updatedAt', 'inviteToken']));
       allow delete: if owner(id);
