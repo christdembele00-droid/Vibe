@@ -5,9 +5,24 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function isUser(uid) { return signedIn() && request.auth.uid == uid; }
     function conversationExists(id) { return exists(/databases/$(database)/documents/conversations/$(id)); }
-    function member(id) { return signedIn() && conversationExists(id) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(id)).data.participantIds; }
-    function owner(id) { return signedIn() && conversationExists(id) && get(/databases/$(database)/documents/conversations/$(id)).data.ownerId == request.auth.uid; }
-    function callParticipant(id) { return signedIn() && conversationExists(id) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(id)).data.participantIds; }
+    function member(id) {
+      return signedIn() && conversationExists(id)
+        && request.auth.uid in get(/databases/$(database)/documents/conversations/$(id)).data.participantIds;
+    }
+    function owner(id) {
+      return signedIn() && conversationExists(id)
+        && get(/databases/$(database)/documents/conversations/$(id)).data.ownerId == request.auth.uid;
+    }
+    function callParticipant(id) { return member(id); }
+    function channelExists(id) { return exists(/databases/$(database)/documents/channels/$(id)); }
+    function channelMember(id) {
+      return signedIn() && channelExists(id)
+        && request.auth.uid in get(/databases/$(database)/documents/channels/$(id)).data.followerIds;
+    }
+    function channelAdmin(id) {
+      return signedIn() && channelExists(id)
+        && request.auth.uid in get(/databases/$(database)/documents/channels/$(id)).data.adminIds;
+    }
 
     match /users/{uid} {
       allow read: if isUser(uid);
@@ -16,12 +31,16 @@ service cloud.firestore {
       allow delete: if isUser(uid);
       match /settings/{id} { allow read, write: if isUser(uid); }
       match /conversations/{id} { allow read, write: if isUser(uid); }
-      match /notifications/{id} { allow read, update, delete: if isUser(uid); allow create: if isUser(uid) && request.resource.data.recipientId == uid; }
+      match /notifications/{id} {
+        allow read, update, delete: if isUser(uid);
+        allow create: if isUser(uid) && request.resource.data.recipientId == uid;
+      }
       match /blocked/{id} { allow read, write: if isUser(uid); }
       match /sessions/{id} { allow read, write: if isUser(uid); }
       match /favorites/{chatId} {
         allow read: if isUser(uid);
-        allow create, update: if isUser(uid) && request.resource.data.get('chatId', chatId) == chatId;
+        allow create, update: if isUser(uid)
+          && request.resource.data.get('chatId', chatId) == chatId;
         allow delete: if isUser(uid);
       }
     }
@@ -63,14 +82,30 @@ service cloud.firestore {
           && (!request.resource.data.keys().hasAny(['fileName']) || (request.resource.data.fileName is string && request.resource.data.fileName.size() <= 180))
           && (!request.resource.data.keys().hasAny(['mimeType']) || (request.resource.data.mimeType is string && request.resource.data.mimeType.size() <= 120))
           && (!request.resource.data.keys().hasAny(['dataUrl']) || (request.resource.data.dataUrl is string && request.resource.data.dataUrl.size() <= 1100000))
+          && (!request.resource.data.keys().hasAny(['mediaUrl']) || (request.resource.data.mediaUrl is string && request.resource.data.mediaUrl.size() <= 2000))
+          && (!request.resource.data.keys().hasAny(['fileSize']) || (request.resource.data.fileSize is int && request.resource.data.fileSize <= 26214400))
           && (!request.resource.data.keys().hasAny(['viewOnce']) || request.resource.data.viewOnce is bool);
         allow update: if member(id)
           && resource.data.uid == request.auth.uid
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updatedAt']);
-        allow delete: if member(id) && (resource.data.uid == request.auth.uid || (resource.data.get('viewOnce', false) == true && resource.data.uid != request.auth.uid));
+        allow delete: if member(id)
+          && (resource.data.uid == request.auth.uid
+              || resource.data.get('viewOnce', false) == true);
+
+        match /reactions/{reactionUid} {
+          allow read: if member(id);
+          allow create, update: if member(id)
+            && reactionUid == request.auth.uid
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.messageId == messageId
+            && request.resource.data.emoji is string
+            && request.resource.data.emoji.size() <= 16;
+          allow delete: if member(id) && reactionUid == request.auth.uid;
+        }
       }
 
+      // Legacy reaction location kept compatible with older Vibe code.
       match /reactions/{reactionId} {
         allow read: if member(id);
         allow create, update: if member(id)
@@ -85,18 +120,61 @@ service cloud.firestore {
 
     match /conversationInvites/{token} {
       allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && request.resource.data.chatId is string && request.resource.data.token == token && request.resource.data.token.size() >= 32;
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.chatId is string
+        && request.resource.data.token == token
+        && request.resource.data.token.size() >= 32;
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /channels/{channelId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.auth.uid in request.resource.data.adminIds
+        && request.auth.uid in request.resource.data.followerIds
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 500
+        && request.resource.data.inviteToken is string
+        && request.resource.data.inviteToken.size() >= 32;
+      allow update: if signedIn()
+        && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.adminIds)
+        && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+
+      match /posts/{postId} {
+        allow read: if signedIn() && (channelMember(channelId) || channelAdmin(channelId));
+        allow create, update, delete: if channelAdmin(channelId)
+          && (request.resource == null || request.resource.data.authorId == request.auth.uid);
+      }
+    }
+
+    match /channelInvites/{token} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.channelId is string
+        && request.resource.data.token == token
+        && request.resource.data.token.size() >= 32;
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
       allow update: if false;
     }
 
     match /stories/{storyId} {
       allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid && request.resource.data.createdAt is timestamp && request.resource.data.expiresAt is timestamp && request.resource.data.expiresAt > request.resource.data.createdAt && request.resource.data.expiresAt <= request.resource.data.createdAt + duration.value(24, 'h') && (!request.resource.data.keys().hasAny(['text']) || (request.resource.data.text is string && request.resource.data.text.size() <= 2000)) && (!request.resource.data.keys().hasAny(['dataUrl']) || (request.resource.data.dataUrl is string && request.resource.data.dataUrl.size() <= 1100000));
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.resource.data.createdAt
+        && request.resource.data.expiresAt <= request.resource.data.createdAt + duration.value(24, 'h');
       allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
-    // Vibe currently publishes 24-hour statuses in the `statuses` collection.
     match /statuses/{statusId} {
       allow read: if signedIn();
       allow create: if signedIn()
@@ -119,23 +197,48 @@ service cloud.firestore {
 
     match /calls/{id} {
       allow read: if signedIn() && (resource.data.callerUid == request.auth.uid || resource.data.calleeUid == request.auth.uid);
-      allow create: if signedIn() && request.resource.data.callerUid == request.auth.uid && request.resource.data.calleeUid != request.auth.uid && request.resource.data.kind in ['audio','video'] && request.resource.data.chatId is string && callParticipant(request.resource.data.chatId) && get(/databases/$(database)/documents/conversations/$(request.resource.data.chatId)).data.participantIds.hasAll([request.resource.data.calleeUid]) && request.resource.data.createdAt is timestamp;
-      allow update: if signedIn() && (resource.data.callerUid == request.auth.uid || resource.data.calleeUid == request.auth.uid) && request.resource.data.callerUid == resource.data.callerUid && request.resource.data.calleeUid == resource.data.calleeUid && request.resource.data.chatId == resource.data.chatId && request.resource.data.kind == resource.data.kind && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['offer','answer','status','endedAt']);
+      allow create: if signedIn()
+        && request.resource.data.callerUid == request.auth.uid
+        && request.resource.data.calleeUid != request.auth.uid
+        && request.resource.data.kind in ['audio','video']
+        && request.resource.data.chatId is string
+        && callParticipant(request.resource.data.chatId)
+        && get(/databases/$(database)/documents/conversations/$(request.resource.data.chatId)).data.participantIds.hasAll([request.resource.data.calleeUid])
+        && request.resource.data.createdAt is timestamp;
+      allow update: if signedIn()
+        && (resource.data.callerUid == request.auth.uid || resource.data.calleeUid == request.auth.uid)
+        && request.resource.data.callerUid == resource.data.callerUid
+        && request.resource.data.calleeUid == resource.data.calleeUid
+        && request.resource.data.chatId == resource.data.chatId
+        && request.resource.data.kind == resource.data.kind
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['offer','answer','status','endedAt']);
       allow delete: if signedIn() && (resource.data.callerUid == request.auth.uid || resource.data.calleeUid == request.auth.uid);
       match /candidates/{uid}/{candidateId} {
-        allow read, create: if signedIn() && (uid == request.auth.uid || get(/databases/$(database)/documents/calls/$(id)).data.callerUid == request.auth.uid || get(/databases/$(database)/documents/calls/$(id)).data.calleeUid == request.auth.uid);
+        allow read, create: if signedIn()
+          && (uid == request.auth.uid
+              || get(/databases/$(database)/documents/calls/$(id)).data.callerUid == request.auth.uid
+              || get(/databases/$(database)/documents/calls/$(id)).data.calleeUid == request.auth.uid);
         allow delete: if isUser(uid);
       }
     }
 
     match /incomingCalls/{uid}/calls/{id} {
       allow read, update, delete: if isUser(uid);
-      allow create: if signedIn() && request.resource.data.calleeUid == uid && request.resource.data.callerUid == request.auth.uid && request.resource.data.kind in ['audio','video'] && request.resource.data.chatId is string && callParticipant(request.resource.data.chatId) && get(/databases/$(database)/documents/conversations/$(request.resource.data.chatId)).data.participantIds.hasAll([uid]);
+      allow create: if signedIn()
+        && request.resource.data.calleeUid == uid
+        && request.resource.data.callerUid == request.auth.uid
+        && request.resource.data.kind in ['audio','video']
+        && request.resource.data.chatId is string
+        && callParticipant(request.resource.data.chatId)
+        && get(/databases/$(database)/documents/conversations/$(request.resource.data.chatId)).data.participantIds.hasAll([uid]);
     }
 
     match /notifications/{id} {
       allow read, update, delete: if signedIn() && resource.data.recipientId == request.auth.uid;
-      allow create: if signedIn() && request.resource.data.recipientId is string && request.resource.data.senderId == request.auth.uid && request.resource.data.senderId != request.resource.data.recipientId;
+      allow create: if signedIn()
+        && request.resource.data.recipientId is string
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.senderId != request.resource.data.recipientId;
     }
 
     match /joinRequests/{id} {
@@ -153,8 +256,15 @@ service cloud.firestore {
     match /favorites/{uid}/items/{id} { allow read, write: if isUser(uid); }
     match /archives/{uid}/items/{id} { allow read, write: if isUser(uid); }
     match /pinnedMessages/{uid}/items/{id} { allow read, write: if isUser(uid); }
-    match /callHistory/{uid}/items/{id} { allow read: if isUser(uid); allow create, update: if isUser(uid) && request.resource.data.uid == request.auth.uid; allow delete: if isUser(uid); }
-    match /reports/{id} { allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid; allow read: if signedIn() && resource.data.reporterId == request.auth.uid; }
+    match /callHistory/{uid}/items/{id} {
+      allow read: if isUser(uid);
+      allow create, update: if isUser(uid) && request.resource.data.uid == request.auth.uid;
+      allow delete: if isUser(uid);
+    }
+    match /reports/{id} {
+      allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow read: if signedIn() && resource.data.reporterId == request.auth.uid;
+    }
     match /appConfig/{id} { allow read: if signedIn(); allow write: if false; }
     match /{document=**} { allow read, write: if false; }
   }
