@@ -1,0 +1,41 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": false,
+    "presence": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        "connections": {
+          "$connectionId": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      }
+    },
+    "messages": {
+      "$chatId": {
+        ".read": "auth != null",
+        "$messageId": {
+          ".write": "auth != null && newData.child('uid').val() === auth.uid"
+        }
+      }
+    },
+    "typing": {
+      "$chatId": {
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "events": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$eventId": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    }
+  }
+}
