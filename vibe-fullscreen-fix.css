@@ -1,0 +1,10 @@
+/* Vibe — true application viewport: no centered card/frame */
+html,body{width:100%!important;height:100%!important;margin:0!important;padding:0!important;background:#fff!important}
+body{overflow:hidden!important}
+.app-shell{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;min-width:100vw!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important}
+.workspace{width:calc(100vw - 72px)!important;height:100dvh!important;max-width:none!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.vibe-rail,.inbox-panel,.content-panel,.details-panel{border-radius:0!important;box-shadow:none!important}
+@media(max-width:760px){
+  .app-shell{width:100vw!important;min-width:100vw!important;height:100dvh!important}
+  .workspace{width:100vw!important;height:100dvh!important;padding-bottom:64px!important}
+}
