@@ -1,7 +1,7 @@
-const CACHE='vibe-shell-v26';
+const CACHE='vibe-shell-v27';
 const ASSETS=[
   './','./index.html','./style.css','./vibe-actions.css','./vibe-redesign.css','./vibe-ui-cleanup.css',
-  './vibe-modern.css','./vibe-oled.css','./vibe-runtime.js','./vibe-persistence.js','./vibe-seed.js',
+  './vibe-modern.css','./vibe-oled.css','./vibe-messaging-advanced.css','./vibe-runtime.js','./vibe-persistence.js','./vibe-seed.js',
   './vibe-enhancements.js','./vibe-ai.js','./vibe-local-notifications.js','./vibe-actions.js','./vibe-online.js',
   './vibe-analytics.js','./vibe-channel.js','./calls.js','./vibe-modern.js','./firebase-config.js',
   './manifest.webmanifest','./icons/icon.svg'
