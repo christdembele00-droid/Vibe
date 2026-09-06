@@ -1,15 +1,109 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getDatabase, ref, get, onValue, remove } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
-const app=getApps()[0];if(!app)throw new Error('Firebase doit être initialisé avant vibe-media.js');
-const auth=getAuth(app),db=getDatabase(app,'https://vibe-749e5-default-rtdb.firebaseio.com');
-let user=null,stop=null,lastChat=null,mediaRaw={};
-const $=s=>document.querySelector(s);
-function chatId(){return document.querySelector('.conversation.active')?.dataset.chat||null}
-function mediaNode(m){if(!m?.dataUrl)return null;let el;if(m.mimeType?.startsWith('image/')){el=document.createElement('img');el.src=m.dataUrl;el.alt=m.fileName||'Image';el.loading='lazy';el.style.maxWidth='100%';el.style.borderRadius='10px'}else if(m.mimeType?.startsWith('video/')){el=document.createElement('video');el.src=m.dataUrl;el.controls=true;el.preload='metadata';el.style.maxWidth='100%'}else if(m.mimeType?.startsWith('audio/')){el=document.createElement('audio');el.src=m.dataUrl;el.controls=true}else if(m.mimeType==='application/pdf'){el=document.createElement('a');el.href=m.dataUrl;el.target='_blank';el.rel='noopener';el.textContent=`📄 ${m.fileName||'Document PDF'}`}return el}
-function renderMedia(){document.querySelectorAll('#messages [data-message]').forEach(node=>{const m=mediaRaw[node.dataset.message];if(!m?.dataUrl||node.querySelector('[data-vibe-media]'))return;const media=mediaNode(m);if(!media)return;media.dataset.vibeMedia='1';const time=node.querySelector('.message-time')?.textContent||'';node.replaceChildren(media);const timeEl=document.createElement('span');timeEl.className='message-time';timeEl.textContent=time;node.appendChild(timeEl)})}
-function watch(){const id=chatId();if(id===lastChat)return;if(stop)stop();stop=null;lastChat=id;mediaRaw={};if(!id||id.startsWith('demo-'))return;stop=onValue(ref(db,`messages/${id}`),s=>{mediaRaw=s.val()||{};renderMedia()})}
-async function cleanupExpired(){if(!user)return;const all=await get(ref(db,'stories'));const now=Date.now(),raw=all.val()||{},jobs=[];for(const [uid,stories] of Object.entries(raw))for(const [id,story] of Object.entries(stories||{}))if(Number(story?.expiresAt||0)<=now)jobs.push(remove(ref(db,`stories/${uid}/${id}`)).catch(()=>{}));await Promise.all(jobs)}
-onAuthStateChanged(auth,async u=>{user=u;if(u)await cleanupExpired().catch(()=>{});watch()});
-const observer=new MutationObserver(()=>watch());observer.observe($('#conversationList')||document.body,{childList:true,subtree:true});
-setInterval(()=>{if(user)cleanupExpired().catch(()=>{})},60000);
+import { getDatabase, ref, onValue, remove, get } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
+
+const app = getApps()[0];
+if (!app) throw new Error('Firebase doit être initialisé avant vibe-media.js');
+const auth = getAuth(app);
+const db = getDatabase(app, 'https://vibe-749e5-default-rtdb.firebaseio.com');
+
+let stopMessages = null;
+let stopStories = null;
+let observedChatId = null;
+
+const activeChatId = () => document.querySelector('.conversation.active')?.dataset.chat || null;
+const messagesEl = () => document.querySelector('#messages');
+
+function escapeHtml(value = '') {
+  return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
+}
+
+function mediaHtml(m) {
+  const url = typeof m.dataUrl === 'string' ? m.dataUrl : '';
+  if (!url || !url.startsWith('data:')) return '';
+  const type = m.mimeType || '';
+  const name = escapeHtml(m.fileName || 'Fichier');
+  if (type.startsWith('image/')) return `<img src="${url}" alt="${name}" loading="lazy" style="max-width:280px;border-radius:12px">`;
+  if (type.startsWith('video/')) return `<video src="${url}" controls playsinline preload="metadata" style="max-width:300px;border-radius:12px"></video>`;
+  if (type.startsWith('audio/')) return `<audio src="${url}" controls preload="metadata"></audio>`;
+  return `<a href="${url}" download="${name}">${name}</a>`;
+}
+
+function renderMediaMessage(key, m) {
+  const root = messagesEl();
+  if (!root || !m || !m.dataUrl) return;
+  const existing = root.querySelector(`[data-media-key="${CSS.escape(key)}"]`);
+  if (existing) return;
+  const wrap = document.createElement('div');
+  wrap.className = `message-row ${m.uid === auth.currentUser?.uid ? 'mine' : ''}`;
+  wrap.dataset.mediaKey = key;
+  wrap.innerHTML = `<div class="message-bubble">${mediaHtml(m)}</div>`;
+  root.appendChild(wrap);
+}
+
+function watchChat(chatId) {
+  if (chatId === observedChatId && stopMessages) return;
+  if (stopMessages) stopMessages();
+  stopMessages = null;
+  observedChatId = chatId;
+  if (!chatId || chatId.startsWith('demo-')) return;
+  stopMessages = onValue(ref(db, `messages/${chatId}`), snap => {
+    const data = snap.val() || {};
+    for (const [key, m] of Object.entries(data)) renderMediaMessage(key, m);
+  });
+}
+
+async function cleanupExpiredStories() {
+  if (!auth.currentUser) return;
+  try {
+    const snap = await get(ref(db, 'stories'));
+    const all = snap.val() || {};
+    const now = Date.now();
+    for (const [uid, stories] of Object.entries(all)) {
+      for (const [storyId, story] of Object.entries(stories || {})) {
+        if (Number(story?.expiresAt) > 0 && Number(story.expiresAt) <= now) {
+          await remove(ref(db, `stories/${uid}/${storyId}`));
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Nettoyage stories indisponible:', error);
+  }
+}
+
+function watchStories() {
+  if (stopStories) stopStories();
+  stopStories = onValue(ref(db, 'stories'), snap => {
+    const all = snap.val() || {};
+    const now = Date.now();
+    for (const [uid, stories] of Object.entries(all)) {
+      for (const [storyId, story] of Object.entries(stories || {})) {
+        if (Number(story?.expiresAt) > 0 && Number(story.expiresAt) <= now) {
+          remove(ref(db, `stories/${uid}/${storyId}`)).catch(() => {});
+        }
+      }
+    }
+  });
+}
+
+function observe() {
+  const list = document.querySelector('#conversationList');
+  if (!list) return;
+  const refresh = () => watchChat(activeChatId());
+  refresh();
+  new MutationObserver(refresh).observe(list, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-chat'] });
+}
+
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    if (stopMessages) stopMessages();
+    if (stopStories) stopStories();
+    stopMessages = stopStories = null;
+    observedChatId = null;
+    return;
+  }
+  observe();
+  watchStories();
+  cleanupExpiredStories();
+  setInterval(cleanupExpiredStories, 60000);
+});
