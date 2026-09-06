@@ -1,0 +1,75 @@
+/* Vibe — application plein écran, sans carte centrale */
+html, body {
+  width: 100%;
+  min-width: 100%;
+  height: 100%;
+  min-height: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #ffffff !important;
+}
+
+body {
+  overflow: hidden !important;
+}
+
+.app-shell {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  max-width: none !important;
+  min-width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: #fff !important;
+}
+
+.vibe-rail,
+.workspace,
+.inbox-panel,
+.content-panel {
+  border-radius: 0 !important;
+}
+
+.workspace {
+  width: calc(100vw - 72px) !important;
+  height: 100% !important;
+  max-width: none !important;
+}
+
+.inbox-panel,
+.content-panel {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.content-panel {
+  overflow: hidden !important;
+}
+
+.welcome,
+.chat-view,
+.module-view {
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    position: fixed !important;
+    inset: 0 0 64px 0 !important;
+    width: 100vw !important;
+    min-width: 100vw !important;
+    height: calc(100dvh - 64px) !important;
+  }
+
+  .workspace {
+    width: 100vw !important;
+    height: 100% !important;
+  }
+}
