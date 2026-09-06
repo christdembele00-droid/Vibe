@@ -1,0 +1,224 @@
+import { getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import {
+  getDatabase,
+  ref,
+  push,
+  set,
+  update,
+  remove,
+  get,
+  onValue,
+  onDisconnect,
+  serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
+
+const app = getApps()[0];
+if (!app) throw new Error('Firebase doit être initialisé avant vibe-fixes.js');
+const auth = getAuth(app);
+const db = getDatabase(app, 'https://vibe-749e5-default-rtdb.firebaseio.com');
+const $ = s => document.querySelector(s);
+let user = null;
+let selected = null;
+let stopReactions = null;
+let stopMembers = null;
+let stopPeerPresence = null;
+let stopChatMessages = null;
+let peerUids = [];
+const consumed = new Set();
+
+function toast(message){
+  const el = $('#toast'); if (!el) return;
+  el.textContent = message; el.classList.add('show');
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+function currentChatId(){ return document.querySelector('.conversation.active')?.dataset.chat || selected; }
+function cleanupChatObservers(){
+  for (const fn of [stopReactions, stopMembers, stopPeerPresence, stopChatMessages]) if (typeof fn === 'function') fn();
+  stopReactions = stopMembers = stopPeerPresence = stopChatMessages = null;
+  peerUids = [];
+}
+function makeId(){ return `chat-${Date.now().toString(36)}-${crypto.randomUUID().slice(0,8)}`; }
+function makeInviteToken(){ return crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', ''); }
+function cleanText(v,max=2000){ return String(v || '').trim().slice(0,max); }
+
+async function createPrivateChat(){
+  if (!user) return toast('Connexion Firebase requise.');
+  const name = cleanText(prompt('Nom de la discussion :'),120); if (!name) return;
+  const chatId = makeId();
+  const inviteToken = makeInviteToken();
+  const message = `Discussion créée. Partagez cet identifiant avec le code d’invitation : ${chatId}`;
+  try {
+    await update(ref(db), {
+      [`chats/${chatId}`]: { name, ownerUid:user.uid, createdAt:serverTimestamp(), inviteToken },
+      [`chatMembers/${chatId}/${user.uid}`]: true,
+      [`userChats/${user.uid}/${chatId}`]: true
+    });
+    toast(`Discussion créée. Code d’invitation : ${inviteToken}`);
+    const item = [...document.querySelectorAll('.conversation')].find(x => x.dataset.chat === chatId);
+    if (item) item.click();
+  } catch (e) { toast(`Création impossible : ${e.message}`); }
+}
+
+async function joinPrivateChat(){
+  if (!user) return toast('Connexion Firebase requise.');
+  const id = cleanText(prompt('Identifiant de la discussion :'),120);
+  if (!id) return;
+  const token = cleanText(prompt('Code d’invitation privé :'),128);
+  if (!token) return;
+  try {
+    const snap = await get(ref(db, `chats/${id}`));
+    if (!snap.exists()) return toast('Discussion introuvable.');
+    const chat = snap.val();
+    if (!chat.inviteToken || chat.inviteToken !== token) return toast('Code d’invitation invalide.');
+    await set(ref(db, `joinRequests/${id}/${token}/${user.uid}`), true);
+    await update(ref(db), {
+      [`chatMembers/${id}/${user.uid}`]: true,
+      [`userChats/${user.uid}/${id}`]: true
+    });
+    toast('Accès privé autorisé.');
+    window.location.reload();
+  } catch (e) { toast(`Impossible de rejoindre : ${e.message}`); }
+}
+
+async function atomicSend(text, type='text', extra={}){
+  const chatId = currentChatId();
+  if (!chatId || !user || !text) return false;
+  const key = push(ref(db, `messages/${chatId}`)).key;
+  const message = { text:cleanText(text,20000), uid:user.uid, createdAt:serverTimestamp(), type, viewOnce:Boolean(extra.viewOnce), ...extra };
+  const event = { type:'message_sent', chatId, messageId:key, createdAt:serverTimestamp() };
+  await update(ref(db), { [`messages/${chatId}/${key}`]:message, [`events/${user.uid}/${key}`]:event });
+  return true;
+}
+
+async function handleSubmit(e){
+  if (e.target !== $('#messageForm')) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const input = $('#messageInput'); const text = cleanText(input?.value,2000);
+  if (!text) return;
+  try { if (await atomicSend(text)) { input.value=''; toast('Message envoyé.'); } }
+  catch (err) { toast(`Impossible d'envoyer : ${err.message}`); }
+}
+
+async function handleAttachment(e){
+  if (e.target?.id !== 'attachBtn') return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  $('#fileInput')?.click();
+}
+async function handleFile(e){
+  if (e.target?.id !== 'fileInput') return;
+  const file = e.target.files?.[0]; e.target.value=''; if (!file) return;
+  const allowed = file.type.startsWith('image/') || file.type.startsWith('video/') || file.type.startsWith('audio/') || file.type === 'application/pdf';
+  if (!allowed) return toast('Type de fichier non pris en charge.');
+  if (file.size > 750 * 1024) return toast('Fichier trop volumineux pour le stockage RTDB (750 Ko maximum).');
+  const chatId = currentChatId(); if (!chatId || !user) return toast('Ouvrez une discussion.');
+  try {
+    const dataUrl = await new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(file); });
+    await atomicSend(file.name, 'media', { fileName:file.name.slice(0,180), mimeType:file.type, dataUrl });
+    toast('Fichier envoyé.');
+  } catch (err) { toast(`Envoi du fichier impossible : ${err.message}`); }
+}
+
+function aggregateReactionMap(raw){
+  const out = {};
+  for (const [messageId, users] of Object.entries(raw || {})) {
+    const counts = {};
+    for (const value of Object.values(users || {})) counts[value] = (counts[value] || 0) + 1;
+    out[messageId] = Object.entries(counts).map(([emoji,count]) => `${emoji}${count > 1 ? ` ${count}` : ''}`).join(' ');
+  }
+  return out;
+}
+function decorateReactions(raw){
+  const map = aggregateReactionMap(raw);
+  document.querySelectorAll('#messages [data-message]').forEach(el=>{
+    const id = el.dataset.message; const old = el.querySelector('.message-reaction');
+    if (old) old.remove();
+    if (map[id]) { const badge=document.createElement('span'); badge.className='message-reaction'; badge.textContent=map[id]; el.appendChild(badge); }
+  });
+}
+
+function watchReactions(chatId){
+  if (stopReactions) stopReactions();
+  stopReactions = onValue(ref(db, `reactions/${chatId}`), snap => decorateReactions(snap.val() || {}));
+}
+
+async function watchPeerPresence(chatId){
+  if (stopMembers) stopMembers(); if (stopPeerPresence) stopPeerPresence();
+  const membersSnap = await get(ref(db, `chatMembers/${chatId}`));
+  const members = membersSnap.val() || {};
+  peerUids = Object.keys(members).filter(uid => uid !== user?.uid);
+  const statusEl = $('#chatPresence');
+  if (!peerUids.length) { if(statusEl) statusEl.textContent='vous êtes le seul membre'; return; }
+  const listeners = [];
+  const states = new Map();
+  const paint = () => {
+    const online = [...states.values()].filter(v => v === 'online').length;
+    if(statusEl) statusEl.textContent = peerUids.length === 1 ? (online ? 'en ligne' : 'hors ligne') : `${online}/${peerUids.length} en ligne`;
+  };
+  for (const uid of peerUids) listeners.push(onValue(ref(db, `presence/${uid}/status`), snap => { states.set(uid, snap.val()?.state || 'offline'); paint(); }));
+  stopPeerPresence = () => listeners.forEach(fn => fn());
+}
+
+function viewOnceClick(e){
+  const el = e.target.closest('#messages [data-message]'); if (!el || !user) return;
+  const id = el.dataset.message; if (!id || consumed.has(id)) return;
+  const chatId = currentChatId(); if (!chatId) return;
+  get(ref(db, `messages/${chatId}/${id}`)).then(async snap=>{
+    const msg=snap.val(); if (!msg?.viewOnce || msg.uid===user.uid) return;
+    consumed.add(id);
+    el.textContent = msg.text || msg.fileName || 'Contenu à vue unique';
+    await new Promise(r=>setTimeout(r,1200));
+    await remove(ref(db, `messages/${chatId}/${id}`));
+    toast('Message à vue unique consommé.');
+  }).catch(err=>toast(`Ouverture impossible : ${err.message}`));
+}
+
+async function cleanupExpiredStories(){
+  if (!user) return;
+  const snap = await get(ref(db, `stories/${user.uid}`));
+  const raw=snap.val()||{}, now=Date.now();
+  await Promise.all(Object.entries(raw).filter(([,s])=>(s.expiresAt||0)<=now).map(([id])=>remove(ref(db,`stories/${user.uid}/${id}`))));
+}
+
+function back(e){
+  if(e.target?.closest('#backBtn')){
+    cleanupChatObservers(); selected=null;
+  }
+}
+
+function monitorActiveChat(){
+  const id=currentChatId(); if (!id || id===selected || id.startsWith('demo-')) return;
+  selected=id; watchReactions(id); watchPeerPresence(id).catch(()=>{});
+}
+
+onAuthStateChanged(auth, async u=>{
+  user=u;
+  if (u) await cleanupExpiredStories().catch(()=>{});
+});
+
+document.addEventListener('click', e=>{
+  const target=e.target.closest('#newChatBtn,#menuBtn,#chatMenuBtn,#profileBtn');
+  if (target?.id === 'newChatBtn') { e.preventDefault(); e.stopImmediatePropagation(); createPrivateChat(); return; }
+  if (target?.id === 'menuBtn' || target?.id === 'chatMenuBtn') {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const choice=prompt('Vibe :\n1. Rejoindre une discussion privée\n2. Publier une actu\n3. Message à vue unique\n4. Réagir au dernier message');
+    if(choice==='1') joinPrivateChat();
+    else if(choice==='2') $('#createStory')?.click();
+    else if(choice==='3') atomicSend(cleanText(prompt('Message à vue unique :'),2000),'text',{viewOnce:true}).then(()=>toast('Message à vue unique envoyé.')).catch(err=>toast(err.message));
+    else if(choice==='4') {
+      const chatId=currentChatId();
+      if(!chatId||!user)return;
+      get(ref(db,`messages/${chatId}`)).then(s=>{ const entries=Object.entries(s.val()||{}); const last=entries.at(-1)?.[0]; if(!last)return; const reaction=cleanText(prompt('Réaction : ❤️ 👍 😂 😮 😢 🙏'),16); if(reaction)set(ref(db,`reactions/${chatId}/${last}/${user.uid}`),reaction).then(()=>toast('Réaction enregistrée.')); });
+    }
+    return;
+  }
+  if(target?.id === 'profileBtn') { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  if(e.target.closest('#backBtn')) back(e);
+  monitorActiveChat();
+  viewOnceClick(e);
+}, true);
+
+document.addEventListener('submit', handleSubmit, true);
+document.addEventListener('click', handleAttachment, true);
+document.addEventListener('change', handleFile, true);
+setInterval(monitorActiveChat, 500);
