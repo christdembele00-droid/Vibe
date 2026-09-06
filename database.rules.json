@@ -115,7 +115,7 @@
         ".read": "auth != null",
         "$storyId": {
           ".write": "auth != null && ((auth.uid === $uid && !data.exists()) || (!newData.exists() && data.child('expiresAt').isNumber() && data.child('expiresAt').val() <= now))",
-          ".validate": "newData.hasChildren(['createdAt','expiresAt','type']) && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber() && newData.child('expiresAt').val() > newData.child('createdAt').val() && newData.child('type').isString() && (!newData.hasChild('text') || (newData.child('text').isString() && newData.child('text').val().length <= 2000))"
+          ".validate": "newData.hasChildren(['createdAt','expiresAt','type']) && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber() && newData.child('expiresAt').val() > newData.child('createdAt').val() && newData.child('type').isString() && (!newData.hasChild('text') || (newData.child('text').isString() && newData.child('text').val().length <= 2000)) && (!newData.hasChild('dataUrl') || (newData.child('dataUrl').isString() && newData.child('dataUrl').val().length <= 1100000))"
         }
       }
     },
@@ -134,7 +134,7 @@
       "$callId": {
         ".read": "auth != null && (data.child('callerUid').val() === auth.uid || data.child('calleeUid').val() === auth.uid)",
         ".write": "auth != null && ((!data.exists() && newData.child('callerUid').val() === auth.uid && root.child('chatMembers').child(newData.child('chatId').val()).child(auth.uid).val() === true && root.child('chatMembers').child(newData.child('chatId').val()).child(newData.child('calleeUid').val()).val() === true) || (data.exists() && (data.child('callerUid').val() === auth.uid || data.child('calleeUid').val() === auth.uid)))",
-        ".validate": "newData.hasChildren(['callerUid','calleeUid','chatId','kind','status','createdAt']) && newData.child('callerUid').isString() && newData.child('calleeUid').isString() && newData.child('chatId').isString() && (newData.child('kind').val() === 'audio' || newData.child('kind').val() === 'video') && newData.child('status').isString() && newData.child('createdAt').isNumber() && (!data.exists() || (newData.child('callerUid').val() === data.child('callerUid').val() && newData.child('calleeUid').val() === data.child('calleeUid').val() && newData.child('chatId').val() === data.child('chatId').val() && newData.child('kind').val() === data.child('kind').val() && newData.child('createdAt').val() === data.child('createdAt').val()))"
+        ".validate": "newData.hasChildren(['callerUid','calleeUid','chatId','kind','status','createdAt']) && newData.child('callerUid').isString() && newData.child('calleeUid').isString() && newData.child('chatId').isString() && newData.child('callerUid').val() !== newData.child('calleeUid').val() && (newData.child('kind').val() === 'audio' || newData.child('kind').val() === 'video') && newData.child('status').isString() && newData.child('status').val().length <= 32 && newData.child('createdAt').isNumber() && (!newData.hasChild('offer') || (newData.child('offer').child('type').isString() && newData.child('offer').child('sdp').isString() && newData.child('offer').child('sdp').val().length <= 20000)) && (!newData.hasChild('answer') || (newData.child('answer').child('type').isString() && newData.child('answer').child('sdp').isString() && newData.child('answer').child('sdp').val().length <= 20000)) && (!data.exists() || (newData.child('callerUid').val() === data.child('callerUid').val() && newData.child('calleeUid').val() === data.child('calleeUid').val() && newData.child('chatId').val() === data.child('chatId').val() && newData.child('kind').val() === data.child('kind').val() && newData.child('createdAt').val() === data.child('createdAt').val()))"
       }
     },
 
@@ -143,7 +143,7 @@
         "$callId": {
           ".read": "auth != null && auth.uid === $uid",
           ".write": "auth != null && ((root.child('calls').child($callId).child('callerUid').val() === auth.uid && root.child('calls').child($callId).child('calleeUid').val() === $uid) || (!newData.exists() && auth.uid === $uid && data.child('calleeUid').val() === auth.uid))",
-          ".validate": "newData.hasChildren(['callerUid','chatId','kind','createdAt']) && newData.child('callerUid').isString() && newData.child('chatId').isString() && (newData.child('kind').val() === 'audio' || newData.child('kind').val() === 'video') && newData.child('createdAt').isNumber()"
+          ".validate": "newData.hasChildren(['callerUid','chatId','kind','createdAt']) && newData.child('callerUid').isString() && newData.child('chatId').isString() && newData.child('chatId').val().length <= 120 && newData.child('kind').isString() && (newData.child('kind').val() === 'audio' || newData.child('kind').val() === 'video') && newData.child('createdAt').isNumber()"
         }
       }
     }
