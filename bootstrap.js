@@ -13,11 +13,12 @@ try {
   await import('./app.js?v=20260906');
   await import('./vibe-fixes.js?v=20260906');
   await import('./active-users.js?v=20260906');
-  await import('./whatsapp-menu.js?v=20260906');
   await import('./vibe-settings.js?v=20260906');
   await import('./webrtc-calls.js?v=20260906');
   await import('./vibe-features.js?v=20260906');
   await import('./vibe-polish.js?v=20260906');
+  await import('./whatsapp-navigation.js?v=20260906');
+  await import('./whatsapp-message-actions.js?v=20260906');
 } catch (error) {
   showBootError(error);
 }
