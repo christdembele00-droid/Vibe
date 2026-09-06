@@ -9,12 +9,12 @@
 .glass-btn:active,.composer-btn:active,.send-btn:active,.tab:active,.mobile-login-btn:active{transform:scale(.96)}
 .glass-btn:focus-visible,.composer-btn:focus-visible,.send-btn:focus-visible,.tab:focus-visible,.conversation-item:focus-visible,.mobile-login-btn:focus-visible,.search-box input:focus-visible,.composer input:focus-visible{outline:none;box-shadow:var(--vibe-shadow-focus)}
 .search-box{position:relative;transition:transform .2s ease}
-.search-box input{transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease}
+.search-box input{transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease;border-radius:999px}
 .search-box:focus-within{transform:translateY(-1px)}
 .search-box kbd{opacity:.72;transition:opacity .2s ease,transform .2s ease}
 .search-box:focus-within kbd{opacity:.35;transform:translateX(2px)}
 .conversation-list{scrollbar-width:thin;overscroll-behavior:contain}
-.conversation-item{position:relative;overflow:hidden}
+.conversation-item{position:relative;overflow:hidden;border-radius:18px;margin:4px 8px}
 .conversation-item::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.16),transparent);transform:translateX(-120%);transition:transform .45s ease;pointer-events:none}
 .conversation-item:hover::after{transform:translateX(120%)}
 .conversation-item .avatar{transition:transform .2s ease,box-shadow .2s ease}
@@ -25,21 +25,27 @@
 .connection-status.offline{opacity:.72}
 .connection-status.syncing i{animation:vibe-pulse .9s infinite}
 @keyframes vibe-pulse{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 4px transparent}}
-.chat-header{box-shadow:0 1px 0 rgba(15,23,42,.04)}
-.messages{scroll-behavior:smooth;overscroll-behavior-y:contain}
+.chat-header{box-shadow:0 1px 0 rgba(15,23,42,.04);border-radius:0 0 18px 18px}
+.messages{scroll-behavior:smooth;overscroll-behavior-y:contain;padding-left:6px;padding-right:6px}
 .message{animation:vibe-message-in .22s ease both}
 .message.mine .message-bubble{box-shadow:0 5px 18px rgba(37,99,235,.08)}
-.message-bubble{transition:transform .16s ease,box-shadow .16s ease}
+.message-bubble{transition:transform .16s ease,box-shadow .16s ease;border-radius:18px}
+.message.mine .message-bubble{border-bottom-right-radius:6px}
+.message:not(.mine) .message-bubble{border-bottom-left-radius:6px}
 .message-bubble:hover{transform:translateY(-1px)}
 .message-time{display:block;margin:4px 4px 0;font-size:10px;line-height:1;color:var(--muted);opacity:.72;text-align:right;user-select:none}
 @keyframes vibe-message-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-.composer{box-shadow:0 -8px 28px rgba(15,23,42,.035)}
+.composer{box-shadow:0 -8px 28px rgba(15,23,42,.035);border-radius:20px 20px 0 0}
 .composer:focus-within{box-shadow:0 -8px 28px rgba(15,23,42,.04),0 0 0 1px rgba(37,99,235,.08)}
-.send-btn{will-change:transform}
+.composer input{border-radius:999px}
+.send-btn{will-change:transform;border-radius:50%}
 .send-btn.vibe-send-pop{animation:vibe-send-pop .28s ease}
 @keyframes vibe-send-pop{50%{transform:scale(1.12) rotate(-3deg)}}
 .vibe-empty-search{display:grid;place-items:center;padding:28px 18px;text-align:center;color:var(--muted);font-size:13px}
 .vibe-empty-search strong{display:block;color:var(--text);margin-bottom:4px}
+.vibe-media-panel{border-radius:0 0 20px 20px;overflow:hidden}
+.vibe-channel-card{border-radius:18px!important}
+.vibe-channel-avatar{border-radius:50%!important}
 @media (max-width:760px){
   .connection-status{display:none}
   .search-box kbd{display:none}
