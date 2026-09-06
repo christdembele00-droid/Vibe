@@ -2,6 +2,7 @@ import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.1.
 import { getAnalytics, isSupported as analyticsIsSupported } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, GithubAuthProvider, EmailAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, linkWithPopup, linkWithRedirect } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const FIREBASE_ENABLED = Boolean(firebaseConfig?.apiKey && firebaseConfig?.projectId);
@@ -17,6 +18,7 @@ try {
   db = getFirestore(app);
 }
 const firestore = db;
+const storage = getStorage(app);
 const auth = getAuth(app);
 
 let analytics = null;
@@ -44,9 +46,10 @@ const emailProvider = new EmailAuthProvider();
 async function signInAnonymously(){ return auth.currentUser ?? null; }
 
 export {
-  FIREBASE_ENABLED, app, auth, db, firestore, analytics, analyticsReady,
+  FIREBASE_ENABLED, app, auth, db, firestore, storage, analytics, analyticsReady,
   collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs,
   onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch,
+  ref, uploadBytes, getDownloadURL,
   onAuthStateChanged, signInAnonymously, signInWithPopup, signInWithRedirect,
   getRedirectResult, googleProvider, githubProvider, emailProvider,
   signInWithEmailAndPassword, createUserWithEmailAndPassword, linkWithPopup, linkWithRedirect
