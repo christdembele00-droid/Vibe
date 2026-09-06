@@ -1,0 +1,14 @@
+name: VIBE Android
+
+on:
+  push:
+    branches: ['main']
+  workflow_dispatch: {}
+
+jobs:
+  build_android:
+    name: Build VIBE Android
+    type: build
+    params:
+      platform: android
+      profile: production
