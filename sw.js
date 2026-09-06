@@ -1,4 +1,4 @@
-const CACHE='vibe-shell-v29';
+const CACHE='vibe-shell-v30';
 const ASSETS=[
   './','./index.html','./style.css','./vibe-actions.css','./vibe-redesign.css','./vibe-ui-cleanup.css',
   './vibe-modern.css','./vibe-oled.css','./vibe-messaging-advanced.css','./vibe-2026.css','./vibe-right-actions.css','./vibe-runtime.js','./vibe-persistence.js','./vibe-seed.js',
