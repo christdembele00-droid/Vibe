@@ -2,7 +2,6 @@
   "rules": {
     ".read": false,
     ".write": false,
-    ".validate": false,
 
     "users": {
       "$uid": {
