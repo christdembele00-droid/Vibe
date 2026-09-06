@@ -30,3 +30,4 @@ await loadModule('interface', './vibe-polish.js');
 await loadModule('menu', './whatsapp-menu.js');
 await loadModule('actions des messages', './whatsapp-message-actions.js');
 await loadModule('médias', './media-extras.js');
+await loadModule('navigation', './vibe-right-pane.js');
