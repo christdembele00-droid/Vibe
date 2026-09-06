@@ -4,7 +4,7 @@ const state = { currentUser:null, currentChatId:null, stopChat:null, stopChats:n
 const $ = id => document.getElementById(id);
 const uid = () => state.currentUser?.uid || auth?.currentUser?.uid || null;
 const toast = message => { const el=$('toast'); if(!el)return; el.textContent=message; el.classList.add('show'); clearTimeout(toast.timer); toast.timer=setTimeout(()=>el.classList.remove('show'),2600); };
-const escapeHtml = value => String(value??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
 const escapeAttr = value => escapeHtml(value).replace(/`/g,'&#96;');
 const conversationRef = chatId => doc(db,'conversations',chatId);
 const messagesRef = chatId => collection(db,'conversations',chatId,'messages');
