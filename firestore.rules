@@ -82,20 +82,41 @@ service cloud.firestore {
 
     match /channels/{channelId} {
       allow read: if signedIn() && validChannel(channelId);
-      allow create, update, delete: if false;
+      allow create: if signedIn() && validChannel(channelId)
+        && request.resource.data.keys().hasOnly(['name','subtitle','icon','createdAt','updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.subtitle is string
+        && request.resource.data.subtitle.size() <= 240
+        && request.resource.data.icon is string
+        && request.resource.data.icon.size() <= 80
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+      allow update, delete: if false;
       match /messages/{messageId} {
         allow read: if signedIn() && validChannel(channelId);
-        allow create: if signedIn() && validChannel(channelId)
-          && request.resource.data.keys().hasOnly(['senderId','senderName','senderAvatar','text','createdAt'])
-          && request.resource.data.senderId == request.auth.uid
-          && request.resource.data.senderName is string
-          && request.resource.data.senderName.size() <= 120
-          && request.resource.data.senderAvatar is string
-          && request.resource.data.senderAvatar.size() <= 1000
-          && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 4000
-          && request.resource.data.createdAt is timestamp;
+        allow create: if signedIn() && validChannel(channelId) && (
+          (messageId == '_init'
+            && request.resource.data.keys().hasOnly(['senderId','senderName','senderAvatar','text','createdAt'])
+            && request.resource.data.senderId == request.auth.uid
+            && request.resource.data.senderName == 'VIBE'
+            && request.resource.data.senderAvatar is string
+            && request.resource.data.text == 'Canal initialisé'
+            && request.resource.data.createdAt is timestamp)
+          ||
+          (messageId != '_init'
+            && request.resource.data.keys().hasOnly(['senderId','senderName','senderAvatar','text','createdAt'])
+            && request.resource.data.senderId == request.auth.uid
+            && request.resource.data.senderName is string
+            && request.resource.data.senderName.size() <= 120
+            && request.resource.data.senderAvatar is string
+            && request.resource.data.senderAvatar.size() <= 1000
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 4000
+            && request.resource.data.createdAt is timestamp)
+        );
         allow update: if signedIn() && validChannel(channelId)
           && resource.data.senderId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text','edited','editedAt'])
@@ -135,5 +156,3 @@ service cloud.firestore {
     }
   }
 }
-
-// sync-trigger-20260906-r2
