@@ -17,6 +17,7 @@ service cloud.firestore {
       match /notifications/{id} { allow read, update, delete: if isUser(uid); allow create: if signedIn() && request.resource.data.recipientId == uid; }
       match /blocked/{id} { allow read, write: if isUser(uid); }
       match /sessions/{id} { allow read, write: if isUser(uid); }
+      match /favorites/{chatId} { allow read, write: if isUser(uid); }
     }
 
     match /conversations/{id} {
