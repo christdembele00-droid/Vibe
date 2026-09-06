@@ -1,4 +1,4 @@
-const CACHE='vibe-shell-v24';
+const CACHE='vibe-shell-v25';
 const ASSETS=['./','./index.html','./style.css','./vibe-actions.css','./vibe-redesign.css','./vibe-ui-cleanup.css','./vibe-modern.css','./vibe-oled.css','./vibe-runtime.js','./vibe-persistence.js','./vibe-seed.js','./vibe-enhancements.js','./vibe-ai.js','./vibe-local-notifications.js','./vibe-actions.js','./vibe-online.js','./vibe-analytics.js','./vibe-channel.js','./calls.js','./vibe-modern.js','./firebase-config.js','./manifest.webmanifest','./icons/icon.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
