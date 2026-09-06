@@ -1,15 +1,8 @@
-import { getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, doc, getDoc, getDocs, onSnapshot, query, where, limit, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { auth, db, onAuthStateChanged, collection, doc, getDoc, getDocs, onSnapshot, query, where, limit, setDoc, updateDoc } from './firebase-client.js';
 
-const app = getApps()[0];
-if (!app) throw new Error('Firebase doit être initialisé avant active-users.js');
-const auth = getAuth(app);
-const db = getFirestore(app);
 const list = () => document.getElementById('activeUsersList');
 let stop = null;
 let currentUid = null;
-
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>\"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#39;' }[c]));
 const escapeAttr = (value) => escapeHtml(value).replace(/`/g, '&#96;');
 const makeInviteToken = () => crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
