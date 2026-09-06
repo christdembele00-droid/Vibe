@@ -1,16 +1,12 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAnalytics, isSupported as analyticsIsSupported } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, GithubAuthProvider, EmailAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, linkWithPopup, linkWithRedirect } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch, arrayUnion } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const FIREBASE_ENABLED = Boolean(firebaseConfig?.apiKey && firebaseConfig?.projectId);
 const app = getApps()[0] ?? initializeApp(firebaseConfig);
-
-// Plusieurs modules Vibe peuvent charger ce fichier avec des URLs différentes
-// (par exemple avec/sans ?v=...). Les modules ES sont alors évalués séparément.
-// Firestore doit néanmoins être initialisé une seule fois pour la même app.
 const shared = globalThis.__VIBE_FIREBASE__ || (globalThis.__VIBE_FIREBASE__ = {});
 let db = shared.firestore;
 
@@ -20,8 +16,6 @@ if (!db) {
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
     });
   } catch (error) {
-    // Si un autre module a déjà créé Firestore avec les options par défaut,
-    // on réutilise cette instance au lieu de relancer initializeFirestore().
     console.warn('[Firebase Firestore] persistence unavailable, using existing/default cache:', error);
     db = getFirestore(app);
   }
@@ -34,21 +28,11 @@ const auth = getAuth(app);
 
 let analytics = null;
 const analyticsReady = FIREBASE_ENABLED
-  ? analyticsIsSupported()
-      .then((supported) => {
-        if (!supported) return null;
-        try {
-          analytics = getAnalytics(app);
-          return analytics;
-        } catch (error) {
-          console.warn('[Firebase Analytics] initialization unavailable:', error);
-          return null;
-        }
-      })
-      .catch((error) => {
-        console.warn('[Firebase Analytics] support check failed:', error);
-        return null;
-      })
+  ? analyticsIsSupported().then((supported) => {
+      if (!supported) return null;
+      try { analytics = getAnalytics(app); return analytics; }
+      catch (error) { console.warn('[Firebase Analytics] initialization unavailable:', error); return null; }
+    }).catch((error) => { console.warn('[Firebase Analytics] support check failed:', error); return null; })
   : Promise.resolve(null);
 
 const googleProvider = new GoogleAuthProvider();
@@ -59,7 +43,7 @@ async function signInAnonymously(){ return auth.currentUser ?? null; }
 export {
   FIREBASE_ENABLED, app, auth, db, firestore, storage, analytics, analyticsReady,
   collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs,
-  onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch,
+  onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch, arrayUnion,
   ref, uploadBytes, getDownloadURL,
   onAuthStateChanged, signInAnonymously, signInWithPopup, signInWithRedirect,
   getRedirectResult, googleProvider, githubProvider, emailProvider,
