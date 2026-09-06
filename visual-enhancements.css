@@ -1,61 +1,9 @@
-/* Vibe — couche visuelle 2026, charte messagerie verte */
-:root{
-  --vibe-green:#00a884;
-  --vibe-green-dark:#008069;
-  --vibe-green-bright:#25d366;
-  --vibe-chat:#efeae2;
-  --vibe-in:#fff;
-  --vibe-out:#d9fdd3;
-}
-
-.sidebar,.chat-panel{border-color:#e9edef;box-shadow:none}
-.side-header,.chat-header{background:#f0f2f5;border-color:#e9edef}
-.brand{transition:opacity .15s ease,transform .15s ease}
-.brand:hover{opacity:.94;transform:none}
-.brand-icon{background:var(--vibe-green);box-shadow:0 2px 7px rgba(0,168,132,.22)}
-
-.glass-btn,.composer-btn{border-color:transparent;background:transparent}
-.glass-btn:hover,.composer-btn:hover{border-color:transparent;background:rgba(0,0,0,.06);box-shadow:none}
-
-.search-box{border:1px solid transparent;background:#f0f2f5}
-.search-box:focus-within{border-color:#b8d6d0;background:#fff;box-shadow:0 0 0 3px rgba(0,168,132,.10)}
-
-.main-tabs{position:relative}
-.tab{position:relative}
-.tab.active::after{background:var(--vibe-green);box-shadow:none}
-
-.conversation-item,.conversation{transition:background .12s ease}
-.conversation-item:hover,.conversation:hover{transform:none}
-.conversation-item:active,.conversation:active{transform:none}
-.avatar{box-shadow:none}
-
-.chat-header{box-shadow:none}
-.chat-title span{min-height:14px}
-
-.messages{background-color:var(--vibe-chat)}
-.message{box-shadow:0 1px 1px rgba(11,20,26,.12)}
-.message.in{background:var(--vibe-in)}
-.message.out{background:var(--vibe-out);box-shadow:0 1px 1px rgba(11,20,26,.12)}
-
-.composer{border-color:#d8dfe2;box-shadow:0 1px 2px rgba(11,20,26,.12),0 2px 8px rgba(11,20,26,.06)}
-.composer:focus-within{border-color:#b9d8d1;box-shadow:0 0 0 3px rgba(0,168,132,.08),0 1px 2px rgba(11,20,26,.12)}
-.send-btn{background:var(--vibe-green);box-shadow:0 2px 7px rgba(0,168,132,.24)}
-.send-btn:hover{background:var(--vibe-green-dark);box-shadow:0 2px 7px rgba(0,168,132,.24)}
-
-.conversation-list,.messages{scrollbar-color:#c8d0d3 transparent}
-.conversation-list::-webkit-scrollbar,.messages::-webkit-scrollbar{width:7px}
-.conversation-list::-webkit-scrollbar-thumb,.messages::-webkit-scrollbar-thumb{background:#c8d0d3;border-radius:99px}
-.conversation-list::-webkit-scrollbar-thumb:hover,.messages::-webkit-scrollbar-thumb:hover{background:#aeb9bd}
-
-.welcome-orb{animation:vibeFloat 5s ease-in-out infinite}
-@keyframes vibeFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-
-@media(max-width:768px){
-  .side-header,.chat-header{background:var(--vibe-green-dark);color:#fff}
-  .messages{background-color:var(--vibe-chat)}
-  .composer{border-color:#d8dfe2}
-}
-
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition-duration:.01ms!important}
-}
+/* Vibe — thème bleu 2026, interface messagerie claire */
+:root{--vibe-blue:#2563eb;--vibe-blue-dark:#1d4ed8;--vibe-blue-bright:#60a5fa;--vibe-chat:#eaf2ff;--vibe-in:#fff;--vibe-out:#dbeafe;--vibe-text:#111827;--vibe-muted:#64748b}
+html,body{background:#f1f5f9;color:var(--vibe-text)}.app-shell{background:#f1f5f9}.sidebar,.chat-panel{border-color:#e5e7eb;box-shadow:0 1px 4px rgba(15,23,42,.08)}.side-header,.chat-header{background:#eff6ff;color:var(--vibe-text);border-color:#e5e7eb}.brand{color:var(--vibe-text)}.brand-icon{background:var(--vibe-blue);box-shadow:0 3px 10px rgba(37,99,235,.24)}
+.glass-btn,.composer-btn{color:var(--vibe-muted);background:transparent;border-color:transparent}.glass-btn:hover,.composer-btn:hover{background:#dbeafe;color:var(--vibe-text);transform:none;box-shadow:none}.search-box{background:#f1f5f9;border-color:transparent}.search-box:focus-within{background:#fff;border-color:#93c5fd;box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+.main-tabs{background:#fff;border-color:#e5e7eb}.tab{color:var(--vibe-muted)}.tab:hover{background:#eff6ff;color:var(--vibe-text)}.tab.active{color:var(--vibe-blue)}.tab.active:after{background:var(--vibe-blue);box-shadow:none}.conversation-item,.conversation{background:#fff;color:var(--vibe-text);border-color:#e5e7eb}.conversation-item:hover,.conversation:hover{background:#f8fafc;transform:none}.conversation-item.active,.conversation.active{background:#eff6ff;box-shadow:inset 3px 0 0 var(--vibe-blue)}.profile-bar{background:#fff;border-color:#e5e7eb}
+.chat-panel{background-color:var(--vibe-chat);background-image:radial-gradient(circle at 15% 15%,rgba(37,99,235,.05),transparent 25%),radial-gradient(circle at 85% 85%,rgba(96,165,250,.04),transparent 25%)}.welcome-orb{background:linear-gradient(145deg,var(--vibe-blue-dark),var(--vibe-blue-bright));box-shadow:0 12px 28px rgba(37,99,235,.20)}.eyebrow{color:var(--vibe-blue)}.welcome h1{color:var(--vibe-text)}.welcome h1 span,.welcome-text{color:var(--vibe-muted)}.welcome-chips span{border-color:#dbe3ee;background:rgba(255,255,255,.75);color:var(--vibe-muted)}.chat-title strong{color:var(--vibe-text)}.chat-title span{color:var(--vibe-muted)}
+.messages{background:var(--vibe-chat)}.message{border-color:rgba(15,23,42,.06);box-shadow:0 1px 1px rgba(15,23,42,.10)}.message.in{background:var(--vibe-in);color:var(--vibe-text)}.message.out,.message.mine{background:var(--vibe-out);color:var(--vibe-text);box-shadow:0 1px 1px rgba(15,23,42,.10)}.message-time{color:var(--vibe-muted)}.composer{background:#fff;border-color:#dbe3ee;box-shadow:0 1px 3px rgba(15,23,42,.10)}.composer:focus-within{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(37,99,235,.08),0 1px 3px rgba(15,23,42,.10)}.composer input{color:var(--vibe-text)}.composer input::placeholder{color:var(--vibe-muted)}.send-btn{background:var(--vibe-blue);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.22)}.send-btn:hover{background:var(--vibe-blue-dark);box-shadow:0 3px 10px rgba(37,99,235,.24);transform:none}.toast{background:#172554;color:#fff}.mobile-login-btn{background:var(--vibe-blue);color:#fff;border-color:transparent}
+@media(max-width:768px){.side-header,.chat-header{background:var(--vibe-blue-dark);color:#fff;border-color:transparent}.side-header .brand{color:#fff}.side-header .glass-btn,.chat-header .glass-btn,.chat-header .back-btn{color:#fff}.side-header .glass-btn:hover,.chat-header .glass-btn:hover,.chat-header .back-btn:hover{background:rgba(255,255,255,.12);color:#fff}.search-box{background:#f1f5f9}.main-tabs{background:#fff}.chat-panel,.messages{background:var(--vibe-chat)}.composer{background:#fff}.mobile-login-btn{background:#2563eb;color:#fff}.brand-icon{background:#2563eb;box-shadow:0 2px 8px rgba(37,99,235,.30)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
