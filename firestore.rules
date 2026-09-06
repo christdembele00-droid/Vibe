@@ -28,8 +28,11 @@ service cloud.firestore {
         allow read, create, update, delete: if signedIn() && request.auth.uid == userId;
       }
       match /devices/{deviceId} {
-        allow read, create, update, delete: if signedIn() && request.auth.uid == userId
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create, update: if signedIn() && request.auth.uid == userId
           && request.resource.data.deviceId == deviceId;
+        allow delete: if signedIn() && request.auth.uid == userId
+          && resource.data.deviceId == deviceId;
       }
     }
 
@@ -80,7 +83,6 @@ service cloud.firestore {
     match /channels/{channelId} {
       allow read: if signedIn() && validChannel(channelId);
       allow create, update, delete: if false;
-
       match /messages/{messageId} {
         allow read: if signedIn() && validChannel(channelId);
         allow create: if signedIn() && validChannel(channelId)
@@ -134,4 +136,4 @@ service cloud.firestore {
   }
 }
 
-// sync-trigger-20260906-r1
+// sync-trigger-20260906-r2
