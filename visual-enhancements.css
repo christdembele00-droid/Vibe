@@ -1,93 +1,108 @@
-/* Vibe visual refinement — modernisation UI sans changer la structure. */
+/* Vibe visual refinement — palette plus claire et moderne, sans changer la structure. */
 :root{
-  --ui-glass:rgba(255,255,255,.045);
-  --ui-glass-strong:rgba(255,255,255,.07);
-  --ui-border:rgba(255,255,255,.09);
-  --ui-accent-soft:rgba(255,122,24,.16);
+  --ui-glass:rgba(255,255,255,.075);
+  --ui-glass-strong:rgba(255,255,255,.11);
+  --ui-border:rgba(255,255,255,.15);
+  --ui-accent-soft:rgba(255,122,24,.18);
+  --ui-text:#f8fafc;
+  --ui-muted:#cbd5e1;
+  --ui-surface:rgba(255,255,255,.065);
 }
 
-/* Surfaces plus propres et profondeur plus naturelle. */
+/* Surfaces plus lumineuses et plus lisibles. */
 .sidebar,.chat-panel{
   border-color:var(--ui-border);
-  box-shadow:0 24px 70px rgba(0,0,0,.34),0 1px 0 rgba(255,255,255,.025) inset;
+  box-shadow:0 24px 70px rgba(0,0,0,.24),0 1px 0 rgba(255,255,255,.06) inset;
 }
 .side-header,.chat-header{
-  background:linear-gradient(180deg,rgba(255,255,255,.025),transparent);
+  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.012));
 }
 .brand{transition:transform .2s ease,opacity .2s ease}
-.brand:hover{transform:translateY(-1px);opacity:.94}
-.brand-icon{box-shadow:0 8px 24px rgba(255,122,24,.22)}
+.brand:hover{transform:translateY(-1px);opacity:.96}
+.brand-icon{box-shadow:0 8px 24px rgba(255,122,24,.25)}
 
-/* Boutons : plus nets au toucher et au survol. */
+/* Boutons plus clairs et mieux contrastés. */
 .glass-btn,.composer-btn{
-  border-color:rgba(255,255,255,.085);
-  background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.025));
+  border-color:rgba(255,255,255,.15);
+  background:linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.055));
+  color:var(--ui-text);
   transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease;
 }
 .glass-btn:active,.composer-btn:active,.send-btn:active{transform:scale(.94)}
 .glass-btn:hover,.composer-btn:hover{
-  border-color:rgba(255,122,24,.22);
-  background:rgba(255,122,24,.09);
+  border-color:rgba(255,122,24,.34);
+  background:rgba(255,122,24,.13);
+  box-shadow:0 5px 18px rgba(0,0,0,.12);
 }
 
-/* Recherche plus premium. */
+/* Recherche plus lumineuse. */
 .search-box{
-  border:1px solid transparent;
-  background:rgba(255,255,255,.045);
+  border:1px solid rgba(255,255,255,.11);
+  background:rgba(255,255,255,.07);
+  color:var(--ui-text);
 }
+.search-box input{color:var(--ui-text)}
+.search-box input::placeholder{color:var(--ui-muted)}
 .search-box:focus-within{
-  border-color:rgba(255,122,24,.22);
-  box-shadow:0 0 0 3px rgba(255,122,24,.055),inset 0 0 0 1px rgba(255,122,24,.12);
+  border-color:rgba(255,122,24,.36);
+  background:rgba(255,255,255,.095);
+  box-shadow:0 0 0 3px rgba(255,122,24,.07),inset 0 0 0 1px rgba(255,122,24,.16);
 }
 
 /* Navigation plus lisible. */
 .main-tabs{position:relative}
-.tab{position:relative}
+.tab{position:relative;color:#dbe4ee}
+.tab.active{color:#fff}
 .tab.active::after{
   content:"";
   position:absolute;
-  left:25%;right:25%;bottom:2px;height:2px;
+  left:25%;right:25%;bottom:2px;height:3px;
   border-radius:99px;background:var(--accent);
-  box-shadow:0 0 12px rgba(255,122,24,.35);
+  box-shadow:0 0 14px rgba(255,122,24,.42);
 }
 
-/* Conversations : hiérarchie visuelle plus claire. */
+/* Conversations : surfaces légèrement plus claires. */
 .conversation-item,.conversation{
+  color:var(--ui-text);
   transition:background .16s ease,transform .16s ease,box-shadow .16s ease;
 }
-.conversation-item:hover,.conversation:hover{transform:translateX(1px)}
+.conversation-item:hover,.conversation:hover{transform:translateX(1px);background:rgba(255,255,255,.055)}
 .conversation-item:active,.conversation:active{transform:scale(.99)}
-.avatar{box-shadow:0 5px 18px rgba(0,0,0,.16)}
+.conversation-item.active{background:rgba(255,122,24,.105);border-color:rgba(255,122,24,.18)}
+.avatar{box-shadow:0 5px 18px rgba(0,0,0,.13)}
 
-/* Écran d'accueil plus vivant sans changer son identité. */
-.welcome-orb{animation:vibeFloat 5s ease-in-out infinite}
+/* Écran d'accueil plus lumineux. */
+.welcome-orb{animation:vibeFloat 5s ease-in-out infinite;box-shadow:0 14px 45px rgba(255,122,24,.16)}
 .welcome-chips span{transition:transform .16s ease,background .16s ease,border-color .16s ease}
-.welcome-chips span:hover{transform:translateY(-2px);background:rgba(255,122,24,.08);border-color:rgba(255,122,24,.18)}
+.welcome-chips span:hover{transform:translateY(-2px);background:rgba(255,122,24,.10);border-color:rgba(255,122,24,.24)}
 @keyframes vibeFloat{0%,100%{transform:rotate(-5deg) translateY(0)}50%{transform:rotate(-3deg) translateY(-5px)}}
 
-/* En-tête de conversation plus proche d'une vraie messagerie. */
-.chat-header{box-shadow:0 1px 0 rgba(255,255,255,.025)}
-.chat-title span{min-height:14px}
+/* En-tête de conversation plus clair. */
+.chat-header{box-shadow:0 1px 0 rgba(255,255,255,.055)}
+.chat-title span{min-height:14px;color:var(--ui-muted)}
 
-/* Bulles : distinction nette entre entrant et sortant. */
-.message{box-shadow:0 4px 14px rgba(0,0,0,.08)}
-.message.in{background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.025))}
-.message.out{box-shadow:0 7px 20px rgba(255,122,24,.14)}
+/* Bulles avec meilleur contraste. */
+.message{box-shadow:0 4px 14px rgba(0,0,0,.07)}
+.message.in{background:linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.055))}
+.message.out{box-shadow:0 7px 20px rgba(255,122,24,.16)}
 
-/* Zone de saisie flottante. */
+/* Zone de saisie plus claire. */
 .composer{
-  border-color:rgba(255,255,255,.095);
-  box-shadow:0 12px 35px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.025);
+  border-color:rgba(255,255,255,.15);
+  background:rgba(255,255,255,.075);
+  box-shadow:0 12px 35px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.055);
 }
-.composer:focus-within{border-color:rgba(255,122,24,.2)}
-.send-btn{box-shadow:0 7px 18px rgba(255,122,24,.14)}
-.send-btn:hover{box-shadow:0 10px 28px rgba(255,122,24,.24)}
+.composer input{color:#fff}
+.composer input::placeholder{color:#cbd5e1}
+.composer:focus-within{border-color:rgba(255,122,24,.34);background:rgba(255,255,255,.09)}
+.send-btn{box-shadow:0 7px 18px rgba(255,122,24,.16)}
+.send-btn:hover{box-shadow:0 10px 28px rgba(255,122,24,.28)}
 
-/* Défilement discret. */
-.conversation-list,.messages{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}
+/* Défilement discret mais visible. */
+.conversation-list,.messages{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.24) transparent}
 .conversation-list::-webkit-scrollbar,.messages::-webkit-scrollbar{width:7px}
-.conversation-list::-webkit-scrollbar-thumb,.messages::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:99px}
-.conversation-list::-webkit-scrollbar-thumb:hover,.messages::-webkit-scrollbar-thumb:hover{background:rgba(255,122,24,.28)}
+.conversation-list::-webkit-scrollbar-thumb,.messages::-webkit-scrollbar-thumb{background:rgba(255,255,255,.20);border-radius:99px}
+.conversation-list::-webkit-scrollbar-thumb:hover,.messages::-webkit-scrollbar-thumb:hover{background:rgba(255,122,24,.32)}
 
 /* Respecte les utilisateurs qui préfèrent réduire les animations. */
 @media (prefers-reduced-motion:reduce){
@@ -98,7 +113,7 @@
   .side-header{padding-top:max(10px,env(safe-area-inset-top))}
   .tab{min-height:44px}
   .conversation-item{min-height:68px}
-  .chat-header{box-shadow:0 5px 20px rgba(0,0,0,.16)}
-  .composer{box-shadow:0 8px 28px rgba(0,0,0,.24)}
+  .chat-header{box-shadow:0 5px 20px rgba(0,0,0,.13)}
+  .composer{box-shadow:0 8px 28px rgba(0,0,0,.18)}
   .welcome h1{letter-spacing:-1.8px}
 }
