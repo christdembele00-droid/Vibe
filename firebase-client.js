@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, GithubAuthProvider, linkWithPopup, linkWithRedirect } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getDatabase } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
+import { getDatabase, ref as databaseRef, onValue, set, push, remove, onDisconnect, serverTimestamp as databaseServerTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const FIREBASE_ENABLED = Boolean(firebaseConfig?.apiKey && firebaseConfig?.projectId && firebaseConfig?.databaseURL);
@@ -23,6 +23,13 @@ export {
   auth,
   db,
   rtdb,
+  databaseRef,
+  onValue,
+  set,
+  push,
+  remove,
+  onDisconnect,
+  databaseServerTimestamp,
   onAuthStateChanged,
   signInAnonymously,
   signInWithPopup,
