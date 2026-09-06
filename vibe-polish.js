@@ -1,6 +1,13 @@
-import './vibe-polish.css';
-
 const $ = (id) => document.getElementById(id);
+
+function ensureStylesheet() {
+  if (document.querySelector('link[data-vibe-polish]')) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = './vibe-polish.css?v=20260906';
+  link.dataset.vibePolish = 'true';
+  document.head.appendChild(link);
+}
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
@@ -21,7 +28,6 @@ function enhanceMessages() {
     const label = document.createElement('span');
     label.className = 'message-time';
     label.textContent = time;
-    label.setAttribute('aria-label', `Envoyé à ${time}`);
     bubble.insertAdjacentElement('afterend', label);
   });
 }
@@ -31,7 +37,6 @@ function enhanceSearch() {
   const list = $('conversationList');
   if (!input || !list || input.dataset.vibePolishBound) return;
   input.dataset.vibePolishBound = 'true';
-
   const filter = () => {
     const term = input.value.trim().toLocaleLowerCase('fr-FR');
     let visible = 0;
@@ -45,14 +50,11 @@ function enhanceSearch() {
       if (!empty) {
         empty = document.createElement('div');
         empty.className = 'vibe-empty-search';
-        empty.innerHTML = '<div><strong>Aucune discussion trouvée</strong><span>Essayez un autre nom.</span></div>';
+        empty.textContent = 'Aucune discussion trouvée';
         list.appendChild(empty);
       }
-    } else {
-      empty?.remove();
-    }
+    } else empty?.remove();
   };
-
   input.addEventListener('input', filter, { passive: true });
   new MutationObserver(filter).observe(list, { childList: true });
 }
@@ -75,6 +77,7 @@ function updatePlatformShortcut() {
 }
 
 function init() {
+  ensureStylesheet();
   enhanceSearch();
   enhanceSendButton();
   updatePlatformShortcut();
