@@ -1,6 +1,7 @@
 import { getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, doc, setDoc, serverTimestamp, arrayUnion, limit } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { firebaseConfig } from './firebase-config.js';
 
 const app=getApps().length?getApps()[0]:initializeApp(firebaseConfig);
 const auth=getAuth(app),db=getFirestore(app);
@@ -8,7 +9,7 @@ const $=id=>document.getElementById(id);
 const roomId=(a,b)=>[a,b].sort().join('__');
 const normalize=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr-FR').trim().replace(/\s+/g,' ');
 const toast=text=>{const el=$('toast');if(!el)return;el.textContent=text;el.style.display='block';clearTimeout(window.__vibeEnhToast);window.__vibeEnhToast=setTimeout(()=>el.style.display='none',2800)};
-let uid=null,users=[],groups=[];let usersUnsub=null,groupsUnsub=null,roomsUnsub=null;const roomUnsubs=new Map();const unread=new Map();let filter='all',internalSearch=false,lastRoom=null,sorting=false,active=false,activeTimer=null;
+let uid=null,users=[],groups=[];let usersUnsub=null,groupsUnsub=null,roomsUnsub=null;const roomUnsubs=new Map();const unread=new Map();let filter='all',internalSearch=false,lastRoom=null,sorting=false,activeTimer=null;
 
 function unreadKey(room){return `vibe:unread:${uid}:${room}`}
 function getUnread(room){return unread.has(room)?unread.get(room):Number(localStorage.getItem(unreadKey(room))||0)}
@@ -99,7 +100,7 @@ function trackActiveRoom(){
 }
 
 function cleanup(){
-  active=false;clearInterval(activeTimer);activeTimer=null;
+  clearInterval(activeTimer);activeTimer=null;
   usersUnsub?.();groupsUnsub?.();roomsUnsub?.();roomUnsubs.forEach(u=>u());roomUnsubs.clear();
   usersUnsub=groupsUnsub=roomsUnsub=null;users=[];groups=[];unread.clear();lastRoom=null;
 }
@@ -109,7 +110,6 @@ function boot(){
   onAuthStateChanged(auth,user=>{
     cleanup();uid=user?.uid||null;
     if(!uid)return;
-    active=true;
     usersUnsub=onSnapshot(collection(db,'users'),snap=>{users=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.uid&&u.uid!==uid);rerenderDirectory();sortRenderedContacts()},()=>{});
     groupsUnsub=onSnapshot(query(collection(db,'groups'),where('participants','array-contains',uid)),snap=>{groups=snap.docs.map(d=>({id:d.id,...d.data()}));rerenderDirectory();sortRenderedContacts()},()=>{});
     setupRooms()
