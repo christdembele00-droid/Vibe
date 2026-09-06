@@ -1,4 +1,4 @@
-const VERSION = '20260906r11';
+const VERSION = '20260906r12';
 
 const showBootError = (label, error) => {
   console.error(`[Vibe] ${label} impossible à charger:`, error);
