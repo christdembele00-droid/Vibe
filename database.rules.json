@@ -7,7 +7,7 @@
       "$chatId": {
         ".read": "auth != null && (data.child('ownerUid').val() === auth.uid || root.child('chatMembers').child($chatId).child(auth.uid).val() === true)",
         ".write": "auth != null && !data.exists() && newData.child('ownerUid').val() === auth.uid",
-        ".validate": "newData.hasChildren(['name','ownerUid','createdAt','inviteToken']) && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 120 && newData.child('ownerUid').isString() && newData.child('createdAt').isNumber() && newData.child('inviteToken').isString() && newData.child('inviteToken').val().length >= 32 && newData.child('inviteToken').val().length <= 128"
+        ".validate": "newData.hasChildren(['name','ownerUid','createdAt']) && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 120 && newData.child('ownerUid').isString() && newData.child('createdAt').isNumber() && (!newData.hasChild('inviteToken') || (newData.child('inviteToken').isString() && newData.child('inviteToken').val().length >= 16 && newData.child('inviteToken').val().length <= 128))"
       }
     },
     "userChats": {
@@ -44,7 +44,7 @@
         ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true",
         "$uid": {
           ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true",
-          ".write": "auth != null && auth.uid === $uid && !data.exists() && newData.val() === true && (root.child('chats').child($chatId).child('ownerUid').val() === auth.uid || root.child('joinRequests').child($chatId).child(root.child('chats').child($chatId).child('inviteToken').val()).child(auth.uid).val() === true)",
+          ".write": "auth != null && auth.uid === $uid && !data.exists() && newData.val() === true && root.child('chats').child($chatId).exists()",
           ".validate": "newData.isBoolean() && newData.val() === true"
         }
       }
