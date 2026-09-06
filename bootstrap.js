@@ -31,6 +31,6 @@ await loadModule('paramètres', './vibe-settings.js?v=20260906');
 await loadModule('appels', './webrtc-calls.js?v=20260906');
 await loadModule('fonctionnalités', './vibe-features.js?v=20260906');
 await loadModule('interface', './vibe-polish.js?v=20260906');
-await loadModule('navigation', './whatsapp-navigation.js?v=20260906');
+await loadModule('menu', './whatsapp-menu.js?v=20260906');
 await loadModule('actions des messages', './whatsapp-message-actions.js?v=20260906');
 await loadModule('médias et statuts', './whatsapp-extras.js?v=20260906');
