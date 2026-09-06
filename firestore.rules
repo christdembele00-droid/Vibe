@@ -96,6 +96,21 @@ service cloud.firestore {
       allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
+    // Vibe currently publishes 24-hour statuses in the `statuses` collection.
+    match /statuses/{statusId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.resource.data.createdAt
+        && request.resource.data.expiresAt <= request.resource.data.createdAt + duration.value(24, 'h')
+        && (!request.resource.data.keys().hasAny(['text']) || (request.resource.data.text is string && request.resource.data.text.size() <= 700))
+        && (!request.resource.data.keys().hasAny(['mediaUrl']) || (request.resource.data.mediaUrl is string && request.resource.data.mediaUrl.size() <= 2000))
+        && (!request.resource.data.keys().hasAny(['mediaType']) || (request.resource.data.mediaType is string && request.resource.data.mediaType.size() <= 120));
+      allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
     match /presence/{uid} {
       allow read: if signedIn();
       allow create, update: if isUser(uid) && request.resource.data.uid == uid;
@@ -130,7 +145,8 @@ service cloud.firestore {
 
     match /userSearch/{id} {
       allow read: if signedIn();
-      allow create, update, delete: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
     match /contacts/{uid}/items/{id} { allow read, write: if isUser(uid); }
