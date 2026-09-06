@@ -16,6 +16,7 @@ try {
   await import('./vibe-settings.js?v=20260906');
   await import('./webrtc-calls.js?v=20260906');
   await import('./vibe-features.js?v=20260906');
+  await import('./vibe-polish.js?v=20260906');
 } catch (error) {
   showBootError(error);
 }
