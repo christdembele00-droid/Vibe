@@ -8,21 +8,11 @@ import { firebaseConfig } from './firebase-config.js';
 const FIREBASE_ENABLED = Boolean(firebaseConfig?.apiKey && firebaseConfig?.projectId);
 const app = getApps()[0] ?? initializeApp(firebaseConfig);
 const shared = globalThis.__VIBE_FIREBASE__ || (globalThis.__VIBE_FIREBASE__ = {});
-
-// Use one Firestore instance for every Vibe module.  The previous combination of
-// initializeFirestore(...persistentLocalCache...) plus another getFirestore(app)
-// instance could make Firebase 12's IndexedDB watch/index backfiller enter an
-// inconsistent internal state (INTERNAL ASSERTION FAILED: Unexpected state).
 let db = shared.firestore;
-if (!db) {
-  db = getFirestore(app);
-  shared.firestore = db;
-}
-
+if (!db) { db = getFirestore(app); shared.firestore = db; }
 const firestore = db;
 const storage = getStorage(app);
 const auth = getAuth(app);
-
 let analytics = null;
 const analyticsReady = FIREBASE_ENABLED
   ? analyticsIsSupported().then((supported) => {
@@ -31,7 +21,6 @@ const analyticsReady = FIREBASE_ENABLED
       catch (error) { console.warn('[Firebase Analytics] initialization unavailable:', error); return null; }
     }).catch((error) => { console.warn('[Firebase Analytics] support check failed:', error); return null; })
   : Promise.resolve(null);
-
 const googleProvider = new GoogleAuthProvider();
 const githubProvider = new GithubAuthProvider();
 const emailProvider = new EmailAuthProvider();
