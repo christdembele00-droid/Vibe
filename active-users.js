@@ -55,10 +55,7 @@ async function openMemberChat(member) {
       name: `Discussion avec ${name}`,
       ownerId: currentUid,
       participantIds: [currentUid, member.uid],
-      participantNames: {
-        [currentUid]: currentName,
-        [member.uid]: name
-      },
+      participantNames: { [currentUid]: currentName, [member.uid]: name },
       inviteToken,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -92,19 +89,12 @@ function render(users) {
   const el = list();
   if (!el) return;
   const rows = users.filter((u) => u.uid !== currentUid);
-  const count = users.length;
-  el.dataset.count = String(count);
-
-  // Les utilisateurs actifs sont représentés uniquement par leur avatar/logo.
-  // Le nom reste disponible via aria-label/title pour l'accessibilité, sans texte visible.
-  el.innerHTML = `
-    <div class="active-users-avatars" aria-label="Utilisateurs actuellement en ligne">
-      ${rows.map((u) => {
-        const name = u.displayName || `Utilisateur ${String(u.uid).slice(0, 8)}`;
-        const initial = [...name.trim()][0]?.toUpperCase() || 'V';
-        return `<button type="button" class="active-user-avatar" data-active-uid="${escapeAttr(u.uid)}" aria-label="Ouvrir une discussion avec ${escapeAttr(name)}" title="${escapeAttr(name)}"><span class="avatar">${escapeHtml(initial)}</span><i class="online-dot" aria-hidden="true"></i></button>`;
-      }).join('')}
-    </div>`;
+  el.dataset.count = String(users.length);
+  el.innerHTML = `<div class="active-users-avatars" aria-label="Utilisateurs actuellement en ligne">${rows.map((u) => {
+    const name = u.displayName || `Utilisateur ${String(u.uid).slice(0, 8)}`;
+    const initial = [...name.trim()][0]?.toUpperCase() || 'V';
+    return `<button type="button" class="active-user-avatar" data-active-uid="${escapeAttr(u.uid)}" aria-label="Ouvrir une discussion avec ${escapeAttr(name)}" title="${escapeAttr(name)}"><span class="avatar">${escapeHtml(initial)}</span><i class="online-dot" aria-hidden="true"></i></button>`;
+  }).join('')}</div>`;
 }
 
 function watch() {
@@ -122,13 +112,21 @@ function watch() {
   });
 }
 
-list()?.addEventListener('click', (event) => {
-  const item = event.target.closest('[data-active-uid]');
-  if (!item) return;
-  const uid = item.dataset.activeUid;
-  const name = item.getAttribute('title') || 'Utilisateur';
-  openMemberChat({ uid, displayName: name });
-});
+function bindList() {
+  const el = list();
+  if (!el || el.dataset.vibeActiveBound === '1') return;
+  el.dataset.vibeActiveBound = '1';
+  el.addEventListener('click', (event) => {
+    const item = event.target.closest('[data-active-uid]');
+    if (!item) return;
+    const uid = item.dataset.activeUid;
+    const name = item.getAttribute('title') || 'Utilisateur';
+    void openMemberChat({ uid, displayName: name });
+  });
+}
 
-onAuthStateChanged(auth, (user) => { currentUid = user?.uid || null; watch(); });
-document.addEventListener('vibe:auth-changed', (event) => { currentUid = event.detail?.user?.uid || auth.currentUser?.uid || null; watch(); });
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindList, { once: true });
+else bindList();
+
+auth.onAuthStateChanged ? onAuthStateChanged(auth, (user) => { currentUid = user?.uid || null; bindList(); watch(); }) : null;
+document.addEventListener('vibe:auth-changed', (event) => { currentUid = event.detail?.user?.uid || auth.currentUser?.uid || null; bindList(); watch(); });
