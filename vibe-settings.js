@@ -1,4 +1,4 @@
-import { auth, rtdb, databaseRef, onValue, set, databaseServerTimestamp } from './firebase-client.js';
+import { auth, rtdb, databaseRef, onValue, set } from './firebase-client.js';
 
 const DEFAULTS = {
   notifications: true, sounds: true, vibrations: true, callNotifications: true, previews: true,
@@ -9,13 +9,27 @@ const DEFAULTS = {
   language: 'fr', mobileData: true, dataSaver: false
 };
 let settings = {...DEFAULTS};
+let saveTimer = null;
 const key = () => `vibe-settings-${auth?.currentUser?.uid || 'guest'}`;
 const saveLocal = () => localStorage.setItem(key(), JSON.stringify(settings));
 const loadLocal = () => { try { settings = {...DEFAULTS, ...JSON.parse(localStorage.getItem(key()) || '{}')}; } catch { settings = {...DEFAULTS}; } applySettings(); };
-const setSetting = async (name, value) => { settings[name] = value; saveLocal(); applySettings(); if (auth?.currentUser && rtdb) await set(databaseRef(rtdb, `users/${auth.currentUser.uid}/settings/${name}`), value).catch(()=>{}); };
+const setSetting = (name, value) => {
+  settings[name] = value;
+  saveLocal();
+  applySettings();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const current = auth?.currentUser;
+    if (current && rtdb) set(databaseRef(rtdb, `users/${current.uid}/settings/${name}`), value).catch(() => {});
+  }, 80);
+};
 function applySettings(){
-  document.documentElement.dataset.theme=settings.appearance; document.documentElement.dataset.fontSize=settings.fontSize; document.documentElement.dataset.uiScale=settings.uiScale; document.documentElement.style.setProperty('--vibe-accent', settings.accent);
-  document.documentElement.classList.toggle('vibe-no-animations', !settings.animations);
+  const root = document.documentElement;
+  root.dataset.theme=settings.appearance;
+  root.dataset.fontSize=settings.fontSize;
+  root.dataset.uiScale=settings.uiScale;
+  root.style.setProperty('--vibe-accent', settings.accent);
+  root.classList.toggle('vibe-no-animations', !settings.animations);
 }
 function row(title, name, type='toggle', options=[]){
   const value=settings[name];
@@ -36,13 +50,34 @@ function panel(){
   <h3>📱 Application</h3>${row('Données mobiles','mobileData')}${row('Économie de données','dataSaver')}<button class="vibe-action" data-action="clear">Effacer les données locales</button><p class="vibe-version">Vibe Messenger · version 1.0.0</p><p class="vibe-legal">Conditions d'utilisation · Politique de confidentialité</p>
   </div></div>`;
   document.body.appendChild(el);
-  el.addEventListener('change',e=>{const input=e.target.closest('[data-setting]');if(!input)return;setSetting(input.dataset.setting,input.type==='checkbox'?input.checked:input.value);});
-  el.querySelector('#vibeSettingsClose').onclick=()=>el.classList.add('hidden');
-  el.addEventListener('click',async e=>{const action=e.target.closest('[data-action]')?.dataset.action;if(!action)return;if(action==='logout'){try{await (await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js')).signOut(auth)}catch{}}if(action==='clear'){localStorage.clear();settings={...DEFAULTS};applySettings();location.reload()}if(action==='sessions')alert('La gestion des sessions dépend des appareils connectés à votre compte.');if(action==='blocked')alert('Aucun utilisateur bloqué pour le moment.');});
+  el.addEventListener('change', e => {
+    const input=e.target.closest('[data-setting]');
+    if(!input)return;
+    setSetting(input.dataset.setting,input.type==='checkbox'?input.checked:input.value);
+  });
+  el.addEventListener('click', e => {
+    const close=e.target.closest('#vibeSettingsClose');
+    if(close){ el.classList.add('hidden'); return; }
+    const action=e.target.closest('[data-action]')?.dataset.action;
+    if(!action)return;
+    if(action==='logout'){
+      import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js').then(({signOut}) => signOut(auth)).catch(()=>{});
+      return;
+    }
+    if(action==='clear'){localStorage.clear();settings={...DEFAULTS};applySettings();requestAnimationFrame(()=>location.reload());return;}
+    if(action==='sessions')alert('La gestion des sessions dépend des appareils connectés à votre compte.');
+    if(action==='blocked')alert('Aucun utilisateur bloqué pour le moment.');
+  });
   return el;
 }
 function openSettings(){loadLocal();panel().classList.remove('hidden');}
 window.VibeSettings={openSettings,get:()=>({...settings}),set:setSetting};
-document.addEventListener('click',e=>{if(e.target.closest('#menuBtn')){e.preventDefault();e.stopImmediatePropagation();openSettings();}},true);
+document.addEventListener('click',e=>{
+  const menu=e.target.closest('#menuBtn');
+  if(!menu)return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  requestAnimationFrame(openSettings);
+},true);
 loadLocal();
 if(auth?.currentUser&&rtdb) onValue(databaseRef(rtdb,`users/${auth.currentUser.uid}/settings`),s=>{settings={...DEFAULTS,...(s.val()||{})};saveLocal();applySettings();});
