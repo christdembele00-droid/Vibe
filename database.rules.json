@@ -64,7 +64,7 @@
       "$chatId": {
         ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true",
         "$messageId": {
-          ".write": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true && !data.exists() && newData.child('uid').val() === auth.uid",
+          ".write": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true && ((!data.exists() && newData.child('uid').val() === auth.uid) || (!newData.exists() && data.child('viewOnce').val() === true && data.child('uid').val() !== auth.uid))",
           ".validate": "newData.hasChildren(['uid','createdAt','type']) && newData.child('uid').isString() && newData.child('createdAt').isNumber() && newData.child('type').isString() && (!newData.hasChild('text') || (newData.child('text').isString() && newData.child('text').val().length <= 20000)) && (!newData.hasChild('replyTo') || newData.child('replyTo').isString()) && (!newData.hasChild('viewOnce') || newData.child('viewOnce').isBoolean()) && (!newData.hasChild('fileName') || (newData.child('fileName').isString() && newData.child('fileName').val().length <= 180)) && (!newData.hasChild('mimeType') || (newData.child('mimeType').isString() && newData.child('mimeType').val().length <= 120)) && (!newData.hasChild('dataUrl') || (newData.child('dataUrl').isString() && newData.child('dataUrl').val().length <= 1100000))"
         }
       }
@@ -110,7 +110,7 @@
     "calls": {
       "$callId": {
         ".read": "auth != null && (data.child('callerUid').val() === auth.uid || data.child('calleeUid').val() === auth.uid)",
-        ".write": "auth != null && (( !data.exists() && newData.child('callerUid').val() === auth.uid && root.child('chatMembers').child(newData.child('chatId').val()).child(auth.uid).val() === true && root.child('chatMembers').child(newData.child('chatId').val()).child(newData.child('calleeUid').val()).val() === true ) || data.child('callerUid').val() === auth.uid || data.child('calleeUid').val() === auth.uid)",
+        ".write": "auth != null && ((!data.exists() && newData.child('callerUid').val() === auth.uid && root.child('chatMembers').child(newData.child('chatId').val()).child(auth.uid).val() === true && root.child('chatMembers').child(newData.child('chatId').val()).child(newData.child('calleeUid').val()).val() === true) || data.child('callerUid').val() === auth.uid || data.child('calleeUid').val() === auth.uid)",
         ".validate": "newData.hasChildren(['callerUid','calleeUid','chatId','kind','status','createdAt']) && newData.child('callerUid').isString() && newData.child('calleeUid').isString() && newData.child('chatId').isString() && (newData.child('kind').val() === 'audio' || newData.child('kind').val() === 'video') && newData.child('status').isString() && newData.child('createdAt').isNumber()"
       }
     },
@@ -118,7 +118,7 @@
       "$uid": {
         "$callId": {
           ".read": "auth != null && auth.uid === $uid",
-          ".write": "auth != null && root.child('calls').child($callId).child('callerUid').val() === auth.uid && root.child('calls').child($callId).child('calleeUid').val() === $uid",
+          ".write": "auth != null && ((root.child('calls').child($callId).child('callerUid').val() === auth.uid && root.child('calls').child($callId).child('calleeUid').val() === $uid) || (!newData.exists() && auth.uid === $uid && data.child('calleeUid').val() === auth.uid))",
           ".validate": "newData.hasChildren(['callerUid','chatId','kind','createdAt']) && newData.child('callerUid').isString() && newData.child('chatId').isString() && (newData.child('kind').val() === 'audio' || newData.child('kind').val() === 'video') && newData.child('createdAt').isNumber()"
         }
       }
