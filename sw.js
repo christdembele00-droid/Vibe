@@ -1,4 +1,4 @@
-const CACHE = 'vibe-shell-v33';
+const CACHE = 'vibe-shell-v35';
 const ASSETS = [
   './',
   './index.html',
@@ -42,10 +42,8 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-
   const url = new URL(event.request.url);
   if (!sameOrigin(url)) return;
-
   event.respondWith(
     fetch(event.request)
       .then(response => {
@@ -55,16 +53,12 @@ self.addEventListener('fetch', event => {
         }
         return response;
       })
-      .catch(() =>
-        caches.match(event.request).then(cached => cached || caches.match('./index.html'))
-      )
+      .catch(() => caches.match(event.request).then(cached => cached || caches.match('./index.html')))
   );
 });
 
 self.addEventListener('message', event => {
   if (event.data?.type === 'CLEAR_VIBE_CACHE') {
-    event.waitUntil(
-      caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key))))
-    );
+    event.waitUntil(caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key)))));
   }
 });
