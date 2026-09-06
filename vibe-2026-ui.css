@@ -1,42 +1,42 @@
-/* VIBE — couche UI finale, inspirée de l’expérience des messageries modernes. */
-:root{--vibe-ease:cubic-bezier(.22,1,.36,1);--vibe-fast:150ms;--vibe-med:240ms}
-.app-shell{animation:vibePageIn .45s var(--vibe-ease) both}@keyframes vibePageIn{from{opacity:0}to{opacity:1}}
-.side-header,.chat-header{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.glass-btn,.composer-btn,.back-btn{transition:transform var(--vibe-fast) var(--vibe-ease),background var(--vibe-fast) ease,color var(--vibe-fast) ease}.glass-btn:hover,.composer-btn:hover,.back-btn:hover{transform:scale(1.04)}.glass-btn:active,.composer-btn:active,.back-btn:active{transform:scale(.92)}
+/* VIBE — UI messagerie, inspirée du comportement visuel de WhatsApp. */
+:root{--vibe-ease:cubic-bezier(.22,1,.36,1);--vibe-fast:150ms;--vibe-med:220ms;--wa-green:#008069;--wa-green-dark:#006d5b;--wa-bg:#efeae2;--wa-header:#f0f2f5;--wa-text:#111b21;--wa-muted:#667781}
+.app-shell{animation:vibePageIn .25s ease both}@keyframes vibePageIn{from{opacity:.98}to{opacity:1}}
+.side-header,.chat-header{backdrop-filter:none;-webkit-backdrop-filter:none}
+.glass-btn,.composer-btn,.back-btn{transition:background var(--vibe-fast) ease,color var(--vibe-fast) ease,transform var(--vibe-fast) ease}.glass-btn:hover,.composer-btn:hover,.back-btn:hover{transform:none}.glass-btn:active,.composer-btn:active,.back-btn:active,.send-btn:active{transform:scale(.94)}
 .search-box{transition:background var(--vibe-fast) ease,box-shadow var(--vibe-fast) ease}.search-box:focus-within{transform:none}
-.tab{transition:background var(--vibe-fast) ease,color var(--vibe-fast) ease}.tab:hover{transform:none}.tab.active:after{display:none}
-.conversation-item,.conversation{transition:background var(--vibe-fast) ease}.conversation-item:hover,.conversation:hover{transform:none;padding-left:14px}.conversation-item .avatar,.conversation .avatar{transition:transform var(--vibe-fast) var(--vibe-ease)}.conversation-item:hover .avatar,.conversation:hover .avatar{transform:none}.conversation-item.active,.conversation.active{box-shadow:inset 3px 0 0 #008069}
-.profile-bar{transition:background var(--vibe-fast) ease}.profile-bar:hover{background:#e9edef}.avatar-user{transition:transform var(--vibe-fast) var(--vibe-ease)}.profile-bar:hover .avatar-user{transform:scale(1.03)}
-.welcome-orb{animation:vibeOrbFloat 5s ease-in-out infinite}@keyframes vibeOrbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}.welcome h1,.welcome-text,.welcome-chips{animation:vibeTextIn .45s var(--vibe-ease) both}@keyframes vibeTextIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}.welcome-text{animation-delay:.06s}.welcome-chips{animation-delay:.12s}
-.welcome-chips span{transition:transform var(--vibe-fast) var(--vibe-ease),background var(--vibe-fast) ease}.welcome-chips span:hover{transform:translateY(-1px);background:#f0f2f5}
-.message{animation:vibeMessageIn .18s ease both;transition:box-shadow var(--vibe-fast) ease}@keyframes vibeMessageIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}.message:hover{transform:none;box-shadow:0 1px 2px rgba(0,0,0,.15)}
-.online-dot{animation:none}.composer{transition:box-shadow var(--vibe-fast) ease}.composer:focus-within{transform:none;box-shadow:0 1px 3px rgba(11,20,26,.10)}.send-btn{transition:transform var(--vibe-fast) var(--vibe-ease),background var(--vibe-fast) ease}.send-btn:hover{transform:scale(1.03);box-shadow:none}
-.status-card,.calls-card{transition:background var(--vibe-fast) ease,border-color var(--vibe-fast) ease}.status-card:hover,.calls-card:hover{transform:none;box-shadow:none;border-color:#d9dfe2}
+.tab{transition:color var(--vibe-fast) ease,background var(--vibe-fast) ease,border-color var(--vibe-fast) ease}.tab:hover{transform:none}.tab.active:after{display:none}
+.conversation-item,.conversation{transition:background var(--vibe-fast) ease}.conversation-item:hover,.conversation:hover{transform:none;padding-left:14px}.conversation-item .avatar,.conversation .avatar{transition:none}.conversation-item:hover .avatar,.conversation:hover .avatar{transform:none}.conversation-item.active,.conversation.active{box-shadow:none}
+.profile-bar{transition:background var(--vibe-fast) ease}.profile-bar:hover{background:#e9edef}.avatar-user{transition:none}.profile-bar:hover .avatar-user{transform:none}
+.welcome-orb{animation:none}.welcome h1,.welcome-text,.welcome-chips{animation:none}.welcome-chips span{transition:none}.welcome-chips span:hover{transform:none;background:#fff}
+.message{animation:vibeMessageIn .12s ease both;transition:none}@keyframes vibeMessageIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}.message:hover{transform:none;box-shadow:0 1px 1px rgba(0,0,0,.12)}
+.online-dot{animation:none}.composer{transition:box-shadow var(--vibe-fast) ease}.composer:focus-within{transform:none}.send-btn{transition:background var(--vibe-fast) ease,transform var(--vibe-fast) ease}.send-btn:hover{transform:none;box-shadow:none}
 button:focus-visible,input:focus-visible{outline-color:#53bdeb}
 
-/* Navigation mobile : même logique de panneau unique que les messageries mobiles. */
+/* Mobile : comportement de panneau unique, avec glissement comme une messagerie native. */
 @media(max-width:760px){
-  .app-shell{position:relative;isolation:isolate}
+  .app-shell{position:relative;isolation:isolate;overflow:hidden}
   .sidebar,.chat-panel{transition:transform var(--vibe-med) var(--vibe-ease),opacity var(--vibe-med) ease}
-  .sidebar{transform:translateX(0);opacity:1}
-  .chat-panel{display:flex;transform:translateX(100%);opacity:0;pointer-events:none;visibility:hidden}
-
-  /* app.js masque déjà .chatView avec .hidden au démarrage. Dès qu'une discussion
-     est ouverte, :has() fait passer automatiquement l'interface sur le panneau chat. */
-  .app-shell:has(.chat-view:not(.hidden)) .sidebar{display:none;transform:translateX(-12%);opacity:0;pointer-events:none}
-  .app-shell:has(.chat-view:not(.hidden)) .chat-panel{display:flex;transform:translateX(0);opacity:1;pointer-events:auto;visibility:visible}
-
-  .chat-panel .chat-view{transform:translateX(0);opacity:1}
-  .chat-header .back-btn{display:grid;place-items:center}
-  .messages{overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
-  .composer{transform:translateZ(0)}
+  .sidebar{transform:translate3d(0,0,0);opacity:1}
+  .chat-panel{position:absolute;inset:0;z-index:10;display:flex!important;transform:translate3d(100%,0,0);opacity:0;pointer-events:none;visibility:hidden}
+  .app-shell.chat-open .sidebar{display:flex;transform:translate3d(-18%,0,0);opacity:0;pointer-events:none}
+  .app-shell.chat-open .chat-panel{transform:translate3d(0,0,0);opacity:1;pointer-events:auto;visibility:visible}
+  .app-shell:not(.chat-open) .chat-view{display:none!important}
+  .app-shell.chat-open .chat-view{display:flex!important}
+  .chat-header{height:60px;min-height:60px;padding:6px 8px}
+  .chat-header .back-btn{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px}
+  .chat-title{margin-left:4px}
+  .chat-actions{gap:0}
+  .messages{padding:12px 8px 10px;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+  .message{max-width:82%;border-radius:7.5px}
+  .message.in{border-top-left-radius:0}.message.out,.message.mine{border-top-right-radius:0}
+  .composer{margin:5px 6px;padding:4px 5px;border-radius:22px;gap:2px;padding-bottom:max(4px,env(safe-area-inset-bottom))}
   .composer input{min-height:40px}
   .conversation-item,.conversation{touch-action:manipulation}
-  .conversation-item:active,.conversation:active{transform:scale(.998)}
+  .conversation-item:active,.conversation:active{background:#e9edef;transform:none}
+  .side-header{height:58px;min-height:58px}
+  .search-box{margin:7px 12px;height:42px}
+  .main-tabs{display:none}
+  .conversation-item{min-height:72px;padding:10px 14px}
 }
-
-@media(max-width:420px){
-  .message{max-width:82%}
-}
-
-@media(prefers-reduced-motion:reduce){.app-shell,.welcome-orb,.welcome h1,.welcome-text,.welcome-chips,.message{animation:none!important}.glass-btn,.composer-btn,.back-btn,.conversation-item,.conversation,.composer,.send-btn,.welcome-chips span,.sidebar,.chat-panel{transition:none!important}}
+@media(max-width:420px){.message{max-width:86%}.chat-actions .glass-btn{width:42px;flex-basis:42px}.welcome{padding:24px 18px}.welcome h1{font-size:30px}}
+@media(prefers-reduced-motion:reduce){.app-shell,.message{animation:none!important}.glass-btn,.composer-btn,.back-btn,.conversation-item,.conversation,.composer,.send-btn,.sidebar,.chat-panel{transition:none!important}}
