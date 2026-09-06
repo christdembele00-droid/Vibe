@@ -11,3 +11,13 @@ export const firebaseConfig={
 };
 // Endpoint interne intercepté par vibe-ai.js. Aucun appel Cloud Functions.
 export const VIBE_AI_URL='/__vibe_ai__';
+
+// Compatibilité DOM : certains anciens écrans attendent encore #railAvatar.
+// On le crée avant que les listeners Firebase puissent tenter de le remplir.
+if(typeof document!=='undefined'&&!document.getElementById('railAvatar')){
+  const img=document.createElement('img');
+  img.id='railAvatar';
+  img.alt='Profil';
+  img.hidden=true;
+  document.body?.appendChild(img);
+}
