@@ -1,48 +1,16 @@
-import { auth, db, doc, setDoc } from './firebase-client.js';
+import { auth, db, doc, setDoc, getDoc, getDocs, collection, query, where, ref, uploadBytes, getDownloadURL } from './firebase-client.js';
 import { updateProfile } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 
-const $ = id => document.getElementById(id);
-const toast = message => { const el=$('toast'); if(!el)return; el.textContent=message; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),2600); };
-
-function syncUI(user){
-  if(!user)return;
-  const name=user.displayName||user.email?.split('@')[0]||'Mon profil';
-  const profileName=document.querySelector('.profile-copy strong');
-  const profileAvatar=document.querySelector('.avatar-user');
-  if(profileName)profileName.textContent=name;
-  if(profileAvatar){profileAvatar.textContent=name.trim().charAt(0).toUpperCase();profileAvatar.innerHTML=name.trim().charAt(0).toUpperCase();}
-  const settingsName=$('vibeSettingsName');
-  const settingsAvatar=$('vibeSettingsAvatar');
-  if(settingsName)settingsName.textContent=name;
-  if(settingsAvatar){settingsAvatar.textContent=name.trim().charAt(0).toUpperCase();settingsAvatar.innerHTML=name.trim().charAt(0).toUpperCase();}
-}
-
-async function editProfile(){
-  const user=auth?.currentUser;
-  if(!user)return toast('Connectez-vous pour modifier votre profil.');
-  const current=user.displayName||user.email?.split('@')[0]||'';
-  const next=prompt('Nouveau nom de profil :',current);
-  if(next===null)return;
-  const name=String(next).trim().slice(0,60);
-  if(!name)return toast('Le nom ne peut pas être vide.');
-  if(name===current)return;
-  try{
-    await updateProfile(user,{displayName:name});
-    await setDoc(doc(db,'users',user.uid),{displayName:name,updatedAt:new Date()},{merge:true});
-    await setDoc(doc(db,'userSearch',user.uid),{uid:user.uid,displayName:name,displayNameLower:name.toLocaleLowerCase('fr-FR'),email:user.email||null,photoURL:user.photoURL||null,updatedAt:new Date()},{merge:true});
-    syncUI(user);
-    document.dispatchEvent(new CustomEvent('vibe:profile-updated',{detail:{user}}));
-    toast('Nom de profil mis à jour.');
-  }catch(error){console.error('Profil Vibe:',error);toast(`Impossible de modifier le nom : ${error.message}`);}
-}
-
+const $=id=>document.getElementById(id);
+const toast=message=>{const el=$('toast');if(!el)return;el.textContent=message;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2800)};
+function profileName(user){return user?.displayName||user?.email?.split('@')[0]||'Mon profil'}
+function syncAvatar(el,name,url){if(!el)return;if(url){el.innerHTML=`<img src="${String(url).replace(/"/g,'&quot;')}" alt="" loading="lazy">`}else el.textContent=name.trim().charAt(0).toUpperCase()||'V'}
+function syncUI(user,data={}){if(!user)return;const name=data.displayName||profileName(user),photo=data.photoURL||user.photoURL||null;document.querySelector('.profile-copy strong')?.replaceChildren(document.createTextNode(name));const sub=document.querySelector('.profile-copy span');if(sub)sub.textContent=data.username?`@${data.username}`:'Mon profil';syncAvatar(document.querySelector('.avatar-user'),name,photo);const settingsName=$('vibeSettingsName');if(settingsName)settingsName.textContent=name;syncAvatar($('vibeSettingsAvatar'),name,photo);document.dispatchEvent(new CustomEvent('vibe:profile-updated',{detail:{user,data}}))}
+async function loadData(user){try{const snap=await getDoc(doc(db,'users',user.uid));const data=snap.exists()?snap.data():{};syncUI(user,data);return data}catch{return {}}}
+async function choosePhoto(user){return new Promise(resolve=>{const input=document.createElement('input');input.type='file';input.accept='image/jpeg,image/png,image/webp';input.onchange=async()=>{const file=input.files?.[0];if(!file)return resolve(null);if(file.size>5*1024*1024){toast('Photo trop volumineuse : 5 Mo maximum.');return resolve(null)}try{toast('Téléversement de la photo…');const storageRef=ref(`profilePhotos/${user.uid}/avatar-${Date.now()}.${file.name.split('.').pop()||'jpg'}`);await uploadBytes(storageRef,file,{contentType:file.type});const url=await getDownloadURL(storageRef);resolve(url)}catch(error){console.error(error);toast(`Photo impossible à enregistrer : ${error.message}`);resolve(null)}};input.click()})}
+async function editProfile(){const user=auth?.currentUser;if(!user)return toast('Connectez-vous pour modifier votre profil.');const current=await loadData(user);const nameInput=prompt('Nom de profil :',current.displayName||profileName(user));if(nameInput===null)return;const name=String(nameInput).trim().slice(0,60);if(!name)return toast('Le nom ne peut pas être vide.');const usernameInput=prompt('Nom d’utilisateur @pseudo :',current.username||'');if(usernameInput===null)return;const username=String(usernameInput).trim().replace(/^@/,'').toLowerCase().replace(/[^a-z0-9._-]/g,'').slice(0,30);if(username.length<3)return toast('Le @pseudo doit contenir au moins 3 caractères.');const bioInput=prompt('Bio :',current.bio||'');if(bioInput===null)return;const bio=String(bioInput).trim().slice(0,160);const statusInput=prompt('Statut : Disponible / Occupé / Absent',current.status||'Disponible');if(statusInput===null)return;const normalized={Disponible:'available',Occupé:'busy',Absent:'away'};const status=normalized[String(statusInput).trim()]||'available';try{const existing=await getDocs(query(collection(db,'userSearch'),where('usernameLower','==',username)));const conflict=existing.docs.find(x=>x.id!==user.uid);if(conflict)return toast('Ce @pseudo est déjà utilisé.');let photoURL=current.photoURL||user.photoURL||null;if(confirm('Changer la photo de profil ?'))photoURL=await choosePhoto(user)||photoURL;await updateProfile(user,{displayName:name,photoURL});const payload={uid:user.uid,displayName:name,displayNameLower:name.toLocaleLowerCase('fr-FR'),username,usernameLower:username,bio,status,photoURL,email:user.email||null,updatedAt:new Date()};await setDoc(doc(db,'users',user.uid),payload,{merge:true});await setDoc(doc(db,'userSearch',user.uid),payload,{merge:true});await setDoc(doc(db,'presence',user.uid),{uid:user.uid,displayName:name,photoURL,status,updatedAt:new Date()},{merge:true});syncUI(user,payload);toast('Profil mis à jour.');}catch(error){console.error('Profil Vibe:',error);toast(`Impossible de modifier le profil : ${error.message}`)}}
 document.addEventListener('vibe:edit-profile',()=>void editProfile());
-document.addEventListener('vibe:auth-changed',e=>syncUI(e.detail?.user||auth?.currentUser));
-document.addEventListener('click',event=>{
-  if(event.target.closest('#profileBtn')||event.target.closest('[data-action="profile-edit"]')){
-    event.preventDefault();
-    document.dispatchEvent(new CustomEvent('vibe:edit-profile'));
-  }
-});
-
-window.VibeProfile={editProfile};
+document.addEventListener('vibe:auth-changed',e=>{const user=e.detail?.user||auth?.currentUser;if(user)void loadData(user)});
+document.addEventListener('click',event=>{if(event.target.closest('[data-action="profile-edit"]')){event.preventDefault();document.dispatchEvent(new CustomEvent('vibe:edit-profile'))}});
+if(auth?.currentUser)void loadData(auth.currentUser);
+window.VibeProfile={editProfile,loadData};
