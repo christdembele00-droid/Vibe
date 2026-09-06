@@ -17,12 +17,11 @@ const CHANNELS=[
 {id:'vibe-ai',name:'VIBE — AI',subtitle:'Assistant intelligent et recherche web en temps réel'}
 ];
 const LIVE=new Set(['actualites','cote-ivoire','monde','sports','technologie','gaming','musique','divertissement','science']);
-let uid=null,current=null,unsub=null,booted=false,sending=false,building=false;
+let uid=null,current=null,unsub=null,booted=false,sending=false,building=false,channelRailBound=false;
 const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr-FR').trim();
 const toast=text=>{const e=$('toast');if(!e)return;e.textContent=text;e.style.display='block';clearTimeout(window.__vibeChannelsToast);window.__vibeChannelsToast=setTimeout(()=>e.style.display='none',2800)};
 const time=v=>v?.toDate?.().toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})||'…';
-
 function injectChannelUI(){
   if(!document.getElementById('vibeChannelsStyle')){
     const s=document.createElement('style');s.id='vibeChannelsStyle';s.textContent=`
@@ -43,9 +42,10 @@ function injectChannelUI(){
     `;document.head.appendChild(s);
   }
   const rail=document.querySelector('.rail-top');
-  if(rail&&!$('railChannels')){
-    const b=document.createElement('button');b.id='railChannels';b.className='rail-button vibe-channel-rail';b.type='button';b.title='Chaînes';b.setAttribute('aria-label','Chaînes');b.innerHTML='<i class="fa-solid fa-tower-broadcast"></i>';
-    b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();showChannels()},true);rail.appendChild(b);
+  if(rail){
+    let b=$('railChannels');
+    if(!b){b=document.createElement('button');b.id='railChannels';b.className='rail-button vibe-channel-rail';b.type='button';b.title='Chaînes';b.setAttribute('aria-label','Chaînes');b.innerHTML='<i class="fa-solid fa-tower-broadcast"></i>';rail.appendChild(b)}
+    if(!channelRailBound){channelRailBound=true;b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();showChannels()},true)}
   }
   if(!$('channels')){
     const box=document.createElement('div');box.id='channels';box.hidden=true;const contacts=$('contacts');
