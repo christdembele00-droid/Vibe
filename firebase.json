@@ -1,4 +1,7 @@
 {
+  "projects": {
+    "default": "vibe-749e5"
+  },
   "database": {
     "rules": "database.rules.json"
   }
