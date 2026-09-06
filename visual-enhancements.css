@@ -1,109 +1,82 @@
-/* Vibe — interface claire, structurée et soignée. Couche visuelle finale. */
+/* Vibe — palette claire, harmonieuse et cohérente. */
 :root{
-  --ui-bg:#f4f7fb;
+  --ui-bg:#f6f8fb;
   --ui-surface:#ffffff;
-  --ui-surface-2:#f8fafc;
-  --ui-surface-3:#eef3f8;
-  --ui-border:#e1e7ef;
-  --ui-border-strong:#d4dce7;
-  --ui-text:#172033;
-  --ui-muted:#667085;
-  --ui-soft:#475467;
-  --ui-accent:#ff7a18;
-  --ui-accent-2:#ff9b4a;
-  --ui-accent-soft:#fff1e7;
-  --ui-success:#22a866;
+  --ui-surface-2:#f9fafb;
+  --ui-surface-3:#f1f5f9;
+  --ui-border:#e4e8ee;
+  --ui-border-strong:#d6dce5;
+  --ui-text:#202735;
+  --ui-muted:#6b7280;
+  --ui-soft:#4b5563;
+  --ui-accent:#f97316;
+  --ui-accent-2:#fb923c;
+  --ui-accent-soft:#fff4e8;
+  --ui-accent-pale:#fff8f1;
+  --ui-success:#16a36a;
   color-scheme:only light;
 }
 
 html,body{background:var(--ui-bg)!important;color:var(--ui-text)!important}
 body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-.app-shell{background:linear-gradient(135deg,#fbfcfe 0%,#f1f5f9 100%)!important}
-.sidebar,.chat-panel{background:var(--ui-surface)!important;border:1px solid var(--ui-border)!important;box-shadow:0 12px 40px rgba(31,45,61,.08)!important}
-.side-header,.chat-header{background:rgba(255,255,255,.96)!important;border-color:var(--ui-border)!important}
+.app-shell{background:linear-gradient(135deg,#ffffff 0%,#f5f7fa 100%)!important}
+.sidebar,.chat-panel{background:var(--ui-surface)!important;border:1px solid var(--ui-border)!important;box-shadow:0 10px 32px rgba(32,39,53,.07)!important}
+.side-header,.chat-header{background:rgba(255,255,255,.98)!important;border-color:var(--ui-border)!important}
 
-/* Logo Vibe : proportions et profondeur cohérentes partout. */
 .brand{color:var(--ui-text)!important;gap:10px}
-.brand-icon{width:40px;height:40px;border-radius:12px;object-fit:cover;box-shadow:0 7px 20px rgba(255,122,24,.18)!important}
-.welcome-orb{background:linear-gradient(145deg,#ff7a18,#ff9b4a)!important;box-shadow:0 18px 42px rgba(255,122,24,.2)!important}
+.brand-icon{width:40px;height:40px;border-radius:12px;object-fit:cover;box-shadow:0 6px 18px rgba(249,115,22,.16)!important}
+.welcome-orb{background:linear-gradient(145deg,#f97316,#fb923c)!important;box-shadow:0 16px 36px rgba(249,115,22,.18)!important}
 .welcome-orb img{object-fit:contain}
 
-/* Système d'icônes : même taille, même trait, même alignement. */
 .glass-btn,.composer-btn,.send-btn,.back-btn,.tab{appearance:none;-webkit-appearance:none}
-.glass-btn,.composer-btn{border:1px solid var(--ui-border)!important;background:var(--ui-surface-2)!important;color:var(--ui-soft)!important;border-radius:12px;box-shadow:0 2px 7px rgba(31,45,61,.04)}
+.glass-btn,.composer-btn{border:1px solid var(--ui-border)!important;background:var(--ui-surface-2)!important;color:var(--ui-soft)!important;border-radius:12px;box-shadow:0 2px 6px rgba(32,39,53,.035)}
 .glass-btn svg,.composer-btn svg,.tab svg,.back-btn svg,.send-btn svg,.search-icon svg{width:19px;height:19px;display:block;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.glass-btn svg,.composer-btn svg{transition:transform .16s ease}
-.glass-btn:hover,.composer-btn:hover{background:var(--ui-accent-soft)!important;border-color:#ffc7a4!important;color:var(--ui-accent)!important;transform:translateY(-1px);box-shadow:0 7px 16px rgba(31,45,61,.08)}
-.glass-btn:hover svg,.composer-btn:hover svg{transform:scale(1.05)}
+.glass-btn:hover,.composer-btn:hover{background:var(--ui-accent-soft)!important;border-color:#fed7aa!important;color:var(--ui-accent)!important;transform:translateY(-1px);box-shadow:0 6px 14px rgba(32,39,53,.07)}
 .glass-btn:active,.composer-btn:active,.send-btn:active{transform:scale(.96)}
-.glass-btn:focus-visible,.composer-btn:focus-visible,.send-btn:focus-visible,.tab:focus-visible,.back-btn:focus-visible{outline:3px solid rgba(255,122,24,.22)!important;outline-offset:2px}
+.glass-btn:focus-visible,.composer-btn:focus-visible,.send-btn:focus-visible,.tab:focus-visible,.back-btn:focus-visible{outline:3px solid rgba(249,115,22,.20)!important;outline-offset:2px}
 
-/* Barre de recherche structurée. */
 .search-box{height:50px!important;margin:12px 14px!important;padding:0 14px!important;border:1px solid var(--ui-border)!important;background:var(--ui-surface-2)!important;border-radius:15px!important;box-shadow:none!important}
-.search-box:focus-within{background:#fff!important;border-color:#ffb47e!important;box-shadow:0 0 0 4px rgba(255,122,24,.08)!important;transform:none!important}
-.search-icon{color:#7a8698!important}.search-box input{color:var(--ui-text)!important;font-size:13px}.search-box input::placeholder{color:#98a2b3!important}.search-box kbd{color:#7a8698!important;border-color:var(--ui-border)!important;background:#fff!important;border-radius:6px}
+.search-box:focus-within{background:#fff!important;border-color:#fdba74!important;box-shadow:0 0 0 4px rgba(249,115,22,.07)!important;transform:none!important}
+.search-icon{color:#7b8493!important}.search-box input{color:var(--ui-text)!important;font-size:13px}.search-box input::placeholder{color:#9aa2ae!important}.search-box kbd{color:#7b8493!important;border-color:var(--ui-border)!important;background:#fff!important;border-radius:6px}
 
-/* Navigation : séparation nette et hiérarchie claire. */
 .main-tabs{padding:0 12px 10px!important;gap:6px}
-.tab{color:#667085!important;border:1px solid transparent!important;border-radius:11px!important;font-weight:700}
+.tab{color:#697386!important;border:1px solid transparent!important;border-radius:11px!important;font-weight:700}
 .tab:hover{color:var(--ui-text)!important;background:var(--ui-surface-3)!important}
-.tab.active{color:var(--ui-accent)!important;background:var(--ui-accent-soft)!important;border-color:#ffe0cd!important}
+.tab.active{color:#ea580c!important;background:var(--ui-accent-soft)!important;border-color:#fed7aa!important}
 .tab.active::after{display:none!important}
-.tab svg{width:17px;height:17px;stroke-width:2}
-.tab b{background:var(--ui-accent)!important;color:#fff!important}
+.tab svg{width:17px;height:17px;stroke-width:2}.tab b{background:var(--ui-accent)!important;color:#fff!important}
 
-/* Liste des conversations : chaque ligne est un bloc lisible. */
-.conversation-list{scrollbar-color:#c7d0dc transparent}
-.conversation-item,.conversation{color:var(--ui-text)!important;border-bottom:1px solid #edf1f5!important;border-radius:12px!important}
-.conversation-item:hover,.conversation:hover{background:#f7f9fc!important;transform:none!important}
-.conversation-item.active,.conversation.active{background:#fff4ec!important;box-shadow:inset 3px 0 0 var(--ui-accent)!important}
-.avatar{box-shadow:0 4px 12px rgba(31,45,61,.10)!important}
+.conversation-list{scrollbar-color:#cbd2dc transparent}
+.conversation-item,.conversation{color:var(--ui-text)!important;border-bottom:1px solid #edf0f4!important;border-radius:12px!important}
+.conversation-item:hover,.conversation:hover{background:#fafbfc!important;transform:none!important}
+.conversation-item.active,.conversation.active{background:var(--ui-accent-pale)!important;box-shadow:inset 3px 0 0 var(--ui-accent)!important}
+.avatar{box-shadow:0 4px 10px rgba(32,39,53,.09)!important}
 .profile-bar{border-color:var(--ui-border)!important;background:#fff!important}
 .profile-copy strong,.chat-title strong{color:var(--ui-text)!important}.profile-copy span,.chat-title span{color:var(--ui-muted)!important}
 
-/* Zone de discussion : grille propre et beaucoup d'espace blanc. */
-.chat-panel{background:#f8fafc!important;background-image:radial-gradient(circle at 80% 0%,rgba(255,122,24,.07),transparent 25%)!important}
-.chat-header{box-shadow:0 1px 0 #edf1f5!important}
-.back-btn{color:var(--ui-text)!important}
-.chat-title{margin-left:10px}.chat-title strong{font-size:14px}.chat-title span{font-size:10px}
-.online-dot{background:var(--ui-success)!important;box-shadow:0 0 7px rgba(34,168,102,.3)!important}
-.chat-actions{gap:7px}
+.chat-panel{background:#f8fafc!important;background-image:radial-gradient(circle at 80% 0%,rgba(249,115,22,.045),transparent 25%)!important}
+.chat-header{box-shadow:0 1px 0 #edf0f4!important}.back-btn{color:var(--ui-text)!important}.chat-title{margin-left:10px}.chat-title strong{font-size:14px}.chat-title span{font-size:10px}
+.online-dot{background:var(--ui-success)!important;box-shadow:0 0 6px rgba(22,163,106,.25)!important}.chat-actions{gap:7px}
 
-/* Bulles : distinction visuelle précise entrant/sortant. */
-.messages{scrollbar-color:#c7d0dc transparent}
-.message{border:1px solid #e2e8f0!important;box-shadow:0 2px 8px rgba(31,45,61,.05)!important}
+.messages{scrollbar-color:#cbd2dc transparent}
+.message{border:1px solid #e5e9ef!important;box-shadow:0 2px 7px rgba(32,39,53,.045)!important}
 .message.in{background:#fff!important;color:var(--ui-text)!important;border-top-left-radius:6px!important}
-.message.out{background:linear-gradient(135deg,#ff7a18,#ff9340)!important;color:#fff!important;border-color:transparent!important;border-top-right-radius:6px!important;box-shadow:0 5px 15px rgba(255,122,24,.16)!important}
+.message.out{background:linear-gradient(135deg,#f97316,#fb923c)!important;color:#fff!important;border-color:transparent!important;border-top-right-radius:6px!important;box-shadow:0 5px 14px rgba(249,115,22,.14)!important}
 
-/* Composer : trois zones distinctes et bouton d'envoi parfaitement centré. */
-.composer{background:#fff!important;border:1px solid var(--ui-border)!important;border-radius:16px!important;box-shadow:0 8px 24px rgba(31,45,61,.09)!important;gap:6px}
-.composer:focus-within{border-color:#ffb47e!important;box-shadow:0 0 0 4px rgba(255,122,24,.07),0 8px 24px rgba(31,45,61,.09)!important}
-.composer input{color:var(--ui-text)!important}.composer input::placeholder{color:#98a2b3!important}
-.send-btn{background:linear-gradient(135deg,#ff7a18,#ff963f)!important;color:#fff!important;border-radius:12px!important;box-shadow:0 6px 16px rgba(255,122,24,.2)!important}
-.send-btn svg{width:20px;height:20px;stroke-width:2.1}
-.send-btn:hover{transform:translateY(-1px)!important;box-shadow:0 9px 22px rgba(255,122,24,.26)!important}
+.composer{background:#fff!important;border:1px solid var(--ui-border)!important;border-radius:16px!important;box-shadow:0 7px 20px rgba(32,39,53,.075)!important;gap:6px}
+.composer:focus-within{border-color:#fdba74!important;box-shadow:0 0 0 4px rgba(249,115,22,.06),0 7px 20px rgba(32,39,53,.075)!important}
+.composer input{color:var(--ui-text)!important}.composer input::placeholder{color:#9aa2ae!important}
+.send-btn{background:linear-gradient(135deg,#f97316,#fb923c)!important;color:#fff!important;border-radius:12px!important;box-shadow:0 5px 14px rgba(249,115,22,.17)!important}
+.send-btn svg{width:20px;height:20px;stroke-width:2.1}.send-btn:hover{transform:translateY(-1px)!important;box-shadow:0 8px 18px rgba(249,115,22,.22)!important}
 
-/* Accueil : composition plus équilibrée. */
-.welcome h1{color:var(--ui-text)!important;letter-spacing:-2.2px}.welcome h1 span,.welcome-text{color:#667085!important}
-.eyebrow{color:var(--ui-accent)!important}.welcome-chips{gap:8px}.welcome-chips span{color:#475467!important;background:#fff!important;border:1px solid var(--ui-border)!important;border-radius:10px!important;box-shadow:0 2px 6px rgba(31,45,61,.03)}
-.welcome-chips span:hover{background:var(--ui-accent-soft)!important;border-color:#ffc7a4!important;transform:translateY(-1px)}
+.welcome h1{color:var(--ui-text)!important;letter-spacing:-2.2px}.welcome h1 span,.welcome-text{color:#697386!important}.eyebrow{color:#ea580c!important}.welcome-chips{gap:8px}.welcome-chips span{color:#4b5563!important;background:#fff!important;border:1px solid var(--ui-border)!important;border-radius:10px!important;box-shadow:0 2px 6px rgba(32,39,53,.025)}
+.welcome-chips span:hover{background:var(--ui-accent-soft)!important;border-color:#fed7aa!important;transform:translateY(-1px)}
 
-/* Toast et barres de défilement cohérents avec le thème clair. */
-.toast{background:#fff!important;color:var(--ui-text)!important;border-color:var(--ui-border)!important;box-shadow:0 12px 30px rgba(31,45,61,.13)!important}
-.conversation-list::-webkit-scrollbar-thumb,.messages::-webkit-scrollbar-thumb{background:#c7d0dc!important}.conversation-list::-webkit-scrollbar-thumb:hover,.messages::-webkit-scrollbar-thumb:hover{background:#ffb47e!important}
+.toast{background:#fff!important;color:var(--ui-text)!important;border-color:var(--ui-border)!important;box-shadow:0 12px 28px rgba(32,39,53,.12)!important}
+.conversation-list::-webkit-scrollbar-thumb,.messages::-webkit-scrollbar-thumb{background:#cbd2dc!important}.conversation-list::-webkit-scrollbar-thumb:hover,.messages::-webkit-scrollbar-thumb:hover{background:#fdba74!important}
 
-/* Mobile : zones tactiles régulières et aucune surcharge visuelle. */
 @media(max-width:760px){
-  .side-header,.chat-header,.profile-bar{background:#fff!important}
-  .side-header{min-height:68px}.search-box{margin:10px!important;height:46px!important}
-  .conversation-item{min-height:68px!important}
-  .chat-header{min-height:64px!important}
-  .composer{margin:8px!important;box-shadow:0 7px 20px rgba(31,45,61,.10)!important}
-  .glass-btn,.composer-btn,.send-btn{width:42px;height:42px;flex-basis:42px}
-  .send-btn svg{width:19px;height:19px}
+  .side-header,.chat-header,.profile-bar{background:#fff!important}.side-header{min-height:68px}.search-box{margin:10px!important;height:46px!important}.conversation-item{min-height:68px!important}.chat-header{min-height:64px!important}.composer{margin:8px!important;box-shadow:0 7px 18px rgba(32,39,53,.08)!important}.glass-btn,.composer-btn,.send-btn{width:42px;height:42px;flex-basis:42px}.send-btn svg{width:19px;height:19px}
 }
-@media(max-width:420px){
-  .brand-icon{width:36px;height:36px}.search-box{margin:8px 10px!important;height:44px!important}.main-tabs{padding-left:8px!important;padding-right:8px!important}
-  .messages{padding-left:10px!important;padding-right:10px!important}.message{max-width:88%}
-}
+@media(max-width:420px){.brand-icon{width:36px;height:36px}.search-box{margin:8px 10px!important;height:44px!important}.main-tabs{padding-left:8px!important;padding-right:8px!important}.messages{padding-left:10px!important;padding-right:10px!important}.message{max-width:88%}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
