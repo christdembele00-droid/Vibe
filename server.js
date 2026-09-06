@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const root = __dirname;
+const root = path.resolve(__dirname);
 const port = Number(process.env.PORT || 10000);
 const mime = {
   '.html': 'text/html; charset=utf-8',
@@ -20,9 +20,17 @@ const mime = {
 };
 
 function safePath(urlPath) {
-  const decoded = decodeURIComponent(urlPath.split('?')[0]);
-  const normalized = path.normalize(decoded).replace(/^([.][.][\\/])+/, '');
-  return path.join(root, normalized === '/' ? 'index.html' : normalized.replace(/^[/\\]+/, ''));
+  let decoded;
+  try {
+    decoded = decodeURIComponent(String(urlPath || '/').split('?')[0]);
+  } catch {
+    return null;
+  }
+  const relative = decoded.replace(/^[/\\]+/, '');
+  const candidate = path.resolve(root, relative || 'index.html');
+  const relativeToRoot = path.relative(root, candidate);
+  if (relativeToRoot.startsWith('..') || path.isAbsolute(relativeToRoot)) return null;
+  return candidate;
 }
 
 const server = http.createServer((req, res) => {
@@ -32,13 +40,19 @@ const server = http.createServer((req, res) => {
   }
 
   let file = safePath(req.url || '/');
-  if (!file.startsWith(root)) {
-    res.writeHead(403);
-    return res.end('Forbidden');
+  if (!file) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('Bad Request');
   }
 
-  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
-    file = path.join(root, 'index.html');
+  try {
+    if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      file = path.join(root, 'index.html');
+    }
+  } catch (error) {
+    console.error('[VIBE] File lookup error:', error);
+    res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('Internal Server Error');
   }
 
   fs.readFile(file, (err, data) => {
