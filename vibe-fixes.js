@@ -27,13 +27,13 @@ function toast(message) {
 function currentChatId() {
   return window.VibeApp?.currentChatId
     || document.activeElement?.dataset?.chatId
-    || document.querySelector('.conversation-item.active')?.dataset?.chatId
+    || document.querySelector('.conversation-item.active')?.dataset.chatId
     || selected;
 }
 
 function cleanup() {
-  if (stopReactions) stopReactions();
-  if (stopPeerPresence) stopPeerPresence();
+  stopReactions?.();
+  stopPeerPresence?.();
   stopReactions = null;
   stopPeerPresence = null;
 }
@@ -51,11 +51,7 @@ function clean(value, max = 2000) {
 }
 
 async function createPrivateChat() {
-  if (!user) {
-    toast('Connexion Firebase requise.');
-    return;
-  }
-
+  if (!user) return toast('Connexion Firebase requise.');
   const name = clean(prompt('Nom de la discussion :'), 120);
   if (!name) return;
 
@@ -73,7 +69,6 @@ async function createPrivateChat() {
       [`chatMembers/${id}/${user.uid}`]: true,
       [`userChats/${user.uid}/${id}`]: true
     });
-
     toast(`Discussion créée. Code d'invitation : ${token}`);
     window.VibeApp?.openChat(id, { name, ownerUid: user.uid, inviteToken: token });
   } catch (error) {
@@ -82,28 +77,18 @@ async function createPrivateChat() {
 }
 
 async function joinPrivateChat() {
-  if (!user) {
-    toast('Connexion Firebase requise.');
-    return;
-  }
-
+  if (!user) return toast('Connexion Firebase requise.');
   const id = clean(prompt('Identifiant de la discussion :'), 120);
   if (!id) return;
-
   const token = clean(prompt('Code d’invitation privé :'), 128);
   if (!token) return;
 
   try {
-    const snapshot = await get(ref(db, `chats/${id}`));
-    if (!snapshot.exists()) {
-      toast('Discussion introuvable.');
-      return;
-    }
-
-    const chat = snapshot.val();
+    const snap = await get(ref(db, `chats/${id}`));
+    if (!snap.exists()) return toast('Discussion introuvable.');
+    const chat = snap.val();
     if (chat.ownerUid !== user.uid && chat.inviteToken !== token) {
-      toast('Code d’invitation invalide.');
-      return;
+      return toast('Code d’invitation invalide.');
     }
 
     await set(ref(db, `joinRequests/${id}/${user.uid}`), token);
@@ -111,7 +96,6 @@ async function joinPrivateChat() {
       [`chatMembers/${id}/${user.uid}`]: true,
       [`userChats/${user.uid}/${id}`]: true
     });
-
     toast('Accès privé autorisé.');
     window.VibeApp?.openChat(id, chat);
   } catch (error) {
@@ -144,13 +128,11 @@ async function atomicSend(text, type = 'text', extra = {}) {
       createdAt: serverTimestamp()
     }
   });
-
   return true;
 }
 
 function handleSubmit(event) {
   if (event.target !== $('#messageForm')) return;
-
   event.preventDefault();
   event.stopImmediatePropagation();
 
@@ -177,7 +159,6 @@ function handleAttachment(event) {
 
 async function handleFile(event) {
   if (event.target?.id !== 'fileInput') return;
-
   const file = event.target.files?.[0];
   event.target.value = '';
   if (!file) return;
@@ -187,20 +168,9 @@ async function handleFile(event) {
     || file.type.startsWith('audio/')
     || file.type === 'application/pdf';
 
-  if (!allowed) {
-    toast('Type de fichier non pris en charge.');
-    return;
-  }
-
-  if (file.size > 750 * 1024) {
-    toast('Fichier trop volumineux : 750 Ko maximum.');
-    return;
-  }
-
-  if (!currentChatId() || !user) {
-    toast('Ouvrez une discussion.');
-    return;
-  }
+  if (!allowed) return toast('Type de fichier non pris en charge.');
+  if (file.size > 750 * 1024) return toast('Fichier trop volumineux : 750 Ko maximum.');
+  if (!currentChatId() || !user) return toast('Ouvrez une discussion.');
 
   try {
     const dataUrl = await new Promise((resolve, reject) => {
@@ -209,13 +179,11 @@ async function handleFile(event) {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-
     await atomicSend(file.name, 'media', {
       fileName: file.name.slice(0, 180),
       mimeType: file.type,
       dataUrl
     });
-
     toast('Fichier envoyé.');
   } catch (error) {
     toast(`Envoi impossible : ${error.message}`);
@@ -224,65 +192,55 @@ async function handleFile(event) {
 
 function decorateReactions(raw) {
   const map = {};
-
   for (const [messageId, users] of Object.entries(raw || {})) {
     const counts = {};
     for (const value of Object.values(users || {})) {
       counts[value] = (counts[value] || 0) + 1;
     }
-
     map[messageId] = Object.entries(counts)
       .map(([emoji, count]) => emoji + (count > 1 ? ` ${count}` : ''))
       .join(' ');
   }
 
-  document.querySelectorAll('#messages [data-message]').forEach((element) => {
-    const previous = element.querySelector('.message-reaction');
-    if (previous) previous.remove();
-
-    if (map[element.dataset.message]) {
+  document.querySelectorAll('#messages [data-message]').forEach((el) => {
+    el.querySelector('.message-reaction')?.remove();
+    if (map[el.dataset.message]) {
       const badge = document.createElement('span');
       badge.className = 'message-reaction';
-      badge.textContent = map[element.dataset.message];
-      element.appendChild(badge);
+      badge.textContent = map[el.dataset.message];
+      el.appendChild(badge);
     }
   });
 }
 
-function watchReactions(chatId) {
-  if (stopReactions) stopReactions();
-  stopReactions = onValue(ref(db, `reactions/${chatId}`), (snapshot) => {
+function watchReactions(id) {
+  stopReactions?.();
+  stopReactions = onValue(ref(db, `reactions/${id}`), (snapshot) => {
     decorateReactions(snapshot.val() || {});
   });
 }
 
-async function watchPresence(chatId) {
-  if (stopPeerPresence) stopPeerPresence();
-
-  const members = (await get(ref(db, `chatMembers/${chatId}`))).val() || {};
-  const peers = Object.keys(members).filter((uid) => uid !== user?.uid);
-  const element = $('#chatPresence');
+async function watchPresence(id) {
+  stopPeerPresence?.();
+  const members = (await get(ref(db, `chatMembers/${id}`))).val() || {};
+  const peers = Object.keys(members).filter((peerId) => peerId !== user?.uid);
+  const el = $('#chatPresence');
 
   if (!peers.length) {
-    if (element) element.textContent = 'vous êtes le seul membre';
+    if (el) el.textContent = 'vous êtes le seul membre';
     return;
   }
 
   const states = new Map();
   const listeners = [];
-
   const paint = () => {
-    const onlineCount = [...states.values()].filter((state) => state === 'online').length;
-    if (element) {
-      element.textContent = peers.length === 1
-        ? (onlineCount ? 'en ligne' : 'hors ligne')
-        : `${onlineCount}/${peers.length} en ligne`;
-    }
+    const online = [...states.values()].filter((state) => state === 'online').length;
+    if (el) el.textContent = peers.length === 1 ? (online ? 'en ligne' : 'hors ligne') : `${online}/${peers.length} en ligne`;
   };
 
-  for (const peerUid of peers) {
-    listeners.push(onValue(ref(db, `presence/${peerUid}/status`), (snapshot) => {
-      states.set(peerUid, snapshot.val()?.state || 'offline');
+  for (const peerId of peers) {
+    listeners.push(onValue(ref(db, `presence/${peerId}/status`), (snapshot) => {
+      states.set(peerId, snapshot.val()?.state || 'offline');
       paint();
     }));
   }
@@ -291,17 +249,16 @@ async function watchPresence(chatId) {
 }
 
 function viewOnceClick(event) {
-  const element = event.target.closest('#messages [data-message]');
-  if (!element || !user) return;
+  const el = event.target.closest('#messages [data-message]');
+  if (!el || !user) return;
 
-  const messageId = element.dataset.message;
+  const messageId = el.dataset.message;
   const chatId = currentChatId();
-  if (!messageId || !chatId || consumed.has(messageId)) return;
+  if (!messageId || consumed.has(messageId) || !chatId) return;
 
   get(ref(db, `messages/${chatId}/${messageId}`)).then(async (snapshot) => {
     const message = snapshot.val();
     if (!message?.viewOnce || message.uid === user.uid) return;
-
     consumed.add(messageId);
     try {
       await remove(ref(db, `messages/${chatId}/${messageId}`));
@@ -315,100 +272,93 @@ function viewOnceClick(event) {
 
 async function cleanupStories() {
   if (!user) return;
-
   const raw = (await get(ref(db, `stories/${user.uid}`))).val() || {};
   const now = Date.now();
-
   await Promise.all(
     Object.entries(raw)
       .filter(([, story]) => Number(story?.expiresAt || 0) <= now)
-      .map(([storyId]) => remove(ref(db, `stories/${user.uid}/${storyId}`)).catch(() => {}))
+      .map(([id]) => remove(ref(db, `stories/${user.uid}/${id}`)).catch(() => {}))
   );
 }
 
 function monitor() {
-  const chatId = currentChatId();
-  if (!chatId) {
-    cleanup();
+  const id = currentChatId();
+  if (!id || id === selected) {
+    if (!id) cleanup();
     return;
   }
-
-  if (chatId === selected) return;
-  selected = chatId;
+  selected = id;
   cleanup();
-  watchReactions(chatId);
-  watchPresence(chatId).catch(() => {});
+  watchReactions(id);
+  watchPresence(id).catch(() => {});
 }
 
-onAuthStateChanged(auth, async (currentUser) => {
-  user = currentUser;
-  if (user) await cleanupStories().catch(() => {});
-  selected = null;
-  monitor();
-  document.dispatchEvent(new CustomEvent('vibe:auth-changed', { detail: { user } }));
-});
-
-document.addEventListener('click', (event) => {
-  const target = event.target.closest('#newChatBtn, #menuBtn, #chatMenuBtn');
-
+function handleNavigationClick(event) {
+  const target = event.target.closest('#newChatBtn,#menuBtn,#chatMenuBtn');
   if (target?.id === 'newChatBtn') {
     event.preventDefault();
     event.stopImmediatePropagation();
     createPrivateChat();
-    return;
+    return true;
   }
 
   if (target?.id === 'chatMenuBtn') {
     event.preventDefault();
     event.stopImmediatePropagation();
-
-    const choice = prompt(
-      'Vibe :\n1. Rejoindre une discussion privée\n2. Message à vue unique\n3. Réagir au dernier message'
-    );
+    const choice = prompt('Vibe :\n1. Rejoindre une discussion privée\n2. Message à vue unique\n3. Réagir au dernier message');
 
     if (choice === '1') {
       joinPrivateChat();
     } else if (choice === '2') {
       const text = clean(prompt('Message à vue unique :'));
-      if (text) {
-        atomicSend(text, 'text', { viewOnce: true })
-          .then((ok) => {
-            if (ok) toast('Message à vue unique envoyé.');
-          });
-      }
+      if (text) atomicSend(text, 'text', { viewOnce: true }).then((ok) => ok && toast('Message à vue unique envoyé.'));
     } else if (choice === '3') {
-      const chatId = currentChatId();
-      if (!chatId || !user) return;
-
-      get(ref(db, `messages/${chatId}`)).then((snapshot) => {
-        const values = snapshot.val() || {};
-        const keys = Object.keys(values);
-        const lastMessageId = keys[keys.length - 1];
-        if (!lastMessageId) return;
-
+      const id = currentChatId();
+      if (!id || !user) return true;
+      get(ref(db, `messages/${id}`)).then((snapshot) => {
+        const last = Object.keys(snapshot.val() || {}).at(-1);
+        if (!last) return;
         const reaction = clean(prompt('Réaction : ❤️ 👍 😂 😮 😢 🙏'), 16);
         if (reaction) {
-          set(ref(db, `reactions/${chatId}/${lastMessageId}/${user.uid}`), reaction)
+          set(ref(db, `reactions/${id}/${last}/${user.uid}`), reaction)
             .then(() => toast('Réaction enregistrée.'));
         }
       });
     }
-
-    return;
+    return true;
   }
 
+  return false;
+}
+
+function handleChatSelection(event) {
   const chatButton = event.target.closest('[data-chat-id]');
-  if (chatButton) {
-    selected = chatButton.dataset.chatId;
-    document.querySelectorAll('.conversation-item').forEach((element) => {
-      element.classList.toggle('active', element.dataset.chatId === selected);
-    });
-    setTimeout(monitor, 0);
-  }
+  if (!chatButton) return;
 
+  selected = chatButton.dataset.chatId;
+  document.querySelectorAll('.conversation-item').forEach((el) => {
+    el.classList.toggle('active', el.dataset.chatId === selected);
+  });
+
+  // Laisser le rendu principal terminer avant les abonnements Firebase.
+  setTimeout(monitor, 0);
+}
+
+function handleClick(event) {
+  if (handleNavigationClick(event)) return;
+  handleChatSelection(event);
   viewOnceClick(event);
-}, true);
+}
 
+onAuthStateChanged(auth, async (nextUser) => {
+  user = nextUser;
+  if (nextUser) await cleanupStories().catch(() => {});
+  selected = null;
+  monitor();
+  document.dispatchEvent(new CustomEvent('vibe:auth-changed', { detail: { user: nextUser } }));
+});
+
+document.addEventListener('click', handleClick, true);
 document.addEventListener('submit', handleSubmit, true);
 document.addEventListener('click', handleAttachment, true);
 document.addEventListener('change', handleFile, true);
