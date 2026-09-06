@@ -1,4 +1,4 @@
-import { auth, db, onAuthStateChanged, collection, doc, getDocs, addDoc, setDoc, query, where, orderBy, limit, serverTimestamp, onSnapshot } from './firebase-client.js';
+import { auth, db, onAuthStateChanged, collection, doc, getDoc, getDocs, addDoc, setDoc, query, where, orderBy, limit, serverTimestamp, onSnapshot } from './firebase-client.js';
 
 const $ = id => document.getElementById(id);
 let user = null;
@@ -8,7 +8,7 @@ let searchTimer = 0;
 let searchGeneration = 0;
 
 const clean = (value, max = 80) => String(value || '').trim().slice(0, max);
-const esc = value => String(value ?? '').replace(/[&<>\"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#39;' }[c]));
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const toast = message => {
   const el = $('toast');
   if (!el) return;
@@ -23,13 +23,20 @@ async function indexUser(next) {
   const name = next.displayName || next.email?.split('@')[0] || 'Utilisateur';
   try {
     await setDoc(doc(db, 'userSearch', next.uid), {
-      uid: next.uid, displayName: name, displayNameLower: name.toLocaleLowerCase('fr-FR'),
-      photoURL: next.photoURL || null, updatedAt: serverTimestamp()
+      uid: next.uid,
+      displayName: name,
+      displayNameLower: name.toLocaleLowerCase('fr-FR'),
+      photoURL: next.photoURL || null,
+      updatedAt: serverTimestamp()
     }, { merge: true });
-  } catch (error) { console.warn('Index utilisateur:', error); }
+  } catch (error) {
+    console.warn('Index utilisateur:', error);
+  }
 }
 
-function restoreChats() { if (window.VibeApp?.getChats) renderResults([...window.VibeApp.getChats()]); }
+function restoreChats() {
+  if (window.VibeApp?.getChats) renderResults([...window.VibeApp.getChats()]);
+}
 
 function renderResults(chats, users = []) {
   const list = $('conversationList');
@@ -108,25 +115,39 @@ function watchNotifications() {
   stopNotifications?.();
   stopNotifications = null;
   if (!user) return;
-  const root = query(collection(db, 'conversations'), where('participantIds', 'array-contains', user.uid), limit(100));
+
   const stops = [];
+  let lastSignature = '';
   stopNotifications = () => { stops.splice(0).forEach(stop => stop()); };
-  onSnapshot(root, snap => {
+
+  const refresh = () => {
+    const chats = window.VibeApp?.getChats?.() || [];
+    const signature = chats.map(chat => chat.id).sort().join('|');
+    if (signature === lastSignature) return;
+    lastSignature = signature;
     stops.splice(0).forEach(stop => stop());
-    snap.forEach(chatDoc => {
-      const mq = query(collection(db, 'conversations', chatDoc.id, 'messages'), orderBy('createdAt', 'desc'), limit(1));
+    chats.forEach(chat => {
+      const mq = query(collection(db, 'conversations', chat.id, 'messages'), orderBy('createdAt', 'desc'), limit(1));
       stops.push(onSnapshot(mq, ms => {
         if (!notificationReady || document.visibilityState === 'visible') return;
         const item = ms.docs[0];
         const message = item?.data();
         if (!message || message.uid === user.uid) return;
-        const key = `vibe-notified:${chatDoc.id}:${item.id}`;
+        const key = `vibe-notified:${chat.id}:${item.id}`;
         if (sessionStorage.getItem(key)) return;
         sessionStorage.setItem(key, '1');
-        new Notification(chatDoc.data().name || 'Vibe', { body: String(message.text || 'Nouveau message').slice(0, 120) });
+        new Notification(chat.name || 'Vibe', { body: String(message.text || 'Nouveau message').slice(0, 120) });
       }, error => console.warn('Notification messages:', error)));
     });
-  }, error => console.warn('Notifications Vibe:', error));
+  };
+
+  refresh();
+  const timer = setInterval(refresh, 1500);
+  const previousStop = stopNotifications;
+  stopNotifications = () => {
+    clearInterval(timer);
+    previousStop();
+  };
 }
 
 async function loadCallHistory() {
