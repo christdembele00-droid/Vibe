@@ -1,4 +1,6 @@
-/* Vibe — style messagerie clair inspiré de WhatsApp Web + Android
+/* Vibe — responsive dimensions 2026
+   Desktop: max 1600px / sidebar 340-400px / bars 60px / bubbles 65%
+   Mobile: breakpoint 768px / top bar 56px / touch targets 48px / bubbles 80%
    Aucun chargement externe : CSS autonome et stable. */
 :root{
   --wa-page:#dfe5e8;
@@ -24,7 +26,7 @@ button,input{font:inherit}
 button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 /* =========================
-   PC — WhatsApp Web inspired
+   PC / Mac — 1600px maximum
    ========================= */
 .app-shell{
   height:100dvh;
@@ -39,8 +41,9 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 }
 
 .sidebar{
-  width:clamp(320px,31vw,460px);
-  min-width:320px;
+  width:clamp(340px,30%,400px);
+  min-width:340px;
+  max-width:400px;
   height:100%;
   display:flex;
   flex-direction:column;
@@ -53,13 +56,14 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 }
 
 .side-header,.chat-header{
-  min-height:64px;
+  height:60px;
+  min-height:60px;
   background:var(--wa-header)!important;
   border:0!important;
   border-bottom:1px solid var(--wa-line)!important;
   box-shadow:none!important;
 }
-.side-header{padding:8px 16px!important}
+.side-header{padding:6px 12px!important}
 .brand{display:flex;align-items:center;gap:10px;color:var(--wa-text)!important;text-decoration:none;font-weight:700!important;letter-spacing:-.2px}
 .brand-icon{width:40px;height:40px;border-radius:50%;object-fit:cover;box-shadow:none!important}
 .brand span{font-size:20px}
@@ -68,9 +72,11 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .glass-btn,.composer-btn,.back-btn,.send-btn{
   display:grid;
   place-items:center;
-  width:44px;
-  height:44px;
-  flex:0 0 44px;
+  width:48px;
+  height:48px;
+  min-width:48px;
+  min-height:48px;
+  flex:0 0 48px;
   padding:0;
   border:0!important;
   background:transparent!important;
@@ -132,7 +138,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .conv-time{font-size:12px;color:var(--wa-muted)!important}
 .conv-preview{margin-top:4px;color:var(--wa-muted)!important;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .unread{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:50%;background:var(--wa-green-bright)!important;color:#fff!important;font-size:11px;font-weight:700}
-.profile-bar{margin:0!important;padding:8px 12px!important;border:0!important;border-top:1px solid var(--wa-line)!important;border-radius:0!important;background:var(--wa-header)!important}
+.profile-bar{margin:0!important;padding:6px 12px!important;border:0!important;border-top:1px solid var(--wa-line)!important;border-radius:0!important;background:var(--wa-header)!important}
 .avatar-user{width:40px;height:40px;flex-basis:40px}
 .profile-copy strong{font-size:13px;color:var(--wa-text)!important}.profile-copy span{font-size:11px;color:var(--wa-muted)!important}
 
@@ -150,7 +156,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   background:var(--wa-chat)!important;
   background-image:radial-gradient(circle at 15% 15%,rgba(255,255,255,.20),transparent 25%),radial-gradient(circle at 85% 80%,rgba(255,255,255,.13),transparent 24%)!important;
 }
-.chat-header{display:flex;align-items:center;padding:8px 12px!important;min-height:64px!important}
+.chat-header{display:flex;align-items:center;padding:6px 8px!important}
 .chat-title{min-width:0;display:flex;flex-direction:column;margin-left:8px}
 .chat-title strong{font-size:16px;color:var(--wa-text)!important;font-weight:500}.chat-title span{font-size:12px;color:var(--wa-muted)!important}
 .online-dot{display:inline-block;width:7px;height:7px;margin-right:5px;border-radius:50%;background:#25d366!important}
@@ -171,12 +177,13 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 .composer{
   flex-shrink:0;
-  min-height:64px;
+  height:60px;
+  min-height:60px;
   margin:0!important;
-  padding:8px 12px!important;
+  padding:6px 8px!important;
   display:flex;
   align-items:center;
-  gap:6px;
+  gap:4px;
   background:var(--wa-header)!important;
   border:0!important;
   border-radius:0!important;
@@ -197,22 +204,23 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .toast{background:#fff!important;color:var(--wa-text)!important;border:1px solid var(--wa-line)!important;box-shadow:0 8px 24px rgba(11,20,26,.14)!important}
 
 /* =========================
-   Android — plein écran
+   Android — breakpoint 768px
+   Référence 360 / 412px, une seule colonne
    ========================= */
-@media(max-width:760px){
+@media(max-width:767px){
   :root{--mobile-header:#008069;--mobile-action:#00a884}
   html,body{background:#fff!important}
   .app-shell{height:100dvh;min-height:0;width:100%;background:#fff!important;overflow:hidden}
-  .sidebar{width:100%;min-width:0;height:100%;border:0!important;background:#fff!important}
-  .side-header{min-height:64px!important;padding:calc(8px + env(safe-area-inset-top,0px)) 8px 8px!important;background:var(--mobile-header)!important;border:0!important;color:#fff!important}
-  .brand{color:#fff!important}.brand-icon{width:38px;height:38px}.brand span{font-size:20px;color:#fff!important}
-  .header-actions .glass-btn{width:42px;height:42px;flex-basis:42px;color:#fff!important;background:transparent!important}
+  .sidebar{width:100%;min-width:0;max-width:none;height:100%;border:0!important;background:#fff!important}
+  .side-header{height:56px!important;min-height:56px!important;padding:calc(4px + env(safe-area-inset-top,0px)) 4px 4px!important;background:var(--mobile-header)!important;border:0!important;color:#fff!important}
+  .brand{color:#fff!important}.brand-icon{width:40px;height:40px}.brand span{font-size:20px;color:#fff!important}
+  .header-actions .glass-btn{width:48px;height:48px;min-width:48px;min-height:48px;flex-basis:48px;color:#fff!important;background:transparent!important}
   .header-actions .glass-btn:hover{background:rgba(255,255,255,.10)!important;color:#fff!important}
-  .mobile-login-btn{height:38px!important;padding:0 13px!important;border:1px solid rgba(255,255,255,.35)!important;border-radius:20px!important;background:rgba(255,255,255,.12)!important;color:#fff!important;font-weight:700}
+  .mobile-login-btn{height:40px!important;min-height:40px!important;padding:0 13px!important;border:1px solid rgba(255,255,255,.35)!important;border-radius:20px!important;background:rgba(255,255,255,.12)!important;color:#fff!important;font-weight:700}
 
-  .search-box{height:46px!important;margin:8px 12px!important;background:#f0f2f5!important;border-radius:23px!important}
-  .main-tabs{height:50px!important;background:#fff!important;border-bottom:1px solid var(--wa-line)!important}
-  .tab{min-height:50px!important;font-size:12px!important}
+  .search-box{height:48px!important;margin:8px 12px!important;background:#f0f2f5!important;border-radius:24px!important}
+  .main-tabs{height:48px!important;background:#fff!important;border-bottom:1px solid var(--wa-line)!important}
+  .tab{min-height:48px!important;font-size:12px!important}
   .tab.active{color:var(--wa-green)!important}
   .tab.active::after{height:3px;left:25%;right:25%;background:var(--wa-green)}
 
@@ -223,31 +231,34 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .profile-bar{display:none!important}
 
   .chat-panel{position:fixed!important;inset:0!important;z-index:50!important;width:100%!important;height:100dvh!important;background:var(--wa-chat)!important}
-  .chat-header{min-height:60px!important;padding:calc(6px + env(safe-area-inset-top,0px)) 4px 6px!important;background:#fff!important;border-bottom:1px solid var(--wa-line)!important;box-shadow:0 1px 4px rgba(11,20,26,.10)!important}
-  .chat-header .back-btn{width:42px;height:42px;flex-basis:42px;color:var(--wa-icon)!important}
-  .chat-header .avatar{width:38px!important;height:38px!important;flex-basis:38px!important}
+  .chat-header{height:56px!important;min-height:56px!important;padding:4px 0!important;background:#fff!important;border-bottom:1px solid var(--wa-line)!important;box-shadow:0 1px 4px rgba(11,20,26,.10)!important}
+  .chat-header .back-btn{width:48px;height:48px;min-width:48px;min-height:48px;flex-basis:48px;color:var(--wa-icon)!important}
+  .chat-header .avatar{width:40px!important;height:40px!important;flex-basis:40px!important}
   .chat-title strong{font-size:15px}.chat-title span{font-size:11px}
-  .chat-actions .glass-btn{width:42px;height:42px;flex-basis:42px}
+  .chat-actions .glass-btn{width:48px;height:48px;min-width:48px;min-height:48px;flex-basis:48px}
 
   .messages{padding:12px 7px 10px!important;background:var(--wa-chat)!important}
-  .message{max-width:82%!important;border-radius:8px!important}
+  .message{max-width:80%!important;border-radius:8px!important}
   .message.in,.message.received{border-top-left-radius:2px!important}.message.out,.message.sent{border-top-right-radius:2px!important}
 
-  .composer{min-height:62px!important;padding:7px 8px max(7px,env(safe-area-inset-bottom,7px))!important;background:#f0f2f5!important;gap:5px}
+  .composer{height:64px!important;min-height:64px!important;padding:8px 8px max(8px,env(safe-area-inset-bottom,8px))!important;background:#f0f2f5!important;gap:4px}
   .composer input{height:48px!important;font-size:16px!important;padding:0 15px!important}
-  .composer-btn{width:42px!important;height:42px!important;flex-basis:42px!important}
-  .send-btn{width:48px!important;height:48px!important;flex-basis:48px!important;border-radius:50%!important}
+  .composer-btn{width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;flex-basis:48px!important}
+  .send-btn{width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;flex-basis:48px!important;border-radius:50%!important}
 
   .welcome{background:var(--wa-chat)!important}
   .welcome h1{font-size:30px!important}
 }
 
 @media(max-width:420px){
-  .side-header{min-height:62px!important}
   .conversation{min-height:70px!important;padding-left:10px!important;padding-right:10px!important}
   .conversation .avatar{width:48px!important;height:48px!important;flex-basis:48px!important}
   .messages{padding-left:5px!important;padding-right:5px!important}
-  .message{max-width:88%!important}
+  .message{max-width:80%!important}
+}
+
+@media(min-width:361px) and (max-width:430px){
+  .app-shell{width:100vw!important}
 }
 
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
