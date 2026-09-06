@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Vibe",
+    "slug": "vibe-messenger",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "../icon.svg",
+    "android": {
+      "package": "com.christdembele.vibe",
+      "versionCode": 1
+    },
+    "extra": {
+      "webUrl": "${EXPO_PUBLIC_VIBE_WEB_URL}"
+    }
+  }
+}
