@@ -1,3 +1,5 @@
+import './vibe-polish.css';
+
 const $ = (id) => document.getElementById(id);
 
 function formatTime(timestamp) {
