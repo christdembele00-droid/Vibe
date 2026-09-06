@@ -46,7 +46,9 @@ service cloud.firestore {
     }
 
     match /conversations/{id} {
-      allow read: if member(id);
+      // Use the document's own participantIds so collection queries with
+      // array-contains can be evaluated by Firestore rules.
+      allow read: if signedIn() && request.auth.uid in resource.data.participantIds;
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
         && request.auth.uid in request.resource.data.participantIds
@@ -90,8 +92,7 @@ service cloud.firestore {
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updatedAt']);
         allow delete: if member(id)
-          && (resource.data.uid == request.auth.uid
-              || resource.data.get('viewOnce', false) == true);
+          && (resource.data.uid == request.auth.uid || resource.data.get('viewOnce', false) == true);
 
         match /reactions/{reactionUid} {
           allow read: if member(id);
@@ -105,7 +106,6 @@ service cloud.firestore {
         }
       }
 
-      // Legacy reaction location kept compatible with older Vibe code.
       match /reactions/{reactionId} {
         allow read: if member(id);
         allow create, update: if member(id)
@@ -145,11 +145,11 @@ service cloud.firestore {
         && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.adminIds)
         && request.resource.data.ownerId == resource.data.ownerId;
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
-
       match /posts/{postId} {
         allow read: if signedIn() && (channelMember(channelId) || channelAdmin(channelId));
-        allow create, update, delete: if channelAdmin(channelId)
-          && (request.resource == null || request.resource.data.authorId == request.auth.uid);
+        allow create: if channelAdmin(channelId)
+          && request.resource.data.authorId == request.auth.uid;
+        allow update, delete: if channelAdmin(channelId);
       }
     }
 
