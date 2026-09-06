@@ -32,33 +32,6 @@ function enhanceMessages() {
   });
 }
 
-function enhanceSearch() {
-  const input = $('searchInput');
-  const list = $('conversationList');
-  if (!input || !list || input.dataset.vibePolishBound) return;
-  input.dataset.vibePolishBound = 'true';
-  const filter = () => {
-    const term = input.value.trim().toLocaleLowerCase('fr-FR');
-    let visible = 0;
-    list.querySelectorAll('.conversation-item').forEach((item) => {
-      const match = !term || item.textContent.toLocaleLowerCase('fr-FR').includes(term);
-      item.hidden = !match;
-      if (match) visible += 1;
-    });
-    let empty = list.querySelector('.vibe-empty-search');
-    if (term && visible === 0) {
-      if (!empty) {
-        empty = document.createElement('div');
-        empty.className = 'vibe-empty-search';
-        empty.textContent = 'Aucune discussion trouvée';
-        list.appendChild(empty);
-      }
-    } else empty?.remove();
-  };
-  input.addEventListener('input', filter, { passive: true });
-  new MutationObserver(filter).observe(list, { childList: true });
-}
-
 function enhanceSendButton() {
   const form = $('messageForm');
   const button = form?.querySelector('.send-btn');
@@ -78,7 +51,8 @@ function updatePlatformShortcut() {
 
 function init() {
   ensureStylesheet();
-  enhanceSearch();
+  // La recherche est gérée exclusivement par vibe-enhancements.js pour éviter
+  // qu'un filtre DOM concurrent ne masque les résultats Firebase.
   enhanceSendButton();
   updatePlatformShortcut();
   enhanceMessages();
