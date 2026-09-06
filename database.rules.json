@@ -3,6 +3,17 @@
     ".read": false,
     ".write": false,
     ".validate": false,
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "settings": {
+          "$name": {
+            ".validate": "newData.isBoolean() || newData.isString() || newData.isNumber()"
+          }
+        }
+      }
+    },
     "chats": {
       "$chatId": {
         ".read": "auth != null && (data.child('ownerUid').val() === auth.uid || root.child('chatMembers').child($chatId).child(auth.uid).val() === true)",
@@ -44,7 +55,7 @@
         ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true",
         "$uid": {
           ".read": "auth != null && root.child('chatMembers').child($chatId).child(auth.uid).val() === true",
-          ".write": "auth != null && auth.uid === $uid && !data.exists() && newData.val() === true && root.child('chats').child($chatId).exists()",
+          ".write": "auth != null && auth.uid === $uid && !data.exists() && newData.val() === true && root.child('chats').child($chatId).exists() && (root.child('chats').child($chatId).child('ownerUid').val() === auth.uid || root.child('chats').child($chatId).child('inviteToken').val() === $token)",
           ".validate": "newData.isBoolean() && newData.val() === true"
         }
       }
