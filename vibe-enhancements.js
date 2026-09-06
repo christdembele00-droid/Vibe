@@ -1,11 +1,5 @@
-import { getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, collection, doc, getDocs, addDoc, setDoc, query, where, limit, serverTimestamp, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { auth, db, onAuthStateChanged, collection, doc, getDocs, addDoc, setDoc, query, where, limit, serverTimestamp, onSnapshot } from './firebase-client.js';
 
-const app = getApps()[0];
-if (!app) throw new Error('Firebase doit être initialisé avant vibe-enhancements.js');
-const auth = getAuth(app);
-const db = getFirestore(app);
 const $ = id => document.getElementById(id);
 let user = null;
 let stopNotifications = null;
@@ -41,7 +35,6 @@ async function indexUser(next) {
 }
 
 function restoreChats() {
-  window.VibeApp?.refreshChats?.();
   if (window.VibeApp?.getChats) renderResults([...window.VibeApp.getChats()]);
 }
 
@@ -84,7 +77,6 @@ async function search(value) {
   } catch (error) {
     if (generation !== searchGeneration) return;
     console.warn('Recherche Vibe:', error);
-    // La recherche des discussions reste utilisable même si l'index utilisateur est indisponible.
     renderResults(chats);
     if (!chats.length) toast('Recherche indisponible pour les utilisateurs.');
   }
@@ -111,31 +103,24 @@ async function openUserResult(targetUid) {
       const profile = peer.docs[0]?.data();
       if (!profile) return toast('Utilisateur introuvable.');
       const chatId = `private_${[user.uid, targetUid].sort().join('_')}`;
-      const direct = await getDocs(query(collection(db, 'conversations'), where('participantIds', 'array-contains', user.uid), limit(100)));
-      direct.forEach(item => {
-        const data = item.data();
-        if (!found && item.id === chatId) found = { id: item.id, ...data };
+      const ref = doc(db, 'conversations', chatId);
+      const existing = await getDocs(query(collection(db, 'conversations'), where('participantIds', 'array-contains', user.uid), limit(100)));
+      existing.forEach(item => {
+        if (!found && item.id === chatId) found = { id: item.id, ...item.data() };
       });
       if (!found) {
-        const ref = doc(db, 'conversations', chatId);
-        const existing = await getDocs(query(collection(db, 'conversations'), where('participantIds', 'array-contains', user.uid), limit(100)));
-        existing.forEach(item => {
-          if (!found && item.id === chatId) found = { id: item.id, ...item.data() };
-        });
-        if (!found) {
-          const inviteToken = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
-          await setDoc(ref, {
-            name: profile.displayName || 'Discussion',
-            ownerId: user.uid,
-            participantIds: [user.uid, targetUid],
-            inviteToken,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            type: 'private'
-          }, { merge: true });
-          await setDoc(doc(db, 'users', user.uid, 'conversations', chatId), { chatId, updatedAt: serverTimestamp() }, { merge: true });
-          found = { id: chatId, name: profile.displayName || 'Discussion', participantIds: [user.uid, targetUid], type: 'private' };
-        }
+        const inviteToken = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
+        await setDoc(ref, {
+          name: profile.displayName || 'Discussion',
+          ownerId: user.uid,
+          participantIds: [user.uid, targetUid],
+          inviteToken,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          type: 'private'
+        }, { merge: true });
+        await setDoc(doc(db, 'users', user.uid, 'conversations', chatId), { chatId, updatedAt: serverTimestamp() }, { merge: true });
+        found = { id: chatId, name: profile.displayName || 'Discussion', participantIds: [user.uid, targetUid], type: 'private' };
       }
     }
     window.VibeApp?.openChat(found.id, found);
@@ -162,9 +147,9 @@ function watchNotifications() {
   const stops = [];
   stopNotifications = () => { stops.splice(0).forEach(stop => stop()); };
   onSnapshot(root, snap => {
-    stopNotifications();
+    stops.splice(0).forEach(stop => stop());
     snap.forEach(chatDoc => {
-      const mq = query(collection(db, 'conversations', chatDoc.id, 'messages'), orderBySafeLimit());
+      const mq = query(collection(db, 'conversations', chatDoc.id, 'messages'), limit(1));
       stops.push(onSnapshot(mq, ms => {
         if (!notificationReady || document.visibilityState === 'visible') return;
         const item = ms.docs[0];
@@ -178,9 +163,6 @@ function watchNotifications() {
     });
   }, error => console.warn('Notifications Vibe:', error));
 }
-
-// Évite orderBy sur les notifications : les anciennes données peuvent ne pas avoir de timestamp cohérent.
-function orderBySafeLimit() { return limit(1); }
 
 async function loadCallHistory() {
   if (!user) return;
