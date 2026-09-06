@@ -1,13 +1,15 @@
-// Vibe Firebase configuration.
-// Replace the placeholder values with your Firebase Web App config.
-// Never commit private server credentials or service-account JSON here.
+// Vibe Firebase Web App configuration.
+// This file contains the public Firebase Web SDK configuration for the VIBE Web app.
+// Do not put service-account credentials or other private server secrets here.
 export const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.firebasestorage.app",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_FIREBASE_APP_ID"
+  apiKey: "AIzaSyC6g40Uc9hq9Ij5DU1nwbO-zwpHqk9L9aQ",
+  authDomain: "vibe-749e5.firebaseapp.com",
+  databaseURL: "https://vibe-749e5-default-rtdb.firebaseio.com",
+  projectId: "vibe-749e5",
+  storageBucket: "vibe-749e5.firebasestorage.app",
+  messagingSenderId: "17097166235",
+  appId: "1:17097166235:web:c39c5c082b3cf6a01ee53e",
+  measurementId: "G-YXG6TEQHME"
 };
 
-export const FIREBASE_ENABLED = !Object.values(firebaseConfig).some((value) => String(value).startsWith("YOUR_"));
+export const FIREBASE_ENABLED = true;
