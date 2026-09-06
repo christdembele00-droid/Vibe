@@ -17,13 +17,15 @@ const loadModule = async (label, path) => {
   }
 };
 
-// Le cœur est chargé en premier. Les modules optionnels sont isolés afin qu'une
-// erreur dans une fonction secondaire ne bloque plus toute l'application.
+// Le cœur est chargé en premier. Les modules optionnels restent isolés afin
+// qu'une erreur secondaire ne bloque jamais les autres fonctionnalités.
 await loadModule('Firebase', './firebase-client.js?v=20260906');
 await loadModule('authentification', './auth-ui.js?v=20260906');
 await loadModule('messagerie', './app.js?v=20260906');
 
-await loadModule('correctifs', './vibe-fixes.js?v=20260906');
+// vibe-fixes.js contenait encore un ancien gestionnaire global du sélecteur
+// de fichiers (DataURL 750 Ko) qui interceptait les nouveaux gestionnaires
+// Firebase Storage de whatsapp-extras.js. Il n'est plus chargé au démarrage.
 await loadModule('utilisateurs actifs', './active-users.js?v=20260906');
 await loadModule('paramètres', './vibe-settings.js?v=20260906');
 await loadModule('appels', './webrtc-calls.js?v=20260906');
