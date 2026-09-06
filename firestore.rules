@@ -152,18 +152,16 @@ service cloud.firestore {
       }
 
       match /messages/{messageId} {
-        allow read: if signedIn();
-        allow create: if signedIn()
-          && request.resource.data.senderId == request.auth.uid
-          && request.resource.data.text is string
-          && request.resource.data.text.size() > 0;
-        allow update, delete: if signedIn()
-          && resource.data.senderId == request.auth.uid;
+        allow read: if channelMember(channelId) || channelAdmin(channelId);
+        allow create: if channelMember(channelId) || channelAdmin(channelId);
+        allow update, delete: if channelAdmin(channelId) || (
+          signedIn() && resource.data.senderId == request.auth.uid
+        );
       }
 
       match /typing/{userId} {
-        allow read: if signedIn();
-        allow write: if signedIn() && userId == request.auth.uid;
+        allow read: if channelMember(channelId) || channelAdmin(channelId);
+        allow write: if signedIn() && userId == request.auth.uid && (channelMember(channelId) || channelAdmin(channelId));
       }
     }
 
