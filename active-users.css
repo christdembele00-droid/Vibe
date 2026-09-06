@@ -2,3 +2,13 @@
 .active-users-head .avatar,.active-users-empty .avatar{font-size:13px;background:linear-gradient(145deg,#ff9d55,#ff7a18);box-shadow:0 8px 22px rgba(255,122,24,.18)}
 .active-users-head strong,.active-users-empty strong{font:800 13px Manrope}
 .active-users-head span,.active-users-empty span{display:flex;align-items:center;gap:5px;margin-top:3px;color:#858b99;font-size:10px}
+
+/* Utilisateurs en ligne : uniquement les avatars/logos sont visibles. */
+.active-users-avatars{display:flex;align-items:center;gap:8px;min-height:54px;padding:7px 10px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.active-users-avatars::-webkit-scrollbar{display:none}
+.active-user-avatar{position:relative;width:42px;height:42px;flex:0 0 42px;padding:0;border:0;background:transparent;border-radius:50%;cursor:pointer}
+.active-user-avatar .avatar{width:42px;height:42px;display:grid;place-items:center;border:2px solid #fff;border-radius:50%;background:linear-gradient(145deg,#ff9d55,#ff7a18);color:#fff;font:800 14px/1 Manrope,sans-serif;box-shadow:0 3px 10px rgba(255,122,24,.18)}
+.active-user-avatar .online-dot{position:absolute;right:0;bottom:0;width:11px;height:11px;border:2px solid #fff;border-radius:50%;background:#20c77a}
+.active-user-avatar:focus-visible{outline:3px solid rgba(255,122,24,.24);outline-offset:3px}
+.active-user-avatar:active{transform:scale(.94)}
+@media (max-width:420px){.active-users-avatars{gap:7px;padding-left:9px;padding-right:9px}.active-user-avatar,.active-user-avatar .avatar{width:40px;height:40px;flex-basis:40px}}
