@@ -1,0 +1,4 @@
+function loadTheme(){if(document.querySelector('link[data-vibe-2026-theme]'))return;const link=document.createElement('link');link.rel='stylesheet';link.href='./vibe-2026-theme.css?v=20260906';link.dataset.vibe2026Theme='true';document.head.appendChild(link)}
+function normalizeAccent(){const root=document.documentElement;const current=(root.style.getPropertyValue('--vibe-accent')||'').trim().toLowerCase();if(current==='#ff7a18'||current==='orange'||!current)root.style.setProperty('--vibe-accent','#2563eb')}
+function init(){loadTheme();normalizeAccent();const observer=new MutationObserver(normalizeAccent);observer.observe(document.documentElement,{attributes:true,attributeFilter:['style']});window.Vibe2026Theme={loadTheme,normalizeAccent}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
