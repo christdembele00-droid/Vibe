@@ -2,67 +2,70 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#075e54">
-  <meta name="description" content="Vibe — messagerie instantanée inspirée des meilleures applications de chat.">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d12">
+  <meta name="description" content="Vibe — une messagerie moderne, rapide et privée.">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
-  <title>Vibe — Messages</title>
+  <title>Vibe — Messenger</title>
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
-      <header class="topbar">
-        <div class="brand"><span class="brand-mark">V</span><span>Vibe</span></div>
-        <div class="top-actions">
-          <button class="icon-btn" id="newChatBtn" title="Nouvelle discussion" aria-label="Nouvelle discussion">＋</button>
-          <button class="icon-btn" id="menuBtn" title="Menu" aria-label="Menu">⋮</button>
+      <header class="side-header">
+        <a class="brand" href="#" aria-label="Vibe accueil"><span class="brand-icon">V</span><span>Vibe</span></a>
+        <div class="header-actions">
+          <button class="glass-btn" id="newChatBtn" aria-label="Nouvelle discussion" title="Nouvelle discussion">+</button>
+          <button class="glass-btn" id="menuBtn" aria-label="Menu" title="Menu">•••</button>
         </div>
       </header>
 
-      <div class="search-wrap">
-        <span>⌕</span>
-        <input id="searchInput" type="search" placeholder="Rechercher ou démarrer une discussion" autocomplete="off">
+      <div class="search-box">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input id="searchInput" type="search" placeholder="Rechercher" autocomplete="off">
+        <kbd>⌘ K</kbd>
       </div>
 
-      <nav class="tabs" aria-label="Navigation">
-        <button class="tab active" data-view="chats">Discussions <span id="chatBadge">3</span></button>
+      <nav class="main-tabs" aria-label="Navigation principale">
+        <button class="tab active" data-view="chats">Messages <span id="chatBadge">3</span></button>
         <button class="tab" data-view="status">Actus</button>
         <button class="tab" data-view="calls">Appels</button>
       </nav>
 
-      <section id="conversationList" class="conversation-list" aria-label="Discussions"></section>
+      <section class="conversation-list" id="conversationList" aria-label="Discussions"></section>
+      <footer class="profile-bar">
+        <div class="avatar avatar-user">C</div>
+        <div class="profile-copy"><strong>Mon profil</strong><span>Disponible</span></div>
+        <button class="glass-btn" id="profileBtn" aria-label="Profil">⚙</button>
+      </footer>
     </aside>
 
     <main class="chat-panel" id="chatPanel">
-      <div class="empty-state" id="emptyState">
-        <div class="vibe-logo">V</div>
-        <h1>Vibe pour le Web</h1>
-        <p>Discutez, partagez et restez connecté. Sélectionnez une discussion pour commencer.</p>
-        <div class="secure-note">🔒 Vos messages sont protégés pendant leur transmission.</div>
-      </div>
+      <section class="welcome" id="emptyState">
+        <div class="welcome-orb"><span>V</span></div>
+        <p class="eyebrow">VIBE MESSENGER</p>
+        <h1>Vos conversations,<br><span>sans friction.</span></h1>
+        <p class="welcome-text">Une expérience de messagerie pensée pour 2026 : claire, rapide et agréable sur tous vos écrans.</p>
+        <div class="welcome-chips"><span>⚡ Rapide</span><span>🔒 Privé</span><span>☁ Synchronisé</span></div>
+      </section>
 
       <section class="chat-view hidden" id="chatView">
         <header class="chat-header">
           <button class="back-btn" id="backBtn" aria-label="Retour">‹</button>
-          <div class="avatar" id="chatAvatar">C</div>
-          <div class="chat-title">
-            <strong id="chatName">Contact</strong>
-            <span id="chatPresence">en ligne</span>
-          </div>
+          <div class="avatar" id="chatAvatar">A</div>
+          <div class="chat-title"><strong id="chatName">Contact</strong><span><i class="online-dot"></i><span id="chatPresence">en ligne</span></span></div>
           <div class="chat-actions">
-            <button class="icon-btn" title="Recherche">⌕</button>
-            <button class="icon-btn" id="chatMenuBtn" title="Menu">⋮</button>
+            <button class="glass-btn" title="Appel audio" aria-label="Appel audio">⌕</button>
+            <button class="glass-btn" title="Appel vidéo" aria-label="Appel vidéo">▣</button>
+            <button class="glass-btn" id="chatMenuBtn" title="Plus" aria-label="Plus">•••</button>
           </div>
         </header>
-
         <div class="messages" id="messages"></div>
-
         <form class="composer" id="messageForm">
-          <button type="button" class="icon-btn" id="emojiBtn" title="Emoji">☺</button>
-          <input id="messageInput" maxlength="2000" placeholder="Écrire un message" autocomplete="off">
-          <button type="button" class="icon-btn" id="attachBtn" title="Joindre">＋</button>
-          <button class="send-btn" type="submit" aria-label="Envoyer">➤</button>
+          <button type="button" class="composer-btn" id="emojiBtn" title="Emoji" aria-label="Emoji">☺</button>
+          <input id="messageInput" maxlength="2000" placeholder="Écrire un message…" autocomplete="off">
+          <button type="button" class="composer-btn" id="attachBtn" title="Joindre un fichier" aria-label="Joindre un fichier">⌁</button>
+          <button class="send-btn" type="submit" aria-label="Envoyer">↑</button>
         </form>
       </section>
     </main>
@@ -70,7 +73,6 @@
 
   <div class="toast" id="toast" role="status"></div>
   <input type="file" id="fileInput" hidden>
-
   <script type="module" src="app.js"></script>
 </body>
 </html>
