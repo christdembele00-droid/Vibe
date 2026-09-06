@@ -1,127 +1,30 @@
-import { FIREBASE_ENABLED, auth, db, collection, doc, addDoc, setDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch } from './firebase-client.js';
+import { FIREBASE_ENABLED, auth, db, collection, doc, addDoc, setDoc, getDoc, onSnapshot, query, where, limit, serverTimestamp } from './firebase-client.js';
 
-const state = { currentUser: null, currentChatId: null, stopChat: null, stopChats: null, stopPresence: null, chats: new Map() };
+const state = { currentUser: null, currentChatId: null, stopChat: null, stopChats: null, chats: new Map() };
 const $ = (id) => document.getElementById(id);
 const toast = (message) => { const el = $('toast'); if (!el) return; el.textContent = message; el.classList.add('show'); clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.remove('show'), 2600); };
 const uid = () => state.currentUser?.uid || auth?.currentUser?.uid || null;
 const normalizeId = (value) => String(value || '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 100);
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>\"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;' }[c]));
 const escapeAttr = (value) => escapeHtml(value).replace(/`/g, '&#96;');
+const conversationRef = (chatId) => doc(db, 'conversations', chatId);
+const messagesRef = (chatId) => collection(db, 'conversations', chatId, 'messages');
 
-function conversationRef(chatId) { return doc(db, 'conversations', chatId); }
-function messagesRef(chatId) { return collection(db, 'conversations', chatId, 'messages'); }
-
-async function setPresence(user, online = true) {
-  if (!FIREBASE_ENABLED || !user) return;
-  try {
-    await setDoc(doc(db, 'presence', user.uid), {
-      uid: user.uid,
-      state: online ? 'online' : 'offline',
-      updatedAt: serverTimestamp(),
-      lastOnline: online ? null : serverTimestamp()
-    }, { merge: true });
-  } catch (error) { console.warn('Présence Firestore:', error); }
-}
-function stopSubscriptions() { state.stopChat?.(); state.stopChat = null; state.stopChats?.(); state.stopChats = null; state.stopPresence?.(); state.stopPresence = null; }
-
-async function ensureChatMembership(chatId) {
-  const userId = uid(); if (!userId) throw new Error('Connexion requise.');
-  const ref = conversationRef(chatId); const snap = await getDoc(ref); if (!snap.exists()) throw new Error('Discussion introuvable.');
-  const chat = snap.data();
-  if (!Array.isArray(chat.participantIds) || !chat.participantIds.includes(userId)) {
-    if (chat.ownerId !== userId) throw new Error('Accès privé refusé.');
-    await updateConversation(chatId, { participantIds: [...(chat.participantIds || []), userId] });
-  }
-  await setDoc(doc(db, 'users', userId, 'conversations', chatId), { chatId, updatedAt: serverTimestamp() }, { merge: true });
-}
-async function updateConversation(chatId, data) { const { updateDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js'); await updateDoc(conversationRef(chatId), data); }
-
-async function createChat() {
-  const userId = uid(); if (!userId) return toast('Connectez-vous pour créer une discussion.');
-  const name = prompt('Nom de la discussion :', 'Nouvelle discussion'); if (!name?.trim()) return;
-  try {
-    const inviteToken = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
-    const ref = await addDoc(collection(db, 'conversations'), { name: name.trim().slice(0, 120), ownerId: userId, participantIds: [userId], inviteToken, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), type: 'private' });
-    await setDoc(doc(db, 'users', userId, 'conversations', ref.id), { chatId: ref.id, updatedAt: serverTimestamp() });
-    const chat = { id: ref.id, name: name.trim().slice(0, 120), ownerId: userId, participantIds: [userId], inviteToken };
-    state.chats.set(ref.id, chat); openChat(ref.id, chat); toast(`Discussion créée. Code : ${inviteToken}`);
-  } catch (error) { toast(`Création impossible : ${error.message}`); }
-}
-
-async function joinChat() {
-  const userId = uid(); if (!userId) return toast('Connectez-vous pour rejoindre une discussion.');
-  const chatId = normalizeId(prompt('ID de la discussion :')); if (!chatId) return;
-  try {
-    const snap = await getDoc(conversationRef(chatId)); if (!snap.exists()) return toast('Discussion introuvable.');
-    const chat = snap.data();
-    if (chat.ownerId !== userId) { const token = prompt('Code d’invitation :'); if (!token || token.trim() !== String(chat.inviteToken || '')) return toast('Code d’invitation invalide.'); }
-    const participants = Array.isArray(chat.participantIds) ? chat.participantIds : [];
-    if (!participants.includes(userId)) await updateConversation(chatId, { participantIds: [...participants, userId], updatedAt: serverTimestamp() });
-    await setDoc(doc(db, 'users', userId, 'conversations', chatId), { chatId, updatedAt: serverTimestamp() }, { merge: true });
-    const updated = { id: chatId, ...chat, participantIds: [...new Set([...participants, userId])] }; state.chats.set(chatId, updated); openChat(chatId, updated); toast('Discussion rejointe.');
-  } catch (error) { console.error(error); toast(`Impossible de rejoindre : ${error.message}`); }
-}
-
-function subscribeChats() {
-  const userId = uid(); if (!FIREBASE_ENABLED || !userId) return;
-  state.stopChats?.();
-  const q = query(collection(db, 'conversations'), where('participantIds', 'array-contains', userId), orderBy('updatedAt', 'desc'), limit(100));
-  state.stopChats = onSnapshot(q, (snap) => {
-    const list = $('conversationList'); if (!list) return;
-    const loaded = [];
-    snap.forEach((item) => { const chat = { id: item.id, ...item.data() }; state.chats.set(item.id, chat); loaded.push(chat); });
-    list.innerHTML = loaded.map((chat) => `<button class="conversation-item ${state.currentChatId === chat.id ? 'active' : ''}" data-chat-id="${escapeAttr(chat.id)}"><div class="avatar">${escapeHtml((chat.name || 'V')[0].toUpperCase())}</div><div><strong>${escapeHtml(chat.name || 'Discussion')}</strong><span>Discussion Vibe</span></div></button>`).join('');
-  }, (error) => toast(`Impossible de charger vos discussions : ${error.message}`));
-}
-
-function openChat(chatId, chat = {}) {
-  state.currentChatId = chatId;
-  document.querySelectorAll('.conversation-item').forEach((el) => el.classList.toggle('active', el.dataset.chatId === chatId));
-  $('emptyState')?.classList.add('hidden'); $('chatView')?.classList.remove('hidden'); $('chatName').textContent = chat.name || 'Discussion'; $('chatAvatar').textContent = (chat.name || 'V')[0].toUpperCase(); $('chatPresence').textContent = 'discussion';
-  window.VibeApp.currentChatIdValue = chatId;
-  requestAnimationFrame(() => subscribeToChat(chatId));
-}
-
-function renderMessage(m) {
-  const own = m.uid === uid(); const type = String(m.type || 'text'); let body = '';
-  if (type === 'media' && m.dataUrl) { const url = escapeAttr(m.dataUrl); const name = escapeHtml(m.fileName || 'Fichier'); if (String(m.mimeType || '').startsWith('image/')) body = `<img class="message-media" src="${url}" alt="${name}" loading="lazy">`; else if (String(m.mimeType || '').startsWith('video/')) body = `<video class="message-media" src="${url}" controls preload="metadata"></video>`; else if (String(m.mimeType || '').startsWith('audio/')) body = `<audio src="${url}" controls preload="metadata"></audio>`; else body = `<a class="message-file" href="${url}" download="${escapeAttr(m.fileName || 'fichier')}">📎 ${name}</a>`; }
-  else body = escapeHtml(m.text || '');
-  if (!body) return '';
-  const timestamp = m.createdAt?.toMillis ? m.createdAt.toMillis() : Number(m.createdAt || 0);
-  return `<article class="message ${own ? 'mine' : ''}" data-message="${escapeAttr(m.id)}" data-created-at="${timestamp}"><div class="message-bubble">${body}</div></article>`;
-}
-
-function subscribeToChat(chatId) {
-  state.stopChat?.(); if (!FIREBASE_ENABLED || !uid()) return;
-  const q = query(messagesRef(chatId), orderBy('createdAt', 'asc'), limit(200));
-  state.stopChat = onSnapshot(q, (snap) => {
-    const container = $('messages'); if (!container || state.currentChatId !== chatId) return;
-    const rows = []; snap.forEach((item) => rows.push({ id: item.id, ...item.data() }));
-    requestAnimationFrame(() => { if (state.currentChatId !== chatId) return; container.innerHTML = rows.map(renderMessage).join(''); container.scrollTop = container.scrollHeight; });
-  }, (error) => toast(`Impossible de charger les messages : ${error.message}`));
-}
-
-async function sendMessage(event) {
-  event?.preventDefault(); const text = $('messageInput')?.value?.trim(); const userId = uid(); const chatId = state.currentChatId;
-  if (!text || !userId || !chatId) return; if (text.length > 20000) return toast('Message trop long.');
-  try { await addDoc(messagesRef(chatId), { uid: userId, text, type: 'text', viewOnce: false, createdAt: serverTimestamp() }); await setDoc(conversationRef(chatId), { updatedAt: serverTimestamp() }, { merge: true }); $('messageInput').value = ''; }
-  catch (error) { toast(`Message non envoyé : ${error.message}`); }
-}
-function addEmoji() { const input = $('messageInput'); if (!input) return; const emojis = ['😀','😂','😍','👍','❤️','🙏','🔥','😎','😢','😮','🎉','👏']; const current = prompt(`Choisir un emoji :\n${emojis.join('  ')}`); if (!current) return; const emoji = [...current].find((c) => emojis.includes(c)); if (!emoji) return toast('Emoji non reconnu.'); const start = input.selectionStart ?? input.value.length; const end = input.selectionEnd ?? input.value.length; input.value = input.value.slice(0, start) + emoji + input.value.slice(end); input.focus(); input.selectionStart = input.selectionEnd = start + emoji.length; }
-async function createStory() { const userId = uid(); if (!userId) return toast('Connectez-vous pour publier une actu.'); const text = prompt('Votre actu :'); if (!text?.trim()) return; try { await addDoc(collection(db, 'stories'), { uid: userId, text: text.trim().slice(0, 2000), type: 'text', createdAt: serverTimestamp(), expiresAt: new Date(Date.now() + 86400000) }); toast('Actu publiée pour 24 h.'); } catch (error) { toast(`Publication impossible : ${error.message}`); } }
-
-function bindUI() {
-  $('newChatBtn')?.addEventListener('click', createChat);
-  $('messageForm')?.addEventListener('submit', sendMessage);
-  $('emojiBtn')?.addEventListener('click', addEmoji);
-  $('profileBtn')?.addEventListener('click', () => document.dispatchEvent(new CustomEvent('vibe:open-auth')));
-  $('backBtn')?.addEventListener('click', () => { state.currentChatId = null; $('chatView')?.classList.add('hidden'); $('emptyState')?.classList.remove('hidden'); state.stopChat?.(); state.stopChat = null; requestAnimationFrame(subscribeChats); });
-  $('conversationList')?.addEventListener('click', (event) => { const item = event.target.closest('[data-chat-id]'); if (!item) return; const chat = state.chats.get(item.dataset.chatId); requestAnimationFrame(() => openChat(item.dataset.chatId, chat)); });
-  document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => { document.querySelectorAll('.tab').forEach((x) => x.classList.remove('active')); tab.classList.add('active'); if (tab.dataset.view === 'status') requestAnimationFrame(createStory); if (tab.dataset.view === 'chats') requestAnimationFrame(subscribeChats); }));
-}
-
+async function setPresence(user, online = true) { if (!FIREBASE_ENABLED || !user) return; try { await setDoc(doc(db, 'presence', user.uid), { uid:user.uid, state:online?'online':'offline', updatedAt:serverTimestamp(), lastOnline:online?null:serverTimestamp() }, {merge:true}); } catch(error) { console.warn('Présence Firestore:', error); } }
+function stopSubscriptions(){state.stopChat?.();state.stopChat=null;state.stopChats?.();state.stopChats=null;}
+async function ensureChatMembership(chatId){const userId=uid();if(!userId)throw new Error('Connexion requise.');const snap=await getDoc(conversationRef(chatId));if(!snap.exists())throw new Error('Discussion introuvable.');const chat=snap.data();if(!Array.isArray(chat.participantIds)||!chat.participantIds.includes(userId)){if(chat.ownerId!==userId)throw new Error('Accès privé refusé.');await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js').then(({updateDoc})=>updateDoc(conversationRef(chatId),{participantIds:[...(chat.participantIds||[]),userId]}));}await setDoc(doc(db,'users',userId,'conversations',chatId),{chatId,updatedAt:serverTimestamp()},{merge:true});}
+async function createChat(){const userId=uid();if(!userId)return toast('Connectez-vous pour créer une discussion.');const name=prompt('Nom de la discussion :','Nouvelle discussion');if(!name?.trim())return;try{const inviteToken=crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','');const ref=await addDoc(collection(db,'conversations'),{name:name.trim().slice(0,120),ownerId:userId,participantIds:[userId],inviteToken,createdAt:serverTimestamp(),updatedAt:serverTimestamp(),type:'private'});await setDoc(doc(db,'users',userId,'conversations',ref.id),{chatId:ref.id,updatedAt:serverTimestamp()});const chat={id:ref.id,name:name.trim().slice(0,120),ownerId:userId,participantIds:[userId],inviteToken};state.chats.set(ref.id,chat);openChat(ref.id,chat);toast(`Discussion créée. Code : ${inviteToken}`);}catch(error){toast(`Création impossible : ${error.message}`)}}
+async function joinChat(){const userId=uid();if(!userId)return toast('Connectez-vous pour rejoindre une discussion.');const chatId=normalizeId(prompt('ID de la discussion :'));if(!chatId)return;try{const snap=await getDoc(conversationRef(chatId));if(!snap.exists())return toast('Discussion introuvable.');const chat=snap.data();if(chat.ownerId!==userId){const token=prompt('Code d’invitation :');if(!token||token.trim()!==String(chat.inviteToken||''))return toast('Code d’invitation invalide.')}const participants=Array.isArray(chat.participantIds)?chat.participantIds:[];if(!participants.includes(userId))await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js').then(({updateDoc})=>updateDoc(conversationRef(chatId),{participantIds:[...participants,userId],updatedAt:serverTimestamp()}));await setDoc(doc(db,'users',userId,'conversations',chatId),{chatId,updatedAt:serverTimestamp()},{merge:true});const updated={id:chatId,...chat,participantIds:[...new Set([...participants,userId])]};state.chats.set(chatId,updated);openChat(chatId,updated);toast('Discussion rejointe.');}catch(error){console.error(error);toast(`Impossible de rejoindre : ${error.message}`)}}
+function subscribeChats(){const userId=uid();if(!FIREBASE_ENABLED||!userId)return;state.stopChats?.();const q=query(collection(db,'conversations'),where('participantIds','array-contains',userId),limit(100));state.stopChats=onSnapshot(q,snap=>{const list=$('conversationList');if(!list)return;const loaded=[];snap.forEach(item=>{const chat={id:item.id,...item.data()};state.chats.set(item.id,chat);loaded.push(chat)});loaded.sort((a,b)=>{const ta=a.updatedAt?.toMillis?.()||0,tb=b.updatedAt?.toMillis?.()||0;return tb-ta});list.innerHTML=loaded.map(chat=>`<button class="conversation-item ${state.currentChatId===chat.id?'active':''}" data-chat-id="${escapeAttr(chat.id)}"><div class="avatar">${escapeHtml((chat.name||'V')[0].toUpperCase())}</div><div><strong>${escapeHtml(chat.name||'Discussion')}</strong><span>Discussion Vibe</span></div></button>`).join('')},error=>toast(`Impossible de charger vos discussions : ${error.message}`))}
+function openChat(chatId,chat={}){state.currentChatId=chatId;document.querySelectorAll('.conversation-item').forEach(el=>el.classList.toggle('active',el.dataset.chatId===chatId));$('emptyState')?.classList.add('hidden');$('chatView')?.classList.remove('hidden');$('chatName').textContent=chat.name||'Discussion';$('chatAvatar').textContent=(chat.name||'V')[0].toUpperCase();$('chatPresence').textContent='discussion';requestAnimationFrame(()=>subscribeToChat(chatId))}
+function renderMessage(m){const own=m.uid===uid();const type=String(m.type||'text');let body='';if(type==='media'&&m.dataUrl){const url=escapeAttr(m.dataUrl),name=escapeHtml(m.fileName||'Fichier');if(String(m.mimeType||'').startsWith('image/'))body=`<img class="message-media" src="${url}" alt="${name}" loading="lazy">`;else if(String(m.mimeType||'').startsWith('video/'))body=`<video class="message-media" src="${url}" controls preload="metadata"></video>`;else if(String(m.mimeType||'').startsWith('audio/'))body=`<audio src="${url}" controls preload="metadata"></audio>`;else body=`<a class="message-file" href="${url}" download="${escapeAttr(m.fileName||'fichier')}">📎 ${name}</a>`}else body=escapeHtml(m.text||'');if(!body)return '';const timestamp=m.createdAt?.toMillis?m.createdAt.toMillis():Number(m.createdAt||0);return `<article class="message ${own?'mine':''}" data-message="${escapeAttr(m.id)}" data-created-at="${timestamp}"><div class="message-bubble">${body}</div></article>`}
+function subscribeToChat(chatId){state.stopChat?.();if(!FIREBASE_ENABLED||!uid())return;const q=query(messagesRef(chatId),orderBy('createdAt','asc'),limit(200));state.stopChat=onSnapshot(q,snap=>{const container=$('messages');if(!container||state.currentChatId!==chatId)return;const rows=[];snap.forEach(item=>rows.push({id:item.id,...item.data()}));requestAnimationFrame(()=>{if(state.currentChatId!==chatId)return;container.innerHTML=rows.map(renderMessage).join('');container.scrollTop=container.scrollHeight})},error=>toast(`Impossible de charger les messages : ${error.message}`))}
+async function sendMessage(event){event?.preventDefault();const text=$('messageInput')?.value?.trim(),userId=uid(),chatId=state.currentChatId;if(!text||!userId||!chatId)return;if(text.length>20000)return toast('Message trop long.');try{await addDoc(messagesRef(chatId),{uid:userId,text,type:'text',viewOnce:false,createdAt:serverTimestamp()});await setDoc(conversationRef(chatId),{updatedAt:serverTimestamp()},{merge:true});$('messageInput').value=''}catch(error){toast(`Message non envoyé : ${error.message}`)}}
+function addEmoji(){const input=$('messageInput');if(!input)return;const emojis=['😀','😂','😍','👍','❤️','🙏','🔥','😎','😢','😮','🎉','👏'];const current=prompt(`Choisir un emoji :\n${emojis.join('  ')}`);if(!current)return;const emoji=[...current].find(c=>emojis.includes(c));if(!emoji)return toast('Emoji non reconnu.');const start=input.selectionStart??input.value.length,end=input.selectionEnd??input.value.length;input.value=input.value.slice(0,start)+emoji+input.value.slice(end);input.focus();input.selectionStart=input.selectionEnd=start+emoji.length}
+async function createStory(){const userId=uid();if(!userId)return toast('Connectez-vous pour publier une actu.');const text=prompt('Votre actu :');if(!text?.trim())return;try{await addDoc(collection(db,'stories'),{uid:userId,text:text.trim().slice(0,2000),type:'text',createdAt:serverTimestamp(),expiresAt:new Date(Date.now()+86400000)});toast('Actu publiée pour 24 h.')}catch(error){toast(`Publication impossible : ${error.message}`)}}
+function bindUI(){$('newChatBtn')?.addEventListener('click',createChat);$('messageForm')?.addEventListener('submit',sendMessage);$('emojiBtn')?.addEventListener('click',addEmoji);$('profileBtn')?.addEventListener('click',()=>document.dispatchEvent(new CustomEvent('vibe:open-auth')));$('backBtn')?.addEventListener('click',()=>{state.currentChatId=null;$('chatView')?.classList.add('hidden');$('emptyState')?.classList.remove('hidden');state.stopChat?.();state.stopChat=null;requestAnimationFrame(subscribeChats)});$('conversationList')?.addEventListener('click',event=>{const item=event.target.closest('[data-chat-id]');if(!item)return;const chat=state.chats.get(item.dataset.chatId);requestAnimationFrame(()=>openChat(item.dataset.chatId,chat))});document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));tab.classList.add('active');if(tab.dataset.view==='status')requestAnimationFrame(createStory);if(tab.dataset.view==='chats')requestAnimationFrame(subscribeChats)}))}
 bindUI();
-document.addEventListener('vibe:auth-changed', (event) => { stopSubscriptions(); state.currentUser = event.detail?.user || auth?.currentUser || null; if (state.currentUser) { setPresence(state.currentUser, true); requestAnimationFrame(subscribeChats); } });
-window.addEventListener('pagehide', () => { if (state.currentUser) setPresence(state.currentUser, false); });
-document.addEventListener('visibilitychange', () => { if (state.currentUser) setPresence(state.currentUser, document.visibilityState === 'visible'); });
-window.VibeApp = { createChat, joinChat, createStory, openChat, currentChatIdValue: null, get currentChatId() { return state.currentChatId; } };
+document.addEventListener('vibe:auth-changed',event=>{stopSubscriptions();state.currentUser=event.detail?.user||auth?.currentUser||null;if(state.currentUser){setPresence(state.currentUser,true);requestAnimationFrame(subscribeChats)}});
+window.addEventListener('pagehide',()=>{if(state.currentUser)setPresence(state.currentUser,false)});
+document.addEventListener('visibilitychange',()=>{if(state.currentUser)setPresence(state.currentUser,document.visibilityState==='visible')});
+window.VibeApp={createChat,joinChat,createStory,openChat,get currentChatId(){return state.currentChatId}};
