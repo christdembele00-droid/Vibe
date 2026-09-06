@@ -1,20 +1,23 @@
 # VIBE
 
-VIBE est une messagerie web temps réel construite autour de Firebase, avec une interface responsive, groupes, statuts, partage de médias, appels WebRTC, chaînes thématiques et assistant VIBE AI.
+VIBE est une messagerie web temps réel construite autour de Firebase, avec interface OLED moderne, conversations privées, groupes existants, partage de médias, appels WebRTC, chaînes thématiques et assistant VIBE AI.
 
 ## Architecture
 
 - `index.html` — shell unique de l'application et structure responsive.
-- `style.css`, `vibe-actions.css`, `vibe-redesign.css` — styles existants de l'interface VIBE.
-- `vibe-runtime.js` — contrôleur principal : Auth, utilisateurs, groupes, messages, médias, statuts, recherche et interactions.
+- `style.css`, `vibe-actions.css`, `vibe-redesign.css`, `vibe-ui-cleanup.css`, `vibe-modern.css`, `vibe-oled.css` — couches de présentation, avec `vibe-oled.css` comme couche visuelle finale.
+- `vibe-runtime.js` — contrôleur principal : Auth, utilisateurs, groupes existants, messages, médias, recherche et interactions.
+- `vibe-persistence.js` — cache local Firestore persistant.
 - `vibe-enhancements.js` — synchronisation avancée de recherche, non-lues et conversations Firestore.
-- `vibe-actions.js` — groupes, statuts, profil, paramètres et actions intégrées à l'application.
+- `vibe-actions.js` — profil, paramètres et actions intégrées à l'application ; la création de nouveaux groupes est désactivée.
 - `calls.js` — gestion WebRTC des appels audio/vidéo individuels.
 - `vibe-online.js` — présence et compteur d'utilisateurs en ligne.
 - `vibe-local-notifications.js` — notifications locales pour les nouveaux messages.
 - `vibe-channel.js` — chaînes VIBE et assistant VIBE AI intégré.
-- `vibe-ai.js` — intégration Firebase AI Logic avec Gemini et Google Search grounding.
+- `vibe-ai.js` — intégration Firebase AI Logic avec Gemini et Google Search grounding, avec recherche d'images Openverse pour les flux.
+- `vibe-modern.js` — Command Palette `Ctrl/Cmd + K`.
 - `vibe-analytics.js` — Analytics Firebase lorsqu'il est disponible.
+- `vibe-seed.js` — initialisation des données de démonstration des chaînes.
 - `firebase-config.js` — configuration publique Firebase et endpoint interne intercepté par VIBE AI.
 - `firestore.rules` — contrôle d'accès Firestore.
 - `storage.rules` — contrôle d'accès aux médias, taille maximale et types MIME.
@@ -24,16 +27,15 @@ VIBE est une messagerie web temps réel construite autour de Firebase, avec une 
 ## Fonctionnalités
 
 - Authentification Google et GitHub via Firebase Authentication.
-- Conversations privées et groupes en temps réel.
+- Conversations privées et groupes existants en temps réel.
 - Messages texte, images, vidéos, audio et documents.
 - Modification, suppression pour tous et réactions aux messages.
-- Statuts Firebase avec expiration à 24 h.
 - Recherche des utilisateurs et groupes.
 - Présence en ligne et indicateur de frappe.
 - Appels audio/vidéo WebRTC individuels avec échange ICE.
 - Chaînes Actualités, Côte d'Ivoire, Monde, Sports, Technologie, Gaming, Musique, Divertissement, Science et VIBE AI.
-- VIBE AI avec Gemini 3.7 Flash via Firebase AI Logic.
-- Recherche Web Google grounding pour les flux d'actualités, avec affichage des sources retournées par le modèle.
+- Flux de chaînes alimentés par VIBE AI avec recherche Web Google et images issues d'Openverse lorsqu'elles sont disponibles.
+- Interface OLED, glassmorphism, glow, animations et Command Palette.
 - Installation PWA et cache du shell de l'application.
 
 ## Firebase
@@ -43,7 +45,7 @@ Projet : `vibe-749e5`.
 1. Active Google et GitHub dans Firebase Authentication.
 2. Ajoute le domaine GitHub Pages dans les domaines autorisés Firebase Authentication.
 3. Déploie `firestore.rules` et `storage.rules`.
-4. Le frontend utilise Firebase AI Logic avec le backend Gemini Developer API ; aucun secret Gemini n'est placé dans `firebase-config.js`.
+4. Le frontend utilise Firebase AI Logic avec le backend Gemini Developer API ; aucun secret Gemini privé n'est placé dans `firebase-config.js`.
 
 La configuration Firebase Web présente dans le frontend est une configuration publique. Les secrets privés et comptes de service ne doivent jamais être ajoutés au dépôt.
 
@@ -60,9 +62,14 @@ La configuration Firebase Web présente dans le frontend est une configuration p
 
 Un serveur HTTP local est recommandé pour tester les modules ES, le service worker et WebRTC. GitHub Pages sert directement le frontend.
 
-## Déploiement
+## Validation
 
-Le workflow `Validate VIBE` vérifie automatiquement la syntaxe de tous les fichiers JavaScript, les fichiers JSON, les références frontend et les ressources du cache PWA.
+Le workflow `Validate VIBE` vérifie automatiquement :
+
+- la syntaxe de tous les fichiers JavaScript ;
+- les fichiers JSON ;
+- les références des fichiers chargés par `index.html` ;
+- les ressources nécessaires au cache PWA.
 
 Le workflow `Deploy Firebase Rules` déploie uniquement les règles Firestore et Storage.
 
