@@ -1,36 +1,22 @@
-name: Validate Firebase Realtime Database rules
+name: Validate Vibe rules
 
 on:
-  workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
-      - 'database.rules.json'
-      - 'firebase.json'
+      - database.rules.json
+      - firebase.json
+  workflow_dispatch:
 
 jobs:
-  validate-rtdb-rules:
-    name: Validate Realtime Database rules
+  validate:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+      - name: Validate JSON
+        run: node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync('database.rules.json','utf8')); if(!r || !r.rules || typeof r.rules !== 'object' || Array.isArray(r.rules)) process.exit(1); console.log('database.rules.json: OK')"
 
-      - name: Validate rules JSON
-        run: node -e "const fs=require('fs'); const p='database.rules.json'; const data=JSON.parse(fs.readFileSync(p,'utf8')); if(!data || typeof data.rules!=='object' || Array.isArray(data.rules)) throw new Error('database.rules.json doit contenir un objet rules'); console.log('Firebase Realtime Database rules JSON: OK');"
-
-      - name: Verify Firebase project configuration
-        run: node -e "const fs=require('fs'); const f=JSON.parse(fs.readFileSync('firebase.json','utf8')); if(!f.database || f.database.rules!=='database.rules.json') throw new Error('firebase.json ne référence pas database.rules.json'); console.log('Firebase configuration: OK');"
-
-      - name: Report
-        run: |
-          echo "Firebase rules validation completed."
-          echo "No FIREBASE_TOKEN, Google Cloud credentials, or deployment credentials are required."
-          echo "Production publication remains managed from Firebase Console."
+      - name: Validate Firebase config
+        run: node -e "const fs=require('fs'); const f=JSON.parse(fs.readFileSync('firebase.json','utf8')); if(f.database?.rules !== 'database.rules.json') process.exit(1); console.log('firebase.json: OK')"
