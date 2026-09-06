@@ -1,23 +1,50 @@
-import { FIREBASE_ENABLED, auth, db, collection, doc, addDoc, setDoc, getDoc, onSnapshot, query, where, orderBy, limit, serverTimestamp } from './firebase-client.js';
+import { FIREBASE_ENABLED, auth, db, collection, doc, addDoc, setDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp, onAuthStateChanged } from './firebase-client.js';
 import { arrayUnion } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 const state = { currentUser: null, currentChatId: null, stopChat: null, stopChats: null, chats: new Map(), favorites: new Set(), renderTimer: null };
 const $ = (id) => document.getElementById(id);
 const uid = () => state.currentUser?.uid || auth?.currentUser?.uid || null;
 const toast = (message) => { const el = $('toast'); if (!el) return; el.textContent = message; el.classList.add('show'); clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.remove('show'), 2600); };
-const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>\"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#39;' }[c]));
 const escapeAttr = (value) => escapeHtml(value).replace(/`/g, '&#96;');
 const conversationRef = (chatId) => doc(db, 'conversations', chatId);
 const messagesRef = (chatId) => collection(db, 'conversations', chatId, 'messages');
 const favoriteRef = (userId, chatId) => doc(db, 'users', userId, 'favorites', chatId);
 
+let presenceTimer = null;
+let presenceGeneration = 0;
 async function setPresence(user, online = true) {
   if (!FIREBASE_ENABLED || !user) return;
-  try { await setDoc(doc(db, 'presence', user.uid), { uid:user.uid, state:online?'online':'offline', displayName:user.displayName||user.email?.split('@')[0]||'Utilisateur', updatedAt:serverTimestamp(), lastOnline:online?null:serverTimestamp() }, { merge:true }); }
-  catch (error) { console.warn('Présence Firestore:', error); }
+  try {
+    await setDoc(doc(db, 'presence', user.uid), {
+      uid: user.uid,
+      state: online ? 'online' : 'offline',
+      displayName: user.displayName || user.email?.split('@')[0] || 'Utilisateur',
+      photoURL: user.photoURL || null,
+      updatedAt: serverTimestamp(),
+      lastOnline: online ? null : serverTimestamp()
+    }, { merge: true });
+  } catch (error) { console.warn('Présence Firestore:', error); }
+}
+function startPresence(user) {
+  presenceGeneration += 1;
+  const generation = presenceGeneration;
+  if (presenceTimer) clearInterval(presenceTimer);
+  presenceTimer = null;
+  if (!user) return;
+  void setPresence(user, true);
+  presenceTimer = setInterval(() => {
+    if (generation !== presenceGeneration || auth?.currentUser?.uid !== user.uid) return;
+    void setPresence(user, true);
+  }, 30000);
+}
+function stopPresence() {
+  presenceGeneration += 1;
+  if (presenceTimer) clearInterval(presenceTimer);
+  presenceTimer = null;
 }
 function stopSubscriptions(){ state.stopChat?.(); state.stopChat=null; state.stopChats?.(); state.stopChats=null; if(state.renderTimer)clearTimeout(state.renderTimer); state.renderTimer=null; }
-async function loadFavorites(){const userId=uid();if(!userId)return;try{const {getDocs}=await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');const snap=await getDocs(collection(db,'users',userId,'favorites'));state.favorites=new Set(snap.docs.map(x=>x.id));renderChats([...state.chats.values()]);}catch(e){console.warn('Favoris Firestore:',e)}}
+async function loadFavorites(){const userId=uid();if(!userId)return;try{const snap=await getDocs(collection(db,'users',userId,'favorites'));state.favorites=new Set(snap.docs.map(x=>x.id));renderChats([...state.chats.values()]);}catch(e){console.warn('Favoris Firestore:',e)}}
 async function toggleFavorite(chatId){const userId=uid();if(!userId||!chatId)return false;try{const ref=favoriteRef(userId,chatId);if(state.favorites.has(chatId)){const {deleteDoc}=await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');await deleteDoc(ref);state.favorites.delete(chatId);toast('Retirée des favoris.')}else{const chat=state.chats.get(chatId)||{};await setDoc(ref,{chatId,name:chat.name||'Discussion',updatedAt:serverTimestamp()});state.favorites.add(chatId);toast('Ajoutée aux favoris.')}renderChats([...state.chats.values()]);return true}catch(e){toast(`Favori impossible : ${e.message}`);return false}}
 function renderChats(loaded){const list=$('conversationList');if(!list)return;loaded.sort((a,b)=>{const af=state.favorites.has(a.id)?1:0,bf=state.favorites.has(b.id)?1:0;if(af!==bf)return bf-af;return (b.updatedAt?.toMillis?.()||0)-(a.updatedAt?.toMillis?.()||0)});setTimeout(()=>{if(!list.isConnected)return;list.innerHTML=loaded.map(chat=>{const favorite=state.favorites.has(chat.id);return `<button class="conversation-item ${state.currentChatId===chat.id?'active':''}" data-chat-id="${escapeAttr(chat.id)}"><div class="avatar">${escapeHtml((chat.name||'V')[0].toUpperCase())}</div><div><strong>${favorite?'★ ':''}${escapeHtml(chat.name||'Discussion')}</strong><span>${favorite?'Favori · ':''}Discussion Vibe</span></div></button>`}).join('')},0)}
 function makeInviteToken(){return crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','')}
@@ -31,10 +58,25 @@ function subscribeToChat(chatId){state.stopChat?.();if(!FIREBASE_ENABLED||!uid()
 async function sendMessage(event){event?.preventDefault();const text=$('messageInput')?.value?.trim(),userId=uid(),chatId=state.currentChatId;if(!text||!userId||!chatId)return;if(text.length>20000)return toast('Message trop long.');try{await addDoc(messagesRef(chatId),{uid:userId,text,type:'text',viewOnce:false,createdAt:serverTimestamp()});await setDoc(conversationRef(chatId),{updatedAt:serverTimestamp()},{merge:true});$('messageInput').value=''}catch(e){toast(`Message non envoyé : ${e.message}`)}}
 function addEmoji(){const input=$('messageInput');if(!input)return;const emojis=['😀','😂','😍','👍','❤️','🙏','🔥','😎','😢','😮','🎉','👏'];const current=prompt(`Choisir un emoji :\n${emojis.join('  ')}`);if(!current)return;const emoji=[...current].find(c=>emojis.includes(c));if(!emoji)return toast('Emoji non reconnu.');const start=input.selectionStart??input.value.length,end=input.selectionEnd??input.value.length;input.value=input.value.slice(0,start)+emoji+input.value.slice(end);input.focus();input.selectionStart=input.selectionEnd=start+emoji.length}
 async function createStory(){const userId=uid();if(!userId)return toast('Connexion Firebase requise.');const text=prompt('Votre actu :');if(!text?.trim())return;try{await addDoc(collection(db,'stories'),{uid:userId,text:text.trim().slice(0,2000),type:'text',createdAt:serverTimestamp(),expiresAt:new Date(Date.now()+86400000)});toast('Actu publiée pour 24 h.')}catch(e){toast(`Publication impossible : ${e.message}`)}}
-function bindUI(){$('newChatBtn')?.addEventListener('click',createChat);$('messageForm')?.addEventListener('submit',sendMessage);$('emojiBtn')?.addEventListener('click',addEmoji);$('profileBtn')?.addEventListener('click',()=>document.dispatchEvent(new CustomEvent('vibe:open-auth')));$('backBtn')?.addEventListener('click',()=>{state.currentChatId=null;$('chatView')?.classList.add('hidden');$('emptyState')?.classList.remove('hidden');state.stopChat?.();state.stopChat=null;setTimeout(subscribeChats,0)});$('conversationList')?.addEventListener('click',event=>{const item=event.target.closest('[data-chat-id]');if(!item)return;const chat=state.chats.get(item.dataset.chatId);setTimeout(()=>openChat(item.dataset.chatId,chat),0)});document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));tab.classList.add('active');if(tab.dataset.view==='chats')setTimeout(subscribeChats,0)}))}
+function bindUI(){$('newChatBtn')?.addEventListener('click',createChat);$('messageForm')?.addEventListener('submit',sendMessage);$('emojiBtn')?.addEventListener('click',addEmoji);$('profileBtn')?.addEventListener('click',()=>document.dispatchEvent(new CustomEvent('vibe:open-auth')));$('backBtn')?.addEventListener('click',()=>{state.currentChatId=null;$('chatView')?.classList.add('hidden');$('emptyState')?.classList.remove('hidden');state.stopChat?.();state.stopChat=null;setTimeout(subscribeChats,0)});$('conversationList')?.addEventListener('click',event=>{const item=event.target.closest('[data-chat-id]');if(!item)return;const chat=state.chats.get(item.dataset.chatId);setTimeout(()=>openChat(item.dataset.chatId,chat),0)});document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));tab.classList.add('active');if(tab.dataset.view==='chats')setTimeout(subscribeChats,0)})}
 bindUI();
-document.addEventListener('vibe:auth-changed',event=>{stopSubscriptions();state.currentUser=event.detail?.user||auth?.currentUser||null;state.favorites=new Set();if(state.currentUser){setPresence(state.currentUser,true);loadFavorites();setTimeout(subscribeChats,0)}});
-setInterval(()=>{if(state.currentUser&&document.visibilityState==='visible')setPresence(state.currentUser,true)},30000);
-window.addEventListener('pagehide',()=>{if(state.currentUser)setPresence(state.currentUser,false)});
-document.addEventListener('visibilitychange',()=>{if(state.currentUser)setPresence(state.currentUser,document.visibilityState==='visible')});
+function applyAuthUser(user) {
+  stopSubscriptions();
+  state.currentUser = user || null;
+  state.favorites = new Set();
+  if (state.currentUser) {
+    startPresence(state.currentUser);
+    loadFavorites();
+    setTimeout(subscribeChats,0);
+  } else {
+    stopPresence();
+  }
+}
+onAuthStateChanged(auth, applyAuthUser);
+document.addEventListener('vibe:auth-changed', event => {
+  const user = event.detail?.user || auth?.currentUser || null;
+  if (user?.uid !== state.currentUser?.uid || !user) applyAuthUser(user);
+});
+window.addEventListener('pagehide',()=>{const user=state.currentUser;if(user){stopPresence();void setPresence(user,false)}});
+window.addEventListener('beforeunload',()=>{const user=state.currentUser;if(user)void setPresence(user,false)});
 window.VibeApp={createChat,joinChat,createStory,openChat,toggleFavorite,isFavorite:chatId=>state.favorites.has(chatId),get currentChatId(){return state.currentChatId},getChats:()=>[...state.chats.values()],refreshChats:()=>renderChats([...state.chats.values()])};
