@@ -6,7 +6,7 @@
 .side-header,.chat-header{backdrop-filter:none;-webkit-backdrop-filter:none}
 .glass-btn,.composer-btn,.back-btn{transition:background var(--vibe-fast) ease,color var(--vibe-fast) ease,transform var(--vibe-fast) ease}.glass-btn:hover,.composer-btn:hover,.back-btn:hover{transform:none}.glass-btn:active,.composer-btn:active,.back-btn:active,.send-btn:active{transform:scale(.94)}
 .search-box{transition:background var(--vibe-fast) ease,box-shadow var(--vibe-fast) ease}.search-box:focus-within{transform:none}
-.tab{transition:color var(--vibe-fast) ease,background var(--vibe-fast) ease,border-color var(--vibe-fast) ease}.tab:hover{transform:none}.tab.active:after{display:none}
+.tab{transition:color var(--vibe-fast) ease,background var(--vibe-fast) ease,border-color var(--vibe-fast) ease}.tab:hover{transform:none}.tab.active:after{display:inline-flex}
 .conversation-item,.conversation{transition:background var(--vibe-fast) ease}.conversation-item:hover,.conversation:hover{transform:none;padding-left:14px}.conversation-item .avatar,.conversation .avatar{transition:none}.conversation-item:hover .avatar,.conversation:hover .avatar{transform:none}.conversation-item.active,.conversation.active{box-shadow:none}
 .profile-bar{transition:background var(--vibe-fast) ease}.profile-bar:hover{background:#e9edef}.avatar-user{transition:none}.profile-bar:hover .avatar-user{transform:none}
 .welcome-orb{animation:none}.welcome h1,.welcome-text,.welcome-chips{animation:none}.welcome-chips span{transition:none}.welcome-chips span:hover{transform:none;background:#fff}
