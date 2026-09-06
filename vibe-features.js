@@ -1,5 +1,4 @@
 import { db } from './firebase-client.js';
-import { disableNetwork, enableNetwork } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -23,23 +22,18 @@ function setConnectionStatus(online, source = 'network') {
   el.classList.toggle('syncing', source === 'syncing');
   const label = el.querySelector('span');
   if (label) label.textContent = source === 'syncing' ? 'Synchronisation…' : online ? 'En ligne' : 'Hors ligne';
-  el.title = online ? 'Connexion active' : 'Mode hors connexion — les changements seront synchronisés au retour du réseau';
+  el.title = online ? 'Connexion active' : 'Connexion réseau indisponible';
 }
 
-async function syncFirestoreNetwork() {
-  try {
-    if (navigator.onLine) {
-      setConnectionStatus(true, 'syncing');
-      await enableNetwork(db);
-      setConnectionStatus(true);
-    } else {
-      await disableNetwork(db);
-      setConnectionStatus(false);
-    }
-  } catch (error) {
-    console.warn('[Vibe] réseau Firestore:', error);
-    setConnectionStatus(navigator.onLine);
-  }
+// Firestore manages its own network lifecycle. Calling enableNetwork()/disableNetwork()
+// from an online/offline listener can race with active snapshot listeners and, in
+// Firebase 12, can trigger an INTERNAL ASSERTION FAILED: Unexpected state (ID: b815).
+// Keep the indicator visual only and let Firestore handle reconnects natively.
+function monitorBrowserConnection() {
+  const update = () => setConnectionStatus(navigator.onLine, navigator.onLine ? 'network' : 'offline');
+  window.addEventListener('online', update, { passive: true });
+  window.addEventListener('offline', update, { passive: true });
+  update();
 }
 
 function bindKeyboardShortcuts() {
@@ -73,12 +67,9 @@ function bindMessageInput() {
 
 function init() {
   ensureConnectionIndicator();
-  setConnectionStatus(navigator.onLine);
-  window.addEventListener('online', syncFirestoreNetwork, { passive: true });
-  window.addEventListener('offline', syncFirestoreNetwork, { passive: true });
+  monitorBrowserConnection();
   bindKeyboardShortcuts();
   bindMessageInput();
-  void syncFirestoreNetwork();
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
