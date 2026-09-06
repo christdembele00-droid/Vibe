@@ -39,9 +39,11 @@ jobs:
           const fs=require('fs');
           const html=fs.readFileSync('index.html','utf8');
           const expected=[
-            'vibe-runtime.js','vibe-enhancements.js','vibe-ai.js','calls.js',
-            'vibe-actions.js','vibe-online.js','vibe-analytics.js',
-            'vibe-local-notifications.js','vibe-channel.js'
+            'vibe-persistence.js','vibe-runtime.js','vibe-seed.js','vibe-enhancements.js',
+            'vibe-ai.js','calls.js','vibe-actions.js','vibe-online.js',
+            'vibe-analytics.js','vibe-local-notifications.js','vibe-channel.js','vibe-modern.js',
+            'style.css','vibe-actions.css','vibe-redesign.css','vibe-ui-cleanup.css',
+            'vibe-modern.css','vibe-oled.css'
           ];
           for(const file of expected){
             if(!fs.existsSync(file)) throw new Error(`Missing file: ${file}`);
@@ -60,7 +62,13 @@ jobs:
           node <<'NODE'
           const fs=require('fs');
           const sw=fs.readFileSync('sw.js','utf8');
-          const required=['vibe-runtime.js','vibe-enhancements.js','vibe-ai.js','vibe-local-notifications.js','vibe-actions.js','vibe-online.js','vibe-analytics.js','vibe-channel.js','calls.js','firebase-config.js','style.css','vibe-actions.css','vibe-redesign.css','manifest.webmanifest','icons/icon.svg'];
+          const required=[
+            'vibe-persistence.js','vibe-runtime.js','vibe-seed.js','vibe-enhancements.js','vibe-ai.js',
+            'vibe-local-notifications.js','vibe-actions.js','vibe-online.js','vibe-analytics.js',
+            'vibe-channel.js','calls.js','vibe-modern.js','firebase-config.js','style.css',
+            'vibe-actions.css','vibe-redesign.css','vibe-ui-cleanup.css','vibe-modern.css','vibe-oled.css',
+            'manifest.webmanifest','icons/icon.svg'
+          ];
           for(const file of required){
             if(!sw.includes(file)) throw new Error(`Missing PWA cache asset: ${file}`);
           }
