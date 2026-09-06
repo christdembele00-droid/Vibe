@@ -3,6 +3,8 @@
 .active-users-head strong,.active-users-empty strong{font:800 13px Manrope}
 .active-users-head span,.active-users-empty span{display:flex;align-items:center;gap:5px;margin-top:3px;color:#858b99;font-size:10px}
 
-/* Utilisateurs en ligne : uniquement le nombre est affiché. */
-.active-users-count{display:flex;align-items:center;min-height:40px;padding:8px 14px;color:#667781;font:500 13px/1.2 Manrope,sans-serif;border-bottom:1px solid rgba(0,0,0,.04)}
+/* Le compteur reste compact afin que les discussions commencent immédiatement dessous. */
+#activeUsersList{flex:0 0 auto;min-height:0;overflow:visible;padding:0;margin:0}
+.active-users-count{display:flex;align-items:center;min-height:36px;height:36px;padding:6px 14px;color:#667781;font:500 13px/1.2 Manrope,sans-serif;border-bottom:1px solid rgba(0,0,0,.04);margin:0}
+#conversationList{flex:1 1 auto;min-height:0;margin:0;padding:0;overflow:auto}
 @media (max-width:420px){.active-users-count{padding-left:12px;padding-right:12px}}
