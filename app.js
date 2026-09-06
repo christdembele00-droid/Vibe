@@ -17,9 +17,11 @@ let chats = demoChats.map(c => ({...c, messages:c.messages.map(m=>({...m}))}));
 let selectedId = null;
 let currentUser = null;
 let unsubscribeMessages = null;
+let unsubscribeTyping = null;
 let FIREBASE_ENABLED = false;
-let auth = null, db = null, storage = null;
+let auth = null, db = null, storage = null, rtdb = null;
 let fb = null;
+let presenceConnectionRef = null;
 
 const $ = s => document.querySelector(s);
 const list = $('#conversationList');
@@ -30,9 +32,7 @@ const chatView = $('#chatView');
 const messageInput = $('#messageInput');
 const toast = $('#toast');
 
-function escapeHtml(v){
-  return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-}
+function escapeHtml(v){return String(v).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
 function nowTime(){return new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
 function isDemo(id){return String(id).startsWith('demo-');}
 
@@ -56,24 +56,64 @@ function renderMessages(items){
 
 function subscribeToChat(chatId){
   if(unsubscribeMessages) unsubscribeMessages();
+  if(unsubscribeTyping) unsubscribeTyping();
   unsubscribeMessages = null;
-  if(!FIREBASE_ENABLED || !db || !currentUser || isDemo(chatId) || !fb) return;
+  unsubscribeTyping = null;
+  if(!FIREBASE_ENABLED || !rtdb || !currentUser || isDemo(chatId) || !fb) return;
+
   try {
-    const q = fb.query(fb.collection(db,'chats',chatId,'messages'),fb.orderBy('createdAt','asc'));
-    unsubscribeMessages = fb.onSnapshot(q, snap => {
-      const items = snap.docs.map(d => ({id:d.id,...d.data()}));
+    const messagesRef = fb.databaseRef(rtdb, `messages/${chatId}`);
+    unsubscribeMessages = fb.onValue(messagesRef, snap => {
+      const raw = snap.val() || {};
+      const items = Object.entries(raw)
+        .map(([id,data]) => ({id,...data}))
+        .sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
       const chat = chats.find(c=>c.id===chatId);
       if(chat){
-        chat.messages = items.map(m=>({text:m.text||'',uid:m.uid,time:m.createdAt?.toDate ? m.createdAt.toDate().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : nowTime()}));
+        chat.messages = items.map(m=>({text:m.text||'',uid:m.uid,time:m.createdAt?new Date(m.createdAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):nowTime()}));
         chat.time = chat.messages[chat.messages.length-1]?.time || chat.time;
       }
       renderMessages(items);
       renderChats($('#searchInput').value);
     }, error => showToast(`Firebase : ${error.message}`));
+
+    const typingRef = fb.databaseRef(rtdb, `typing/${chatId}`);
+    unsubscribeTyping = fb.onValue(typingRef, snap => {
+      const typing = snap.val() || {};
+      const otherTyping = Object.entries(typing).some(([uid,value])=>uid!==currentUser.uid && value === true);
+      $('#chatPresence').textContent = otherTyping ? 'écrit…' : (chats.find(c=>c.id===chatId)?.presence || 'en ligne');
+    });
   } catch(error) {
-    console.error('Vibe realtime error:',error);
+    console.error('Vibe Realtime Database error:',error);
     showToast('Mode démo activé.');
   }
+}
+
+async function setupPresence(){
+  if(!rtdb || !currentUser || !fb) return;
+  try {
+    const uid = currentUser.uid;
+    const connectionsRef = fb.databaseRef(rtdb, `presence/${uid}/connections`);
+    const lastOnlineRef = fb.databaseRef(rtdb, `presence/${uid}/lastOnline`);
+    const connectedRef = fb.databaseRef(rtdb, '.info/connected');
+
+    fb.onValue(connectedRef, async snap => {
+      if(snap.val() !== true) return;
+      const connection = fb.push(connectionsRef);
+      presenceConnectionRef = connection;
+      await fb.onDisconnect(connection).remove();
+      await fb.onDisconnect(lastOnlineRef).set(fb.databaseServerTimestamp());
+      await fb.set(connection, {connectedAt:fb.databaseServerTimestamp()});
+      await fb.set(fb.databaseRef(rtdb, `presence/${uid}/status`), {state:'online',updatedAt:fb.databaseServerTimestamp()});
+    });
+  } catch(error){console.warn('Presence sync:',error);}
+}
+
+async function setTyping(isTyping){
+  if(!rtdb || !currentUser || !selectedId || isDemo(selectedId) || !fb) return;
+  try {
+    await fb.set(fb.databaseRef(rtdb, `typing/${selectedId}/${currentUser.uid}`), Boolean(isTyping));
+  } catch(error){ console.warn('Typing sync:',error); }
 }
 
 async function ensureUserProfile(user){
@@ -111,14 +151,19 @@ async function sendMessage(){
   const chat=chats.find(c=>c.id===selectedId);
   if(!chat) return;
 
-  if(FIREBASE_ENABLED && db && currentUser && !isDemo(selectedId) && fb){
+  if(FIREBASE_ENABLED && rtdb && currentUser && !isDemo(selectedId) && fb){
     try{
-      await fb.addDoc(fb.collection(db,'chats',selectedId,'messages'),{
-        text, uid:currentUser.uid, createdAt:fb.serverTimestamp()
+      const messageRef=fb.push(fb.databaseRef(rtdb,`messages/${selectedId}`));
+      await fb.set(messageRef,{
+        text,
+        uid:currentUser.uid,
+        createdAt:fb.databaseServerTimestamp(),
+        type:'text'
       });
-      await fb.setDoc(fb.doc(db,'chats',selectedId),{
-        updatedAt:fb.serverTimestamp(), lastMessage:text, lastSenderId:currentUser.uid
-      },{merge:true});
+      await fb.set(fb.databaseRef(rtdb,`events/${currentUser.uid}/${messageRef.key}`),{
+        type:'message_sent',chatId:selectedId,messageId:messageRef.key,createdAt:fb.databaseServerTimestamp()
+      });
+      await setTyping(false);
     }catch(error){showToast(`Impossible d'envoyer : ${error.message}`);return;}
   }else{
     chat.messages.push({text,direction:'out',time:nowTime(),uid:currentUser?.uid});
@@ -141,6 +186,7 @@ list.addEventListener('click',e=>{const item=e.target.closest('[data-chat]');if(
 $('#searchInput').addEventListener('input',e=>renderChats(e.target.value));
 $('#backBtn').addEventListener('click',()=>chatPanel.classList.remove('open'));
 $('#emojiBtn').addEventListener('click',()=>{messageInput.value+=(messageInput.value?' ':'')+'😊';messageInput.focus();});
+messageInput.addEventListener('input',()=>setTyping(messageInput.value.trim().length>0));
 $('#attachBtn').addEventListener('click',()=>$('#fileInput').click());
 $('#fileInput').addEventListener('change',async e=>{
   const file=e.target.files?.[0]; e.target.value='';
@@ -150,8 +196,9 @@ $('#fileInput').addEventListener('change',async e=>{
     const path=`users/${currentUser.uid}/uploads/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
     const snapshot=await fb.uploadBytes(fb.ref(storage,path),file);
     const url=await fb.getDownloadURL(snapshot.ref);
-    if(selectedId && db && !isDemo(selectedId)){
-      await fb.addDoc(fb.collection(db,'chats',selectedId,'messages'),{text:`📎 ${file.name}`,fileName:file.name,fileUrl:url,uid:currentUser.uid,createdAt:fb.serverTimestamp()});
+    if(selectedId && rtdb && !isDemo(selectedId)){
+      const messageRef=fb.push(fb.databaseRef(rtdb,`messages/${selectedId}`));
+      await fb.set(messageRef,{text:`📎 ${file.name}`,fileName:file.name,fileUrl:url,uid:currentUser.uid,createdAt:fb.databaseServerTimestamp(),type:'file'});
     }
     showToast('Fichier envoyé dans Firebase.');
   }catch(error){showToast(`Upload impossible : ${error.message}`);}
@@ -176,18 +223,22 @@ async function loadFirebase(){
     if(!config.FIREBASE_ENABLED) return;
     const mod = await import('./firebase-client.js');
     fb = mod;
-    FIREBASE_ENABLED = Boolean(mod.FIREBASE_ENABLED && mod.auth);
-    auth = mod.auth; db = mod.db; storage = mod.storage;
+    FIREBASE_ENABLED = Boolean(mod.FIREBASE_ENABLED && mod.auth && mod.rtdb);
+    auth = mod.auth; db = mod.db; storage = mod.storage; rtdb = mod.rtdb;
     if(!FIREBASE_ENABLED) return;
     mod.onAuthStateChanged(auth, async user=>{
       currentUser=user;
-      if(user) await ensureUserProfile(user);
+      if(user){
+        await ensureUserProfile(user);
+        await setupPresence();
+      }
       renderChats($('#searchInput').value);
+      if(selectedId) subscribeToChat(selectedId);
     });
     if(!auth.currentUser) await mod.signInAnonymously(auth);
   }catch(error){
     FIREBASE_ENABLED=false;
-    auth=null; db=null; storage=null;
+    auth=null; db=null; storage=null; rtdb=null;
     console.warn('Vibe Firebase indisponible, mode démo:',error);
     showToast('Vibe est prêt en mode démo.');
   }
