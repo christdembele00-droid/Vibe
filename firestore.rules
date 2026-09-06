@@ -55,7 +55,7 @@ service cloud.firestore {
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && request.auth.uid in request.resource.data.adminIds && request.auth.uid in request.resource.data.followerIds && request.resource.data.name is string && request.resource.data.name.size() <= 100 && request.resource.data.description is string && request.resource.data.description.size() <= 500 && request.resource.data.inviteToken is string && request.resource.data.inviteToken.size() >= 32;
       allow update: if signedIn() && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.adminIds) && request.resource.data.ownerId == resource.data.ownerId;
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
-      match /posts/{postId} { allow read: if signedIn() && (channelMember(channelId) || channelAdmin(channelId)); allow create: if channelAdmin(channelId) && request.resource.data.authorId == request.auth.uid; allow update, delete: if channelAdmin(channelId); }
+      match /posts/{postId} { allow read: if signedIn(); allow create: if channelAdmin(channelId) && request.resource.data.authorId == request.auth.uid; allow update, delete: if channelAdmin(channelId); }
       match /messages/{messageId} { allow read: if channelMember(channelId) || channelAdmin(channelId); allow create: if channelMember(channelId) || channelAdmin(channelId); allow update, delete: if channelAdmin(channelId) || (signedIn() && resource.data.senderId == request.auth.uid); }
       match /typing/{userId} { allow read: if channelMember(channelId) || channelAdmin(channelId); allow write: if signedIn() && userId == request.auth.uid && (channelMember(channelId) || channelAdmin(channelId)); }
     }
