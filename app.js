@@ -18,6 +18,7 @@ let selectedId = null;
 let currentUser = null;
 let unsubscribeMessages = null;
 let unsubscribeTyping = null;
+let unsubscribePresence = null;
 let FIREBASE_ENABLED = false;
 let auth = null, db = null, storage = null, rtdb = null;
 let fb = null;
@@ -96,15 +97,39 @@ async function setupPresence(){
     const connectionsRef = fb.databaseRef(rtdb, `presence/${uid}/connections`);
     const lastOnlineRef = fb.databaseRef(rtdb, `presence/${uid}/lastOnline`);
     const connectedRef = fb.databaseRef(rtdb, '.info/connected');
+    const statusRef = fb.databaseRef(rtdb, `presence/${uid}/status`);
+
+    if(unsubscribePresence) unsubscribePresence();
+    unsubscribePresence = fb.onValue(connectionsRef, snap => {
+      const connections = snap.val() || {};
+      const online = Object.keys(connections).length > 0;
+      const chat = selectedId && chats.find(c=>c.id===selectedId);
+      if(chat && !isDemo(selectedId)) {
+        chat.presence = online ? 'en ligne' : 'hors ligne';
+        $('#chatPresence').textContent = chat.presence;
+      }
+    });
 
     fb.onValue(connectedRef, async snap => {
       if(snap.val() !== true) return;
       const connection = fb.push(connectionsRef);
       presenceConnectionRef = connection;
+
+      // Queue the disconnect operations BEFORE marking this connection online.
+      // This is the Firebase-recommended ordering for reliable presence.
       await fb.onDisconnect(connection).remove();
       await fb.onDisconnect(lastOnlineRef).set(fb.databaseServerTimestamp());
+      await fb.onDisconnect(statusRef).set({
+        state:'offline',
+        updatedAt:fb.databaseServerTimestamp()
+      });
+
       await fb.set(connection, {connectedAt:fb.databaseServerTimestamp()});
-      await fb.set(fb.databaseRef(rtdb, `presence/${uid}/status`), {state:'online',updatedAt:fb.databaseServerTimestamp()});
+      await fb.set(statusRef, {
+        state:'online',
+        updatedAt:fb.databaseServerTimestamp(),
+        connectionId:connection.key
+      });
     });
   } catch(error){console.warn('Presence sync:',error);}
 }
@@ -112,8 +137,14 @@ async function setupPresence(){
 async function setTyping(isTyping){
   if(!rtdb || !currentUser || !selectedId || isDemo(selectedId) || !fb) return;
   try {
-    await fb.set(fb.databaseRef(rtdb, `typing/${selectedId}/${currentUser.uid}`), Boolean(isTyping));
-  } catch(error){ console.warn('Typing sync:',error); }
+    const typingRef = fb.databaseRef(rtdb, `typing/${selectedId}/${currentUser.uid}`);
+    if(isTyping){
+      await fb.set(typingRef, true);
+      await fb.onDisconnect(typingRef).remove();
+    } else {
+      await fb.remove(typingRef);
+    }
+  } catch(error){ console.warn('Typing sync:', error); }
 }
 
 async function ensureUserProfile(user){
@@ -125,7 +156,7 @@ async function ensureUserProfile(user){
       photoURL:user.photoURL || '',
       lastSeen:fb.serverTimestamp()
     },{merge:true});
-  } catch(error){ console.warn('Profile sync:',error); }
+  } catch(error){ console.warn('Profile sync:', error); }
 }
 
 function openChat(id){
@@ -199,6 +230,7 @@ $('#fileInput').addEventListener('change',async e=>{
     if(selectedId && rtdb && !isDemo(selectedId)){
       const messageRef=fb.push(fb.databaseRef(rtdb,`messages/${selectedId}`));
       await fb.set(messageRef,{text:`📎 ${file.name}`,fileName:file.name,fileUrl:url,uid:currentUser.uid,createdAt:fb.databaseServerTimestamp(),type:'file'});
+      await fb.set(fb.databaseRef(rtdb,`events/${currentUser.uid}/${messageRef.key}`),{type:'file_sent',chatId:selectedId,messageId:messageRef.key,createdAt:fb.databaseServerTimestamp()});
     }
     showToast('Fichier envoyé dans Firebase.');
   }catch(error){showToast(`Upload impossible : ${error.message}`);}
