@@ -13,6 +13,7 @@ try {
   await import('./app.js?v=20260906');
   await import('./vibe-fixes.js?v=20260906');
   await import('./active-users.js?v=20260906');
+  await import('./whatsapp-menu.js?v=20260906');
   await import('./vibe-settings.js?v=20260906');
   await import('./webrtc-calls.js?v=20260906');
   await import('./vibe-features.js?v=20260906');
