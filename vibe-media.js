@@ -10,6 +10,8 @@ const db = getDatabase(app, 'https://vibe-749e5-default-rtdb.firebaseio.com');
 let stopMessages = null;
 let stopStories = null;
 let observedChatId = null;
+let cleanupTimer = null;
+let conversationObserver = null;
 
 const activeChatId = () => document.querySelector('.conversation.active')?.dataset.chat || null;
 const messagesEl = () => document.querySelector('#messages');
@@ -32,7 +34,8 @@ function mediaHtml(m) {
 function renderMediaMessage(key, m) {
   const root = messagesEl();
   if (!root || !m || !m.dataUrl) return;
-  const existing = root.querySelector(`[data-media-key="${CSS.escape(key)}"]`);
+  const safeKey = window.CSS?.escape ? CSS.escape(key) : String(key).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+  const existing = root.querySelector(`[data-media-key="${safeKey}"]`);
   if (existing) return;
   const wrap = document.createElement('div');
   wrap.className = `message-row ${m.uid === auth.currentUser?.uid ? 'mine' : ''}`;
@@ -89,21 +92,29 @@ function watchStories() {
 function observe() {
   const list = document.querySelector('#conversationList');
   if (!list) return;
+  if (conversationObserver) conversationObserver.disconnect();
   const refresh = () => watchChat(activeChatId());
   refresh();
-  new MutationObserver(refresh).observe(list, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-chat'] });
+  conversationObserver = new MutationObserver(refresh);
+  conversationObserver.observe(list, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-chat'] });
 }
 
 onAuthStateChanged(auth, user => {
+  if (cleanupTimer) {
+    clearInterval(cleanupTimer);
+    cleanupTimer = null;
+  }
   if (!user) {
     if (stopMessages) stopMessages();
     if (stopStories) stopStories();
+    if (conversationObserver) conversationObserver.disconnect();
     stopMessages = stopStories = null;
+    conversationObserver = null;
     observedChatId = null;
     return;
   }
   observe();
   watchStories();
   cleanupExpiredStories();
-  setInterval(cleanupExpiredStories, 60000);
+  cleanupTimer = setInterval(cleanupExpiredStories, 60000);
 });
