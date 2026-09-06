@@ -1,0 +1,33 @@
+/* Vibe responsive layer — adaptation d'écran uniquement, sans modifier l'identité visuelle. */
+html,body{width:100%;min-width:0;overflow:hidden}body{-webkit-text-size-adjust:100%;text-size-adjust:100%}.app-shell{width:100%;max-width:100vw}.sidebar,.chat-panel{min-height:0;min-width:0}.conversation-list{min-height:0}.profile-bar{flex-shrink:0}.profile-copy{overflow:hidden}.profile-copy strong,.profile-copy span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:760px){
+  .app-shell{height:100dvh;width:100vw;min-height:0;padding:0;display:block;overflow:hidden}
+  .sidebar{position:relative;width:100%;height:100dvh;min-width:0;min-height:0;border-radius:0;display:flex}
+  .side-header{flex-shrink:0}
+  .search-box{flex-shrink:0}
+  .main-tabs{flex-shrink:0}
+  .conversation-list{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-bottom:4px}
+  .profile-bar{flex-shrink:0;margin:0;padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom));min-height:62px;background:rgba(14,16,21,.96)}
+  .profile-bar .glass-btn{display:grid!important;visibility:visible!important;opacity:1!important}
+  .chat-panel{position:fixed;inset:0;width:100vw;height:100dvh;min-width:0;min-height:0;z-index:50}
+  .chat-view{height:100dvh;min-height:0}
+  .messages{min-height:0;max-width:100%;padding-left:12px;padding-right:12px;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  .message{max-width:82%}
+  .composer{flex-shrink:0;margin:8px 8px max(8px,env(safe-area-inset-bottom));max-width:calc(100% - 16px)}
+  .composer input{font-size:16px}
+  .auth-modal{padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))}
+  .auth-card{width:min(420px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:20px}
+}
+@media (max-width:420px){
+  .side-header{padding-left:12px;padding-right:12px}
+  .brand-icon{width:36px;height:36px}
+  .search-box{margin:10px;height:46px}
+  .main-tabs{padding-left:8px;padding-right:8px}
+  .profile-copy strong{font-size:11px}
+  .profile-copy span{font-size:9px}
+  .glass-btn,.composer-btn{width:42px;height:42px;flex-basis:42px}
+  .send-btn{width:42px;height:42px;flex-basis:42px}
+}
+@media (max-height:620px) and (max-width:760px){
+  .side-header{min-height:58px}.search-box{margin:7px 10px;height:42px}.main-tabs{padding-bottom:6px}.profile-bar{min-height:54px;padding-top:6px;padding-bottom:6px}.conversation-list{padding-top:0}
+}
