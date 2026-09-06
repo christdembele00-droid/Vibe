@@ -1,0 +1,39 @@
+:root{
+  --vibe-primary:#2563eb;
+  --vibe-primary-dark:#1d4ed8;
+  --vibe-primary-soft:#dbeafe;
+  --vibe-pink:#ec4899;
+  --vibe-pink-soft:#fce7f3;
+  --vibe-white:#fff;
+  --vibe-bg:#f7f9fc;
+  --vibe-surface:#fff;
+  --vibe-text:#172033;
+  --vibe-muted:#64748b;
+  --vibe-border:#e2e8f0;
+}
+html,body{background:var(--vibe-bg)!important;color:var(--vibe-text)!important}
+.app-shell{background:linear-gradient(135deg,#eff6ff,#fdf2f8)!important}
+.sidebar{background:#fff!important;border-right-color:var(--vibe-border)!important}
+.side-header,.chat-header{background:rgba(255,255,255,.94)!important;border-color:var(--vibe-border)!important}
+.search-box{background:#eff6ff!important;border-color:rgba(37,99,235,.12)!important}
+.glass-btn:hover,.composer-btn:hover{color:#2563eb!important;background:#eff6ff!important}
+.tab.active{color:#2563eb!important;border-bottom-color:#ec4899!important}
+.conversation-item{background:#fff!important;border-radius:18px!important;margin:4px 8px!important;border-bottom:0!important}
+.conversation-item:hover{background:#f8fbff!important}
+.conversation-item.active{background:linear-gradient(90deg,#eff6ff,#fdf2f8)!important}
+.unread{background:#ec4899!important}
+.chat-panel{background:linear-gradient(145deg,#eef5ff,#fff5fa)!important}
+.messages{background:linear-gradient(145deg,#eef5ff,#fff7fb)!important;background-image:radial-gradient(rgba(37,99,235,.055) 1px,transparent 1px)!important;background-size:20px 20px!important}
+.message.mine .message-bubble{background:linear-gradient(135deg,#dbeafe,#fce7f3)!important}
+.message.in .message-bubble{background:#fff!important}
+.composer{background:rgba(255,255,255,.94)!important;border-color:var(--vibe-border)!important}
+.send-btn{background:linear-gradient(135deg,#2563eb,#ec4899)!important;box-shadow:0 8px 20px rgba(37,99,235,.2)!important}
+.send-btn:hover{background:linear-gradient(135deg,#1d4ed8,#db2777)!important}
+.profile-bar{background:linear-gradient(135deg,#f8fbff,#fff5fa)!important}
+.vibe-settings,.vibe-settings-home,.vibe-settings-page{background:#fff!important;color:#172033!important}
+.vibe-settings-nav-icon{color:#2563eb!important;background:#eff6ff!important}
+.vibe-switch{background:#cbd5e1!important}
+input:checked + .vibe-switch{background:linear-gradient(135deg,#2563eb,#ec4899)!important}
+.vibe-action:hover{border-color:#93c5fd!important;background:#eff6ff!important}
+.vibe-settings-group-title{color:#2563eb!important}
+@media(prefers-color-scheme:dark){html[data-theme="dark"] body{background:#07111f!important}html[data-theme="dark"] .sidebar,html[data-theme="dark"] .chat-header,html[data-theme="dark"] .composer,html[data-theme="dark"] .vibe-settings,html[data-theme="dark"] .vibe-settings-home,html[data-theme="dark"] .vibe-settings-page{background:#0f1b2d!important;color:#f8fafc!important}html[data-theme="dark"] .chat-panel{background:linear-gradient(145deg,#071a32,#241024)!important}html[data-theme="dark"] .messages{background:linear-gradient(145deg,#08182d,#211326)!important}html[data-theme="dark"] .message.in .message-bubble{background:#132238!important;color:#f8fafc!important}html[data-theme="dark"] .conversation-item{background:#0f1b2d!important;color:#f8fafc!important}html[data-theme="dark"] .conversation-item.active{background:linear-gradient(90deg,#10284a,#32162e)!important}}
