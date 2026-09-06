@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "Vibe",
-    "slug": "vibe-messenger",
+    "slug": "vibe",
+    "owner": "christ111",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -10,7 +11,7 @@
       "versionCode": 1
     },
     "extra": {
-      "webUrl": "${EXPO_PUBLIC_VIBE_WEB_URL}"
+      "webUrl": "https://vibe-ac39.onrender.com"
     }
   }
 }
