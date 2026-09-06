@@ -6,86 +6,18 @@ const MODULE_IDS={status:'statusView',calls:'callsView',channels:'channelsView'}
 function moveModuleToSidebar(id){const el=$(id),side=sidebar();if(!el||!side)return;el.classList.remove('hidden');el.dataset.vibeSidebarView='true';side.appendChild(el)}
 function restoreModules(){const panel=chatPanel();if(!panel)return;Object.values(MODULE_IDS).forEach(id=>{const el=$(id);if(!el)return;el.dataset.vibeSidebarView='';el.classList.add('hidden');panel.appendChild(el)})}
 function setRailActive(view){document.querySelectorAll('.rail-item[data-view]').forEach(btn=>btn.classList.toggle('active',btn.dataset.view===view))}
-function showWelcome(){const hasChat=Boolean(window.VibeApp?.currentChatId);$('chatView')?.classList.toggle('hidden',!hasChat);$('emptyState')?.classList.toggle('hidden',hasChat);if(hasChat)$('chatView')?.classList.remove('hidden')}
+function showWelcome(){const hasChat=Boolean(window.VibeApp?.currentChatId);$('chatView')?.classList.toggle('hidden',!hasChat);$('emptyState')?.classList.toggle('hidden',hasChat)}
 function setSidebarMode(view){const side=sidebar(),sh=shell();if(!side||!sh)return;side.classList.toggle('context-open',view!=='chats');side.dataset.view=view||'chats';sh.classList.toggle('module-open',view!=='chats');sh.classList.toggle('chat-open',view==='chats'&&Boolean(window.VibeApp?.currentChatId));setRailActive(view)}
-function openView(view){
-  const normalized=view==='status'||view==='calls'||view==='channels'?'status'===view?'status':view:'chats';
-  const official=window.Vibe2026Theme?.setView;
-  if(official)try{official(normalized)}catch(error){console.warn('Navigation Vibe:',error)}
-  restoreModules();
-  if(normalized==='chats'){
-    setSidebarMode('chats');
-    showWelcome();
-    return;
-  }
-  const id=MODULE_IDS[normalized];
-  moveModuleToSidebar(id);
-  setSidebarMode(normalized);
-  $('chatView')?.classList.add('hidden');
-  $('emptyState')?.classList.remove('hidden');
-  $('emptyState')?.classList.add('hidden');
-}
-function openSettings(){
-  restoreModules();
-  setSidebarMode('settings');
-  $('chatView')?.classList.add('hidden');
-  $('emptyState')?.classList.remove('hidden');
-  window.VibeSettings?.openSettings?.();
-}
+function openView(view){const normalized=['status','calls','channels'].includes(view)?view:'chats';const official=window.Vibe2026Theme?.setView;if(official)try{official(normalized)}catch(error){console.warn('Navigation Vibe:',error)}restoreModules();if(normalized==='chats'){setSidebarMode('chats');showWelcome();return}moveModuleToSidebar(MODULE_IDS[normalized]);setSidebarMode(normalized);$('chatView')?.classList.add('hidden');$('emptyState')?.classList.add('hidden')}
+function openSettings(){restoreModules();setSidebarMode('settings');$('chatView')?.classList.add('hidden');$('emptyState')?.classList.add('hidden');window.VibeSettings?.openSettings?.()}
 function closeSettings(){window.VibeSettings?.closeSettings?.();setSidebarMode('chats');restoreModules();showWelcome()}
-function enhanceMessages(){
-  const container=$('messages');if(!container||container.dataset.vibeMetaBound)return;
-  container.dataset.vibeMetaBound='true';
-  const update=()=>container.querySelectorAll('.message').forEach(article=>{
-    const bubble=article.querySelector('.message-bubble')||article;
-    if(article.querySelector('.vibe-message-meta'))return;
-    const ts=Number(article.dataset.createdAt||0);
-    const meta=document.createElement('span');meta.className='vibe-message-meta';
-    const time=ts?new Date(ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
-    meta.innerHTML=`<time>${time}</time><span class="vibe-read-checks" aria-label="Envoyé">✓✓</span>`;
-    bubble.appendChild(meta);
-  });
-  new MutationObserver(update).observe(container,{childList:true,subtree:true});
-  update();
-}
-function enhanceComposer(){
-  const input=$('messageInput'),send=$('messageForm')?.querySelector('.send-btn'),voice=$('voiceBtn');
-  if(!input||!send||input.dataset.vibeComposerBound)return;
-  input.dataset.vibeComposerBound='true';
-  if(voice)voice.style.display='none';
-  const icon=()=>send.querySelector('.svg-send,.svg-mic');
-  const sync=()=>{
-    const has=Boolean(input.value.trim());
-    send.classList.toggle('is-mic',!has);send.setAttribute('aria-label',has?'Envoyer':'Message vocal');
-    const old=icon();if(old)old.className=has?'svg-send':'svg-mic';
-  };
-  input.addEventListener('input',sync);sync();
-  send.addEventListener('click',event=>{
-    if(!input.value.trim()&&voice){event.preventDefault();voice.click()}
-  });
-}
-function bindEmoji(){
-  const form=$('messageForm');if(!form||$('emojiBtn'))return;
-  const button=document.createElement('button');button.type='button';button.id='emojiBtn';button.className='composer-btn';button.title='Emoji et stickers';button.setAttribute('aria-label','Emoji et stickers');button.innerHTML='<span class="svg-emoji" aria-hidden="true">☺</span>';
-  form.insertBefore(button,form.querySelector('#attachBtn')||form.firstChild);
-  button.addEventListener('click',()=>{const input=$('messageInput');if(!input)return;const value=prompt('Emoji :','😀');if(value){input.value+=value;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus()}})
-}
-function initVibeInteractions(){
-  if(document.documentElement.dataset.vibeInteractionInit)return;
-  document.documentElement.dataset.vibeInteractionInit='true';
-  document.addEventListener('click',event=>{
-    const viewButton=event.target.closest('[data-view]');
-    if(viewButton){event.preventDefault();event.stopPropagation();const view=viewButton.dataset.view||'chats';if(view==='settings')openSettings();else if(view==='chats')closeSettings();else openView(view);return}
-    const settingsButton=event.target.closest('#settingsRailBtn');
-    if(settingsButton){event.preventDefault();event.stopPropagation();openSettings();return}
-    if(event.target.closest('#backBtn')){event.preventDefault();event.stopPropagation();closeSettings();return}
-    if(event.target.closest('#vibeSettingsClose')){event.preventDefault();event.stopPropagation();closeSettings();return}
-    if(event.target.closest('#vibeSettingsBack'))return;
-    if(event.target.closest('.conversation-item')){closeSettings();setSidebarMode('chats');shell()?.classList.add('chat-open');return}
-  },true);
-  document.addEventListener('vibe:open-chat',()=>{closeSettings();setSidebarMode('chats');shell()?.classList.add('chat-open')});
-  const list=$('conversationList');list?.addEventListener('click',()=>{closeSettings();setSidebarMode('chats');shell()?.classList.add('chat-open')});
-  bindEmoji();enhanceComposer();enhanceMessages();
-}
+function removeLegacyStyles(){document.querySelectorAll('link[href*="vibe-2026-theme.css"],link[href*="vibe-whatsapp-polish.css"],link[href*="vibe-whatsapp-identity.css"],link[href*="vibe-fullscreen-whatsapp.css"],link[href*="vibe-fullscreen-fix.css"],link[href*="vibe-2026-ui.css"],link[href*="vibe-polish.css"],link[href*="vibe-media-channels.css"]').forEach(link=>link.remove())}
+function enhanceMessages(){const container=$('messages');if(!container||container.dataset.vibeMetaBound)return;container.dataset.vibeMetaBound='true';const update=()=>container.querySelectorAll('.message').forEach(article=>{const bubble=article.querySelector('.message-bubble')||article;if(article.querySelector('.vibe-message-meta'))return;const ts=Number(article.dataset.createdAt||0);const meta=document.createElement('span');meta.className='vibe-message-meta';const time=ts?new Date(ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';meta.innerHTML=`<time>${time}</time><span class="vibe-read-checks" aria-label="Envoyé">✓✓</span>`;bubble.appendChild(meta)});new MutationObserver(update).observe(container,{childList:true,subtree:true});update()}
+function enhanceComposer(){const input=$('messageInput'),send=$('messageForm')?.querySelector('.send-btn'),voice=$('voiceBtn');if(!input||!send||input.dataset.vibeComposerBound)return;input.dataset.vibeComposerBound='true';if(voice)voice.style.display='none';const sync=()=>{const has=Boolean(input.value.trim());send.classList.toggle('is-mic',!has);send.setAttribute('aria-label',has?'Envoyer':'Message vocal');const old=send.querySelector('.svg-send,.svg-mic');if(old)old.className=has?'svg-send':'svg-mic'};input.addEventListener('input',sync);sync();send.addEventListener('click',event=>{if(!input.value.trim()&&voice){event.preventDefault();voice.click()}})}
+function bindEmoji(){const form=$('messageForm');if(!form||$('emojiBtn'))return;const button=document.createElement('button');button.type='button';button.id='emojiBtn';button.className='composer-btn';button.title='Emoji et stickers';button.setAttribute('aria-label','Emoji et stickers');button.innerHTML='<span class="svg-emoji" aria-hidden="true">☺</span>';form.insertBefore(button,form.querySelector('#attachBtn')||form.firstChild);button.addEventListener('click',()=>{const input=$('messageInput');if(!input)return;const value=prompt('Emoji :','😀');if(value){input.value+=value;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus()}})}
+function closeContextMenu(){document.querySelector('.vibe-context-menu')?.remove()}
+function openChatMenu(button){closeContextMenu();const host=$('chatPanel');if(!host)return;const menu=document.createElement('div');menu.className='vibe-context-menu';menu.innerHTML='<button type="button" data-menu-action="search">Rechercher</button><button type="button" data-menu-action="contact">Infos de la discussion</button><button type="button" data-menu-action="close">Fermer la discussion</button>';host.appendChild(menu);menu.addEventListener('click',e=>{const action=e.target.closest('[data-menu-action]')?.dataset.menuAction;if(action==='search'){$('searchInput')?.focus();closeContextMenu()}else if(action==='contact'){const name=$('chatName')?.textContent||'Discussion';showModal('Infos de la discussion',`Discussion active : ${name}.`)}else if(action==='close'){shell()?.classList.remove('chat-open');closeContextMenu()}})}
+function showModal(title,text){document.querySelector('.vibe-modal-backdrop')?.remove();const back=document.createElement('div');back.className='vibe-modal-backdrop';back.innerHTML=`<div class="vibe-modal" role="dialog" aria-modal="true"><h3>${title}</h3><p>${text}</p><div class="vibe-modal-actions"><button type="button" class="secondary" data-close-modal>Fermer</button></div></div>`;document.body.appendChild(back);back.addEventListener('click',e=>{if(e.target===back||e.target.closest('[data-close-modal]'))back.remove()})}
+function initVibeInteractions(){if(document.documentElement.dataset.vibeInteractionInit)return;document.documentElement.dataset.vibeInteractionInit='true';removeLegacyStyles();document.addEventListener('click',event=>{const viewButton=event.target.closest('[data-view]');if(viewButton){event.preventDefault();event.stopPropagation();const view=viewButton.dataset.view||'chats';if(view==='settings')openSettings();else if(view==='chats')closeSettings();else openView(view);return}const settingsButton=event.target.closest('#settingsRailBtn');if(settingsButton){event.preventDefault();event.stopPropagation();openSettings();return}if(event.target.closest('#backBtn')){event.preventDefault();event.stopPropagation();closeSettings();return}if(event.target.closest('#vibeSettingsClose')){event.preventDefault();event.stopPropagation();closeSettings();return}if(event.target.closest('#chatMoreBtn')){event.preventDefault();event.stopPropagation();openChatMenu(event.target.closest('#chatMoreBtn'));return}if(event.target.closest('.chat-actions .glass-btn[title="Rechercher"]')){$('searchInput')?.focus();return}if(event.target.closest('.conversation-item')){closeSettings();setSidebarMode('chats');shell()?.classList.add('chat-open');return}},true);document.addEventListener('click',event=>{if(!event.target.closest('.vibe-context-menu')&&!event.target.closest('#chatMoreBtn'))closeContextMenu()});document.addEventListener('keydown',event=>{if(event.key==='Escape'){closeContextMenu();document.querySelector('.vibe-modal-backdrop')?.remove();if(sidebar()?.dataset.view==='settings')closeSettings()}});document.addEventListener('vibe:open-chat',()=>{closeSettings();setSidebarMode('chats');shell()?.classList.add('chat-open')});$('conversationList')?.addEventListener('click',()=>{closeSettings();setSidebarMode('chats');shell()?.classList.add('chat-open')});bindEmoji();enhanceComposer();enhanceMessages()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initVibeInteractions,{once:true});else initVibeInteractions();
 window.VibeInteractionFix={openView,openSettings,closeSettings,syncMobilePanel:view=>{if(view==='settings')openSettings();else openView(view||'chats')}};
