@@ -6,145 +6,17 @@ const toast = (message) => { const el = $('toast'); if (!el) return; el.textCont
 const uid = () => state.currentUser?.uid || auth?.currentUser?.uid || null;
 const normalizeId = (value) => String(value || '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 100);
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-
-function setPresence(user) {
-  if (!FIREBASE_ENABLED || !rtdb || !user) return;
-  const ref = databaseRef(rtdb, `presence/${user.uid}`);
-  set(ref, { online: true, lastSeen: databaseServerTimestamp() }).catch(() => {});
-  onDisconnect(ref).set({ online: false, lastSeen: databaseServerTimestamp() }).catch(() => {});
-}
-
+function setPresence(user) { if (!FIREBASE_ENABLED || !rtdb || !user) return; const ref = databaseRef(rtdb, `presence/${user.uid}`); set(ref, { online: true, lastSeen: databaseServerTimestamp() }).catch(() => {}); onDisconnect(ref).set({ online: false, lastSeen: databaseServerTimestamp() }).catch(() => {}); }
 function stopSubscriptions() { if (state.stopChat) state.stopChat(); state.stopChat = null; if (state.stopPresence) state.stopPresence(); state.stopPresence = null; }
-
-function ensureChatMembership(chatId) {
-  const userId = uid();
-  if (!userId || !rtdb) return Promise.reject(new Error('Connexion requise.'));
-  return set(databaseRef(rtdb, `chatMembers/${chatId}/${userId}`), true).then(() => set(databaseRef(rtdb, `userChats/${userId}/${chatId}`), true));
-}
-
-async function createChat() {
-  const userId = uid();
-  if (!userId || !rtdb) return toast('Connectez-vous pour créer une discussion.');
-  const name = prompt('Nom de la discussion :', 'Nouvelle discussion');
-  if (!name?.trim()) return;
-  const chatId = push(databaseRef(rtdb, 'chats')).key;
-  if (!chatId) return toast('Impossible de créer la discussion.');
-  await set(databaseRef(rtdb, `chats/${chatId}`), { name: name.trim().slice(0, 80), ownerUid: userId, createdAt: databaseServerTimestamp() });
-  await ensureChatMembership(chatId);
-  openChat(chatId, { name: name.trim().slice(0, 80), ownerUid: userId });
-  toast('Discussion créée.');
-}
-
-async function joinChat() {
-  const userId = uid();
-  if (!userId || !rtdb) return toast('Connectez-vous pour rejoindre une discussion.');
-  const raw = prompt('ID de la discussion :');
-  const chatId = normalizeId(raw);
-  if (!chatId) return;
-  try {
-    const snapshot = await new Promise((resolve, reject) => {
-      const ref = databaseRef(rtdb, `chats/${chatId}`);
-      const unsubscribe = onValue(ref, resolve, reject, { onlyOnce: true });
-      setTimeout(() => { try { unsubscribe(); } catch {} ; reject(new Error('Délai dépassé.')); }, 8000);
-    });
-    const chat = snapshot.val();
-    if (!chat) return toast('Discussion introuvable.');
-    if (chat.ownerUid === userId) { await ensureChatMembership(chatId); openChat(chatId, chat); return; }
-    if (!chat.inviteToken) return toast('Cette discussion nécessite une invitation valide.');
-    const token = prompt('Code d’invitation :');
-    if (!token || token.trim() !== String(chat.inviteToken)) return toast('Code d’invitation invalide.');
-    await ensureChatMembership(chatId);
-    openChat(chatId, chat);
-  } catch (error) { console.error(error); toast('Impossible de rejoindre cette discussion.'); }
-}
-
-function subscribeChats() {
-  const userId = uid();
-  if (!FIREBASE_ENABLED || !rtdb || !userId) return;
-  const ref = databaseRef(rtdb, `userChats/${userId}`);
-  state.stopChat = onValue(ref, async (snap) => {
-    const memberships = snap.val() || {};
-    const entries = Object.keys(memberships);
-    const list = $('conversationList');
-    if (!list) return;
-    if (!entries.length) { list.innerHTML = ''; return; }
-    const loaded = [];
-    for (const chatId of entries.slice(0, 100)) {
-      try {
-        const chatSnap = await new Promise((resolve, reject) => onValue(databaseRef(rtdb, `chats/${chatId}`), resolve, reject, { onlyOnce: true }));
-        const chat = chatSnap.val();
-        if (chat) { state.chats.set(chatId, chat); loaded.push([chatId, chat]); }
-      } catch {}
-    }
-    list.innerHTML = loaded.map(([chatId, chat]) => `<button class="conversation-item" data-chat-id="${escapeHtml(chatId)}"><div class="avatar">${escapeHtml((chat.name || 'V')[0].toUpperCase())}</div><div><strong>${escapeHtml(chat.name || 'Discussion')}</strong><span>Discussion Vibe</span></div></button>`).join('');
-    list.querySelectorAll('[data-chat-id]').forEach((el) => el.addEventListener('click', () => openChat(el.dataset.chatId, state.chats.get(el.dataset.chatId))));
-  }, () => toast('Impossible de charger vos discussions.'));
-}
-
-function openChat(chatId, chat = {}) {
-  state.currentChatId = chatId;
-  $('emptyState')?.classList.add('hidden');
-  $('chatView')?.classList.remove('hidden');
-  $('chatName').textContent = chat.name || 'Discussion';
-  $('chatAvatar').textContent = (chat.name || 'V')[0].toUpperCase();
-  $('chatPresence').textContent = 'discussion';
-  subscribeToChat(chatId);
-}
-
-function subscribeToChat(chatId) {
-  if (state.stopChat) state.stopChat();
-  if (!FIREBASE_ENABLED || !rtdb || !uid()) return;
-  const ref = databaseRef(rtdb, `messages/${chatId}`);
-  state.stopChat = onValue(ref, (snap) => {
-    const messages = snap.val() || {};
-    const container = $('messages');
-    if (!container) return;
-    const rows = Object.entries(messages).slice(-200).map(([id, message]) => ({ id, ...message })).sort((a,b) => Number(a.createdAt || 0) - Number(b.createdAt || 0));
-    container.innerHTML = rows.map((m) => `<article class="message ${m.uid === uid() ? 'mine' : ''}"><div class="message-bubble">${escapeHtml(m.text || '')}</div></article>`).join('');
-    container.scrollTop = container.scrollHeight;
-  }, () => toast('Impossible de charger les messages.'));
-}
-
-async function sendMessage(event) {
-  event?.preventDefault();
-  const text = $('messageInput')?.value?.trim();
-  const userId = uid();
-  if (!text || !userId || !state.currentChatId || !rtdb) return;
-  if (text.length > 2000) return toast('Message trop long.');
-  try {
-    const ref = push(databaseRef(rtdb, `messages/${state.currentChatId}`));
-    await set(ref, { uid: userId, text, createdAt: databaseServerTimestamp() });
-    $('messageInput').value = '';
-  } catch { toast('Message non envoyé.'); }
-}
-
-async function createStory() {
-  const userId = uid();
-  if (!userId || !rtdb) return toast('Connectez-vous pour publier une actu.');
-  const text = prompt('Votre actu :');
-  if (!text?.trim()) return;
-  await set(databaseRef(rtdb, `stories/${userId}`), { uid: userId, text: text.trim().slice(0, 2000), createdAt: databaseServerTimestamp(), expiresAt: Date.now() + 86400000 });
-  toast('Actu publiée pour 24 h.');
-}
-
-function bindUI() {
-  $('newChatBtn')?.addEventListener('click', createChat);
-  $('menuBtn')?.addEventListener('click', () => toast('Menu Vibe'));
-  $('messageForm')?.addEventListener('submit', sendMessage);
-  $('profileBtn')?.addEventListener('click', () => document.dispatchEvent(new CustomEvent('vibe:open-auth')));
-  $('backBtn')?.addEventListener('click', () => { state.currentChatId = null; $('chatView')?.classList.add('hidden'); $('emptyState')?.classList.remove('hidden'); stopSubscriptions(); subscribeChats(); });
-  document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach((x) => x.classList.remove('active')); tab.classList.add('active');
-    if (tab.dataset.view === 'status') createStory();
-    if (tab.dataset.view === 'chats') subscribeChats();
-  }));
-}
-
+function ensureChatMembership(chatId) { const userId = uid(); if (!userId || !rtdb) return Promise.reject(new Error('Connexion requise.')); return set(databaseRef(rtdb, `chatMembers/${chatId}/${userId}`), true).then(() => set(databaseRef(rtdb, `userChats/${userId}/${chatId}`), true)); }
+async function createChat() { const userId = uid(); if (!userId || !rtdb) return toast('Connectez-vous pour créer une discussion.'); const name = prompt('Nom de la discussion :', 'Nouvelle discussion'); if (!name?.trim()) return; const chatId = push(databaseRef(rtdb, 'chats')).key; if (!chatId) return toast('Impossible de créer la discussion.'); await set(databaseRef(rtdb, `chats/${chatId}`), { name: name.trim().slice(0, 80), ownerUid: userId, createdAt: databaseServerTimestamp() }); await ensureChatMembership(chatId); openChat(chatId, { name: name.trim().slice(0, 80), ownerUid: userId }); toast('Discussion créée.'); }
+async function joinChat() { const userId = uid(); if (!userId || !rtdb) return toast('Connectez-vous pour rejoindre une discussion.'); const raw = prompt('ID de la discussion :'); const chatId = normalizeId(raw); if (!chatId) return; try { const snapshot = await new Promise((resolve, reject) => { const ref = databaseRef(rtdb, `chats/${chatId}`); const unsubscribe = onValue(ref, resolve, reject, { onlyOnce: true }); setTimeout(() => { try { unsubscribe(); } catch {} reject(new Error('Délai dépassé.')); }, 8000); }); const chat = snapshot.val(); if (!chat) return toast('Discussion introuvable.'); if (chat.ownerUid === userId) { await ensureChatMembership(chatId); openChat(chatId, chat); return; } if (!chat.inviteToken) return toast('Cette discussion nécessite une invitation valide.'); const token = prompt('Code d’invitation :'); if (!token || token.trim() !== String(chat.inviteToken)) return toast('Code d’invitation invalide.'); await ensureChatMembership(chatId); openChat(chatId, chat); } catch (error) { console.error(error); toast('Impossible de rejoindre cette discussion.'); } }
+function subscribeChats() { const userId = uid(); if (!FIREBASE_ENABLED || !rtdb || !userId) return; const ref = databaseRef(rtdb, `userChats/${userId}`); state.stopChat = onValue(ref, async (snap) => { const memberships = snap.val() || {}; const entries = Object.keys(memberships); const list = $('conversationList'); if (!list) return; if (!entries.length) { list.innerHTML = ''; return; } const loaded = []; for (const chatId of entries.slice(0, 100)) { try { const chatSnap = await new Promise((resolve, reject) => onValue(databaseRef(rtdb, `chats/${chatId}`), resolve, reject, { onlyOnce: true })); const chat = chatSnap.val(); if (chat) { state.chats.set(chatId, chat); loaded.push([chatId, chat]); } } catch {} } list.innerHTML = loaded.map(([chatId, chat]) => `<button class="conversation-item" data-chat-id="${escapeHtml(chatId)}"><div class="avatar">${escapeHtml((chat.name || 'V')[0].toUpperCase())}</div><div><strong>${escapeHtml(chat.name || 'Discussion')}</strong><span>Discussion Vibe</span></div></button>`).join(''); list.querySelectorAll('[data-chat-id]').forEach((el) => el.addEventListener('click', () => openChat(el.dataset.chatId, state.chats.get(el.dataset.chatId)))); }, () => toast('Impossible de charger vos discussions.')); }
+function openChat(chatId, chat = {}) { state.currentChatId = chatId; $('emptyState')?.classList.add('hidden'); $('chatView')?.classList.remove('hidden'); $('chatName').textContent = chat.name || 'Discussion'; $('chatAvatar').textContent = (chat.name || 'V')[0].toUpperCase(); $('chatPresence').textContent = 'discussion'; subscribeToChat(chatId); }
+function subscribeToChat(chatId) { if (state.stopChat) state.stopChat(); if (!FIREBASE_ENABLED || !rtdb || !uid()) return; const ref = databaseRef(rtdb, `messages/${chatId}`); state.stopChat = onValue(ref, (snap) => { const messages = snap.val() || {}; const container = $('messages'); if (!container) return; const rows = Object.entries(messages).slice(-200).map(([id, message]) => ({ id, ...message })).sort((a,b) => Number(a.createdAt || 0) - Number(b.createdAt || 0)); container.innerHTML = rows.map((m) => `<article class="message ${m.uid === uid() ? 'mine' : ''}"><div class="message-bubble">${escapeHtml(m.text || '')}</div></article>`).join(''); container.scrollTop = container.scrollHeight; }, () => toast('Impossible de charger les messages.')); }
+async function sendMessage(event) { event?.preventDefault(); const text = $('messageInput')?.value?.trim(); const userId = uid(); if (!text || !userId || !state.currentChatId || !rtdb) return; if (text.length > 2000) return toast('Message trop long.'); try { const ref = push(databaseRef(rtdb, `messages/${state.currentChatId}`)); await set(ref, { uid: userId, text, createdAt: databaseServerTimestamp() }); $('messageInput').value = ''; } catch { toast('Message non envoyé.'); } }
+async function createStory() { const userId = uid(); if (!userId || !rtdb) return toast('Connectez-vous pour publier une actu.'); const text = prompt('Votre actu :'); if (!text?.trim()) return; await set(databaseRef(rtdb, `stories/${userId}`), { uid: userId, text: text.trim().slice(0, 2000), createdAt: databaseServerTimestamp(), expiresAt: Date.now() + 86400000 }); toast('Actu publiée pour 24 h.'); }
+function bindUI() { $('newChatBtn')?.addEventListener('click', createChat); $('menuBtn')?.addEventListener('click', () => toast('Menu Vibe')); $('messageForm')?.addEventListener('submit', sendMessage); $('profileBtn')?.addEventListener('click', () => document.dispatchEvent(new CustomEvent('vibe:open-auth'))); $('backBtn')?.addEventListener('click', () => { state.currentChatId = null; $('chatView')?.classList.add('hidden'); $('emptyState')?.classList.remove('hidden'); stopSubscriptions(); subscribeChats(); }); document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => { document.querySelectorAll('.tab').forEach((x) => x.classList.remove('active')); tab.classList.add('active'); if (tab.dataset.view === 'status') createStory(); if (tab.dataset.view === 'chats') subscribeChats(); })); }
 bindUI();
-document.addEventListener('vibe:auth-changed', (event) => {
-  stopSubscriptions();
-  state.currentUser = event.detail?.user || auth?.currentUser || null;
-  if (state.currentUser) { setPresence(state.currentUser); subscribeChats(); }
-});
-
+document.addEventListener('vibe:auth-changed', (event) => { stopSubscriptions(); state.currentUser = event.detail?.user || auth?.currentUser || null; if (state.currentUser) { setPresence(state.currentUser); subscribeChats(); } });
 window.VibeApp = { createChat, joinChat, createStory, openChat };
