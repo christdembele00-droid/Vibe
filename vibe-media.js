@@ -12,12 +12,13 @@ let stopStories = null;
 let observedChatId = null;
 let cleanupTimer = null;
 let conversationObserver = null;
+let cleanupRunning = false;
 
-const activeChatId = () => document.querySelector('.conversation.active')?.dataset.chat || null;
+const activeChatId = () => document.querySelector('.conversation-item.active')?.dataset.chatId || null;
 const messagesEl = () => document.querySelector('#messages');
 
 function escapeHtml(value = '') {
-  return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
+  return String(value).replace(/[&<>'"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;' }[c]));
 }
 
 function mediaHtml(m) {
@@ -34,8 +35,7 @@ function mediaHtml(m) {
 function renderMediaMessage(key, m) {
   const root = messagesEl();
   if (!root || !m || !m.dataUrl) return;
-  const safeKey = window.CSS?.escape ? CSS.escape(key) : String(key).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
-  const existing = root.querySelector(`[data-media-key="${safeKey}"]`);
+  const existing = root.querySelector(`[data-media-key="${CSS.escape(key)}"]`);
   if (existing) return;
   const wrap = document.createElement('div');
   wrap.className = `message-row ${m.uid === auth.currentUser?.uid ? 'mine' : ''}`;
@@ -46,7 +46,7 @@ function renderMediaMessage(key, m) {
 
 function watchChat(chatId) {
   if (chatId === observedChatId && stopMessages) return;
-  if (stopMessages) stopMessages();
+  stopMessages?.();
   stopMessages = null;
   observedChatId = chatId;
   if (!chatId || chatId.startsWith('demo-')) return;
@@ -57,33 +57,34 @@ function watchChat(chatId) {
 }
 
 async function cleanupExpiredStories() {
-  if (!auth.currentUser) return;
+  const currentUid = auth.currentUser?.uid;
+  if (!currentUid || cleanupRunning) return;
+  cleanupRunning = true;
   try {
-    const snap = await get(ref(db, 'stories'));
-    const all = snap.val() || {};
+    const snap = await get(ref(db, `stories/${currentUid}`));
+    const stories = snap.val() || {};
     const now = Date.now();
-    for (const [uid, stories] of Object.entries(all)) {
-      for (const [storyId, story] of Object.entries(stories || {})) {
-        if (Number(story?.expiresAt) > 0 && Number(story.expiresAt) <= now) {
-          await remove(ref(db, `stories/${uid}/${storyId}`));
-        }
-      }
-    }
-  } catch (error) {
-    console.warn('Nettoyage stories indisponible:', error);
+    const expired = Object.entries(stories)
+      .filter(([, story]) => Number(story?.expiresAt) > 0 && Number(story.expiresAt) <= now)
+      .map(([storyId]) => remove(ref(db, `stories/${currentUid}/${storyId}`)).catch(() => {}));
+    await Promise.all(expired);
+  } finally {
+    cleanupRunning = false;
   }
 }
 
 function watchStories() {
-  if (stopStories) stopStories();
-  stopStories = onValue(ref(db, 'stories'), snap => {
-    const all = snap.val() || {};
+  stopStories?.();
+  stopStories = null;
+  const currentUid = auth.currentUser?.uid;
+  if (!currentUid) return;
+
+  stopStories = onValue(ref(db, `stories/${currentUid}`), snap => {
+    const stories = snap.val() || {};
     const now = Date.now();
-    for (const [uid, stories] of Object.entries(all)) {
-      for (const [storyId, story] of Object.entries(stories || {})) {
-        if (Number(story?.expiresAt) > 0 && Number(story.expiresAt) <= now) {
-          remove(ref(db, `stories/${uid}/${storyId}`)).catch(() => {});
-        }
+    for (const [storyId, story] of Object.entries(stories)) {
+      if (Number(story?.expiresAt) > 0 && Number(story.expiresAt) <= now) {
+        remove(ref(db, `stories/${currentUid}/${storyId}`)).catch(() => {});
       }
     }
   });
@@ -92,11 +93,11 @@ function watchStories() {
 function observe() {
   const list = document.querySelector('#conversationList');
   if (!list) return;
-  if (conversationObserver) conversationObserver.disconnect();
-  const refresh = () => watchChat(activeChatId());
+  conversationObserver?.disconnect();
+  const refresh = () => requestAnimationFrame(() => watchChat(activeChatId()));
   refresh();
   conversationObserver = new MutationObserver(refresh);
-  conversationObserver.observe(list, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-chat'] });
+  conversationObserver.observe(list, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-chat-id'] });
 }
 
 onAuthStateChanged(auth, user => {
@@ -104,17 +105,17 @@ onAuthStateChanged(auth, user => {
     clearInterval(cleanupTimer);
     cleanupTimer = null;
   }
-  if (!user) {
-    if (stopMessages) stopMessages();
-    if (stopStories) stopStories();
-    if (conversationObserver) conversationObserver.disconnect();
-    stopMessages = stopStories = null;
-    conversationObserver = null;
-    observedChatId = null;
-    return;
-  }
+  stopMessages?.();
+  stopStories?.();
+  conversationObserver?.disconnect();
+  stopMessages = stopStories = null;
+  conversationObserver = null;
+  observedChatId = null;
+
+  if (!user) return;
+
   observe();
   watchStories();
-  cleanupExpiredStories();
-  cleanupTimer = setInterval(cleanupExpiredStories, 60000);
+  cleanupExpiredStories().catch(() => {});
+  cleanupTimer = setInterval(() => cleanupExpiredStories().catch(() => {}), 60000);
 });
