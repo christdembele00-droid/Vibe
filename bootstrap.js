@@ -19,7 +19,7 @@ try {
   await import('./vibe-polish.js?v=20260906');
   await import('./whatsapp-navigation.js?v=20260906');
   await import('./whatsapp-message-actions.js?v=20260906');
-  await import('./whatsapp-extra-features.js?v=20260906');
+  await import('./whatsapp-extras.js?v=20260906');
 } catch (error) {
   showBootError(error);
 }
