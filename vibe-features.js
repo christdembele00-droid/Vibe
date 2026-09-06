@@ -3,7 +3,7 @@ import { db } from './firebase-client.js';
 const $ = (id) => document.getElementById(id);
 
 function ensureConnectionIndicator() {
-  const header = document.querySelector('.side-header');
+  const header = document.querySelector('.inbox-title-row');
   if (!header || $('vibeConnectionStatus')) return;
   const el = document.createElement('span');
   el.id = 'vibeConnectionStatus';
@@ -11,7 +11,8 @@ function ensureConnectionIndicator() {
   el.setAttribute('role', 'status');
   el.setAttribute('aria-live', 'polite');
   el.innerHTML = '<i aria-hidden="true"></i><span>En ligne</span>';
-  header.insertBefore(el, header.querySelector('.header-actions'));
+  el.title = 'Connexion active';
+  header.appendChild(el);
 }
 
 function setConnectionStatus(online, source = 'network') {
