@@ -30,7 +30,6 @@ async function openMemberChat(member) {
   try {
     const existing = await findExistingPrivateChat(member.uid);
     if (existing) {
-      appApi.getChats?.();
       appApi.openChat(existing.id, existing);
       return;
     }
@@ -74,6 +73,7 @@ function render(users) {
 
 function watch() {
   stop?.();
+  stop = null;
   if (!currentUid) {
     render([]);
     return;
@@ -85,16 +85,21 @@ function watch() {
     queueMicrotask(() => render(users));
   }, error => {
     console.warn('Présence Firestore:', error);
+    stop = null;
     render([]);
   });
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => {}, { once: true });
 onAuthStateChanged(auth, user => {
   currentUid = user?.uid || null;
   watch();
 });
+
+// auth-ui.js already emits this event. Keep it as a UI refresh hook without
+// starting a second listener when the Auth state callback has already handled it.
 document.addEventListener('vibe:auth-changed', event => {
-  currentUid = event.detail?.user?.uid || auth.currentUser?.uid || null;
+  const nextUid = event.detail?.user?.uid || null;
+  if (nextUid === currentUid) return;
+  currentUid = nextUid;
   watch();
 });
