@@ -52,6 +52,9 @@ async function handleMedia(event) {
       createdAt: serverTimestamp(),
       viewOnce: false
     });
+    await addDoc(collection(db, 'conversations', chatId, 'events'), {
+      type: 'media-sent', uid: uid(), messageName: file.name, createdAt: serverTimestamp()
+    }).catch(() => {});
     toast('Média envoyé.');
   } catch (error) {
     console.error('[Vibe] upload média:', error);
@@ -105,11 +108,25 @@ function enhanceMessage(article) {
   }).catch(() => {});
 }
 
+function cleanupDisconnectedReactions() {
+  for (const [key, stop] of reactionStops) {
+    const [chatId, messageId] = key.split(':');
+    const article = document.querySelector(`[data-message="${CSS.escape(messageId)}"]`);
+    if (!article || !article.isConnected || !document.querySelector(`[data-chat-id="${CSS.escape(chatId)}"]`)) {
+      try { stop(); } catch {}
+      reactionStops.delete(key);
+    }
+  }
+}
+
 function observeMessages() {
   const box = $('messages');
   if (!box || box.dataset.mediaObserver === '1') return;
   box.dataset.mediaObserver = '1';
-  const scan = () => box.querySelectorAll('.message').forEach(enhanceMessage);
+  const scan = () => {
+    box.querySelectorAll('.message').forEach(enhanceMessage);
+    cleanupDisconnectedReactions();
+  };
   scan();
   new MutationObserver(scan).observe(box, { childList: true, subtree: true });
 }
