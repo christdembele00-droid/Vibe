@@ -1,24 +1,21 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAnalytics, isSupported as analyticsIsSupported } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, GithubAuthProvider, EmailAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, linkWithPopup, linkWithRedirect } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch, arrayUnion } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp, writeBatch, arrayUnion } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const FIREBASE_ENABLED = Boolean(firebaseConfig?.apiKey && firebaseConfig?.projectId);
 const app = getApps()[0] ?? initializeApp(firebaseConfig);
 const shared = globalThis.__VIBE_FIREBASE__ || (globalThis.__VIBE_FIREBASE__ = {});
-let db = shared.firestore;
 
+// Use one Firestore instance for every Vibe module.  The previous combination of
+// initializeFirestore(...persistentLocalCache...) plus another getFirestore(app)
+// instance could make Firebase 12's IndexedDB watch/index backfiller enter an
+// inconsistent internal state (INTERNAL ASSERTION FAILED: Unexpected state).
+let db = shared.firestore;
 if (!db) {
-  try {
-    db = initializeFirestore(app, {
-      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-    });
-  } catch (error) {
-    console.warn('[Firebase Firestore] persistence unavailable, using existing/default cache:', error);
-    db = getFirestore(app);
-  }
+  db = getFirestore(app);
   shared.firestore = db;
 }
 
