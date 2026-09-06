@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://christdembele00-droid.github.io/Vibe/sitemap.xml
