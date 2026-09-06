@@ -4,6 +4,6 @@
   "private": true,
   "description": "Vibe Messenger",
   "scripts": {
-    "check": "node --check app.js && node --check auth-ui.js && node --check firebase-client.js && node --check vibe-fixes.js && node --check vibe-enhancements.js && node --check vibe-settings.js && node --check active-users.js && node --check webrtc-calls.js"
+    "check": "node --check app.js && node --check auth-ui.js && node --check firebase-client.js && node --check vibe-settings.js && node --check active-users.js && node --check vibe-profile.js && node --check vibe-rich-messages.js && node --check webrtc-calls.js && node --check vibe-features.js && node --check vibe-polish.js && node --check vibe-2026-theme.js && node --check whatsapp-menu.js && node --check vibe-media-channels.js && node --check vibe-direct-chat.js && node --check bootstrap.js"
   }
 }
