@@ -1,75 +1,31 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import {
-  getAuth,
-  onAuthStateChanged,
-  signInAnonymously as firebaseSignInAnonymously,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  GoogleAuthProvider,
-  GithubAuthProvider,
-  linkWithPopup,
-  linkWithRedirect
-} from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import {
-  getDatabase,
-  ref as databaseRef,
-  push,
-  set,
-  update,
-  remove,
-  onValue,
-  onChildAdded,
-  onChildChanged,
-  onChildRemoved,
-  onDisconnect,
-  serverTimestamp as databaseServerTimestamp
-} from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
-import { firebaseConfig, FIREBASE_ENABLED } from './firebase-config.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, GithubAuthProvider, linkWithPopup, linkWithRedirect } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getDatabase } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
+import { firebaseConfig } from './firebase-config.js';
 
-let app = null;
-let auth = null;
-let rtdb = null;
-
-if (FIREBASE_ENABLED) {
-  app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  rtdb = getDatabase(app, 'https://vibe-749e5-default-rtdb.firebaseio.com');
-}
-
+const app = getApps()[0] ?? initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app, firebaseConfig.databaseURL);
 const googleProvider = new GoogleAuthProvider();
 const githubProvider = new GithubAuthProvider();
 
-// Compatibilité avec l'ancien app.js : Vibe ne crée plus de comptes anonymes.
-// L'accès réel passe par Google/GitHub (ou e-mail/mot de passe configuré dans Firebase).
+// Compatibilité avec l'ancien code : aucune connexion anonyme automatique.
+// L'utilisateur doit ouvrir une vraie session depuis l'interface d'authentification.
 async function signInAnonymously() {
-  return auth?.currentUser ?? null;
+  return auth.currentUser ?? null;
 }
 
 export {
+  app,
   auth,
-  rtdb,
-  FIREBASE_ENABLED,
+  db,
   onAuthStateChanged,
   signInAnonymously,
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
-  GoogleAuthProvider,
-  GithubAuthProvider,
   googleProvider,
   githubProvider,
   linkWithPopup,
-  linkWithRedirect,
-  databaseRef,
-  push,
-  set,
-  update,
-  remove,
-  onValue,
-  onChildAdded,
-  onChildChanged,
-  onChildRemoved,
-  onDisconnect,
-  databaseServerTimestamp
+  linkWithRedirect
 };
