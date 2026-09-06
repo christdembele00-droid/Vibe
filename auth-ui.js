@@ -1,19 +1,128 @@
-import { auth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, googleProvider, githubProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword } from './firebase-client.js';
+import { auth, onAuthStateChanged, signInWithRedirect, getRedirectResult, googleProvider, githubProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword } from './firebase-client.js';
 import { updateProfile, signOut } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-const $=s=>document.querySelector(s); let modal=null;
-function ensureModal(){
- if(modal)return modal;
- modal=document.createElement('div'); modal.className='auth-modal'; modal.hidden=true;
- modal.innerHTML=`<div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="glass-btn auth-close" id="authClose" type="button" aria-label="Fermer">×</button><h2 id="authTitle">Connexion à Vibe</h2><p id="authCopy">Choisissez votre moyen de connexion.</p><div class="auth-actions"><button type="button" id="googleLogin">Continuer avec Google</button><button type="button" id="githubLogin">Continuer avec GitHub</button><button type="button" id="emailMode">Continuer avec e-mail</button><form id="emailForm" hidden><input id="authEmail" type="email" placeholder="Adresse e-mail" autocomplete="email"><input id="authPassword" type="password" placeholder="Mot de passe" autocomplete="current-password"><button type="submit" id="emailLogin">Se connecter</button><button type="button" id="emailRegister">Créer un compte</button></form><button type="button" id="logoutBtn" hidden>Se déconnecter</button></div><div class="auth-error" id="authError" role="alert" aria-live="polite"></div></div>`;
- document.body.appendChild(modal); $('#authClose').onclick=closeLogin; modal.addEventListener('click',e=>{if(e.target===modal)closeLogin()}); $('#googleLogin').onclick=()=>login(googleProvider); $('#githubLogin').onclick=()=>login(githubProvider); $('#emailMode').onclick=()=>{$('#emailForm').hidden=!$('#emailForm').hidden}; $('#emailForm').onsubmit=e=>{e.preventDefault();emailAuth(false)}; $('#emailRegister').onclick=()=>emailAuth(true); $('#logoutBtn').onclick=async()=>{try{await signOut(auth);closeLogin()}catch(e){showError(e)}}; return modal;
+
+const $ = (s) => document.querySelector(s);
+let modal = null;
+
+const ERROR_MESSAGES = {
+  'auth/popup-closed-by-user': 'La fenêtre de connexion a été fermée.',
+  'auth/popup-blocked': 'La fenêtre de connexion a été bloquée. Utilisez la redirection.',
+  'auth/account-exists-with-different-credential': 'Ce compte existe déjà avec un autre mode de connexion.',
+  'auth/unauthorized-domain': 'Ce domaine doit être autorisé dans Firebase Authentication.',
+  'auth/operation-not-allowed': 'Ce moyen de connexion n’est pas activé dans Firebase.',
+  'auth/network-request-failed': 'Connexion réseau impossible. Vérifiez votre connexion puis réessayez.',
+  'auth/invalid-credential': 'Identifiants invalides.',
+  'auth/invalid-email': 'Adresse e-mail invalide.',
+  'auth/weak-password': 'Le mot de passe doit comporter au moins 6 caractères.',
+  'auth/email-already-in-use': 'Cette adresse e-mail est déjà utilisée.',
+  'auth/invalid-login-credentials': 'E-mail ou mot de passe incorrect.',
+  'auth/user-not-found': 'Aucun compte ne correspond à cette adresse e-mail.',
+  'auth/wrong-password': 'E-mail ou mot de passe incorrect.',
+  'auth/too-many-requests': 'Trop de tentatives. Réessayez plus tard.'
+};
+
+function showError(error) {
+  const el = $('#authError');
+  if (!el) return;
+  const code = error?.code || '';
+  el.textContent = ERROR_MESSAGES[code] || error?.message || 'Connexion impossible.';
 }
-function showError(error){const el=$('#authError');if(!el)return;const code=error?.code||'';const messages={'auth/popup-closed-by-user':'La fenêtre de connexion a été fermée.','auth/popup-blocked':'La fenêtre de connexion a été bloquée.','auth/account-exists-with-different-credential':'Ce compte existe déjà avec un autre mode de connexion.','auth/unauthorized-domain':'Ce domaine doit être autorisé dans Firebase Authentication.','auth/operation-not-allowed':'Ce moyen de connexion n’est pas activé dans Firebase.','auth/network-request-failed':'Connexion réseau impossible.','auth/invalid-credential':'Identifiants invalides.','auth/invalid-email':'Adresse e-mail invalide.','auth/weak-password':'Le mot de passe doit comporter au moins 6 caractères.','auth/email-already-in-use':'Cette adresse e-mail est déjà utilisée.','auth/invalid-login-credentials':'E-mail ou mot de passe incorrect.'};el.textContent=messages[code]||error?.message||'Connexion impossible.'}
-async function login(provider){$('#authError').textContent='';try{await signInWithPopup(auth,provider);closeLogin()}catch(error){if(error?.code==='auth/popup-blocked'){try{await signInWithRedirect(auth,provider)}catch(e){showError(e)}return}showError(error)}}
-async function emailAuth(register){$('#authError').textContent='';const email=$('#authEmail')?.value.trim(),password=$('#authPassword')?.value;if(!email||!password)return showError({code:'auth/invalid-email'});try{const result=register?await createUserWithEmailAndPassword(auth,email,password):await signInWithEmailAndPassword(auth,email,password);if(register&&result.user&&!result.user.displayName)await updateProfile(result.user,{displayName:email.split('@')[0]});closeLogin()}catch(error){showError(error)}}
-function openLogin(){const m=ensureModal(),user=auth.currentUser;m.hidden=false;$('#googleLogin').hidden=!!user;$('#githubLogin').hidden=!!user;$('#emailMode').hidden=!!user;$('#emailForm').hidden=true;$('#logoutBtn').hidden=!user;$('#authTitle').textContent=user?'Mon compte Vibe':'Connexion à Vibe';$('#authCopy').textContent=user?(user.displayName||user.email||'Compte connecté'):'Choisissez votre moyen de connexion.';$('#authError').textContent=''}
-function closeLogin(){if(modal)modal.hidden=true}
-function publishAuth(user){const n=document.querySelector('.profile-copy strong'),c=document.querySelector('.profile-copy span'),a=document.querySelector('.avatar-user');if(!user){if(n)n.textContent='Mon profil';if(c)c.textContent='Se connecter';if(a)a.textContent='V'}else{if(n)n.textContent=user.displayName||user.email||'Mon profil';if(c)c.textContent='Connecté';if(a)a.textContent=(user.displayName||user.email||'V').trim().charAt(0).toUpperCase()}document.dispatchEvent(new CustomEvent('vibe:auth-changed',{detail:{user}}))}
-onAuthStateChanged(auth,publishAuth);
-document.addEventListener('vibe:open-auth',openLogin);
-getRedirectResult(auth).then(result=>{if(result?.user)publishAuth(result.user)}).catch(error=>showError(error));
-export {openLogin,closeLogin};
+
+function ensureModal() {
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.className = 'auth-modal';
+  modal.hidden = true;
+  modal.innerHTML = `<div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="glass-btn auth-close" id="authClose" type="button" aria-label="Fermer">×</button><h2 id="authTitle">Connexion à Vibe</h2><p id="authCopy">Choisissez votre moyen de connexion.</p><div class="auth-actions"><button type="button" id="googleLogin">Continuer avec Google</button><button type="button" id="githubLogin">Continuer avec GitHub</button><button type="button" id="emailMode">Continuer avec e-mail</button><form id="emailForm" hidden><input id="authEmail" type="email" placeholder="Adresse e-mail" autocomplete="email"><input id="authPassword" type="password" placeholder="Mot de passe" autocomplete="current-password"><button type="submit" id="emailLogin">Se connecter</button><button type="button" id="emailRegister">Créer un compte</button></form><button type="button" id="logoutBtn" hidden>Se déconnecter</button></div><div class="auth-error" id="authError" role="alert" aria-live="polite"></div></div>`;
+  document.body.appendChild(modal);
+  $('#authClose').onclick = closeLogin;
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeLogin(); });
+  $('#googleLogin').onclick = () => loginWithRedirect(googleProvider);
+  $('#githubLogin').onclick = () => loginWithRedirect(githubProvider);
+  $('#emailMode').onclick = () => { $('#emailForm').hidden = !$('#emailForm').hidden; };
+  $('#emailForm').onsubmit = (e) => { e.preventDefault(); emailAuth(false); };
+  $('#emailRegister').onclick = () => emailAuth(true);
+  $('#logoutBtn').onclick = async () => {
+    try { await signOut(auth); closeLogin(); } catch (e) { showError(e); }
+  };
+  return modal;
+}
+
+async function loginWithRedirect(provider) {
+  const error = $('#authError');
+  if (error) error.textContent = '';
+  try {
+    // Redirect avoids the Cross-Origin-Opener-Policy popup/window.close warning.
+    await signInWithRedirect(auth, provider);
+  } catch (e) {
+    showError(e);
+  }
+}
+
+async function emailAuth(register) {
+  const error = $('#authError');
+  if (error) error.textContent = '';
+  const email = $('#authEmail')?.value.trim();
+  const password = $('#authPassword')?.value || '';
+  if (!email) return showError({ code: 'auth/invalid-email' });
+  if (!password) return showError({ code: 'auth/invalid-login-credentials' });
+  try {
+    const result = register
+      ? await createUserWithEmailAndPassword(auth, email, password)
+      : await signInWithEmailAndPassword(auth, email, password);
+    if (register && result.user && !result.user.displayName) {
+      await updateProfile(result.user, { displayName: email.split('@')[0] });
+    }
+    closeLogin();
+  } catch (e) {
+    showError(e);
+  }
+}
+
+function openLogin() {
+  const m = ensureModal();
+  const user = auth.currentUser;
+  m.hidden = false;
+  $('#googleLogin').hidden = !!user;
+  $('#githubLogin').hidden = !!user;
+  $('#emailMode').hidden = !!user;
+  $('#emailForm').hidden = true;
+  $('#logoutBtn').hidden = !user;
+  $('#authTitle').textContent = user ? 'Mon compte Vibe' : 'Connexion à Vibe';
+  $('#authCopy').textContent = user ? (user.displayName || user.email || 'Compte connecté') : 'Choisissez votre moyen de connexion.';
+  $('#authError').textContent = '';
+}
+
+function closeLogin() { if (modal) modal.hidden = true; }
+
+function publishAuth(user) {
+  const n = document.querySelector('.profile-copy strong');
+  const c = document.querySelector('.profile-copy span');
+  const a = document.querySelector('.avatar-user');
+  if (!user) {
+    if (n) n.textContent = 'Mon profil';
+    if (c) c.textContent = 'Se connecter';
+    if (a) a.textContent = 'V';
+  } else {
+    if (n) n.textContent = user.displayName || user.email || 'Mon profil';
+    if (c) c.textContent = 'Connecté';
+    if (a) a.textContent = (user.displayName || user.email || 'V').trim().charAt(0).toUpperCase();
+  }
+  document.dispatchEvent(new CustomEvent('vibe:auth-changed', { detail: { user } }));
+}
+
+onAuthStateChanged(auth, publishAuth);
+
+document.addEventListener('vibe:open-auth', openLogin);
+
+// Complete Google/GitHub redirect authentication after Firebase returns to Vibe.
+getRedirectResult(auth)
+  .then((result) => {
+    if (result?.user) {
+      publishAuth(result.user);
+      closeLogin();
+    }
+  })
+  .catch(showError);
+
+export { openLogin, closeLogin };
