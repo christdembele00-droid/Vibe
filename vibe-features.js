@@ -1,4 +1,5 @@
 import { db } from './firebase-client.js';
+import './vibe-customization.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -25,10 +26,6 @@ function setConnectionStatus(online, source = 'network') {
   el.title = online ? 'Connexion active' : 'Connexion réseau indisponible';
 }
 
-// Firestore manages its own network lifecycle. Calling enableNetwork()/disableNetwork()
-// from an online/offline listener can race with active snapshot listeners and, in
-// Firebase 12, can trigger an INTERNAL ASSERTION FAILED: Unexpected state (ID: b815).
-// Keep the indicator visual only and let Firestore handle reconnects natively.
 function monitorBrowserConnection() {
   const update = () => setConnectionStatus(navigator.onLine, navigator.onLine ? 'network' : 'offline');
   window.addEventListener('online', update, { passive: true });
