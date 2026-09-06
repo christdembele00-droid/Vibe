@@ -1,0 +1,13 @@
+/* Vibe 2026 — feedback réseau et micro-interactions */
+.connection-status{display:inline-flex;align-items:center;gap:7px;min-height:30px;padding:0 10px;border:1px solid rgba(148,163,184,.20);border-radius:999px;background:rgba(248,250,252,.82);color:#64748b;font-size:10px;font-weight:800;white-space:nowrap;transition:.2s ease}
+.connection-status i{width:7px;height:7px;border-radius:50%;background:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.10)}
+.connection-status.online{color:#047857;background:#ecfdf5;border-color:rgba(16,185,129,.18)}
+.connection-status.online i{background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.12)}
+.connection-status.offline{color:#b45309;background:#fffbeb;border-color:rgba(245,158,11,.20)}
+.connection-status.offline i{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.12)}
+.connection-status.syncing i{animation:vibe-pulse 1s ease-in-out infinite}
+@keyframes vibe-pulse{50%{transform:scale(.65);opacity:.55}}
+@media(max-width:760px){
+  .connection-status{display:none!important}
+}
+@media(prefers-reduced-motion:reduce){.connection-status i{animation:none!important}}
