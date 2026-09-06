@@ -23,12 +23,14 @@ async function bootstrap(user){
   if(!user||running)return;
   running=true;
   try{
-    const snap=await getDocs(collection(db,'channels'));
-    const existing=new Set(snap.docs.map(d=>d.id));
+    const channelSnap=await getDocs(collection(db,'channels'));
+    const existingChannels=new Set(channelSnap.docs.map(d=>d.id));
+    const messageSnaps=await Promise.all(CHANNELS.map(ch=>getDocs(collection(db,'channels',ch.id,'messages'))));
     const batch=writeBatch(db);
     let writes=0;
+
     for(const ch of CHANNELS){
-      if(existing.has(ch.id))continue;
+      if(existingChannels.has(ch.id))continue;
       batch.set(doc(db,'channels',ch.id),{
         name:ch.name,
         subtitle:ch.subtitle,
@@ -38,6 +40,20 @@ async function bootstrap(user){
       });
       writes++;
     }
+
+    CHANNELS.forEach((ch,index)=>{
+      if(messageSnaps[index].empty){
+        batch.set(doc(db,'channels',ch.id,'messages','_init'),{
+          senderId:user.uid,
+          senderName:'VIBE',
+          senderAvatar:fallback,
+          text:'Canal initialisé',
+          createdAt:serverTimestamp()
+        });
+        writes++;
+      }
+    });
+
     if(writes)await batch.commit();
   }catch(error){
     console.warn('[VIBE] Firestore bootstrap:',error?.code||error?.message||error);
