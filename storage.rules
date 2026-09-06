@@ -9,7 +9,6 @@ service firebase.storage {
         && request.resource.contentType != null;
     }
 
-    // Profile pictures are readable by signed-in Vibe users and writable only by the owner.
     match /profilePhotos/{uid}/{fileName} {
       allow read: if signedIn();
       allow create, update: if own(uid) && validFile() && request.resource.contentType.matches('image/.*') && request.resource.size <= 8 * 1024 * 1024;
@@ -28,7 +27,21 @@ service firebase.storage {
       allow delete: if own(uid);
     }
 
+    // Chat-scoped media path used by the redesigned messenger.
+    match /messages/{chatId}/{uid}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if own(uid) && validFile();
+      allow delete: if own(uid);
+    }
+
     match /voice/{uid}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if own(uid) && validFile();
+      allow delete: if own(uid);
+    }
+
+    // Chat-scoped voice path used by the redesigned messenger.
+    match /voice/{chatId}/{uid}/{fileName} {
       allow read: if signedIn();
       allow create, update: if own(uid) && validFile();
       allow delete: if own(uid);
