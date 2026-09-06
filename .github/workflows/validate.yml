@@ -33,6 +33,26 @@ jobs:
         run: |
           node -e "for (const f of ['firebase.json','manifest.webmanifest']) JSON.parse(require('fs').readFileSync(f,'utf8')); console.log('JSON OK')"
 
+      - name: Check CSS structure
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const files=fs.readdirSync('.').filter(f=>f.endsWith('.css'));
+          for(const file of files){
+            let css=fs.readFileSync(file,'utf8')
+              .replace(/\/\*[\s\S]*?\*\//g,'')
+              .replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g,'');
+            let depth=0;
+            for(const ch of css){
+              if(ch==='{') depth++;
+              else if(ch==='}') depth--;
+              if(depth<0) throw new Error(`Unexpected } in ${file}`);
+            }
+            if(depth!==0) throw new Error(`Unbalanced CSS braces in ${file}: depth=${depth}`);
+            console.log(`CSS structure OK: ${file}`);
+          }
+          NODE
+
       - name: Check frontend references
         run: |
           node <<'NODE'
