@@ -8,10 +8,20 @@
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.christdembele.vibe",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO"
+      ]
+    },
+    "ios": {
+      "infoPlist": {
+        "NSCameraUsageDescription": "VIBE utilise la caméra pour les appels vidéo.",
+        "NSMicrophoneUsageDescription": "VIBE utilise le microphone pour les appels audio et vidéo."
+      }
     },
     "extra": {
-      "webUrl": "https://vibe-ac39.onrender.com"
+      "webUrl": "https://christdembele00-droid.github.io/Vibe/"
     }
   }
 }
