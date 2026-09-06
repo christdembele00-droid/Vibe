@@ -1,5 +1,16 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInAnonymously,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  linkWithPopup,
+  linkWithRedirect
+} from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import {
   getDatabase,
   ref as databaseRef,
@@ -26,12 +37,24 @@ if (FIREBASE_ENABLED) {
   rtdb = getDatabase(app, 'https://vibe-749e5-default-rtdb.firebaseio.com');
 }
 
+const googleProvider = new GoogleAuthProvider();
+const githubProvider = new GithubAuthProvider();
+
 export {
   auth,
   rtdb,
   FIREBASE_ENABLED,
   onAuthStateChanged,
   signInAnonymously,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  googleProvider,
+  githubProvider,
+  linkWithPopup,
+  linkWithRedirect,
   databaseRef,
   push,
   set,
