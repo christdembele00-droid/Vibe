@@ -40,6 +40,7 @@ document.addEventListener('click', event => {
   setTimeout(installThemeControl, 0);
   setTimeout(installThemeControl, 100);
   setTimeout(installThemeControl, 300);
+  setTimeout(() => import('./vibe-profile-lock.js?v=1'), 0);
 });
 
 const observer = new MutationObserver(() => {
