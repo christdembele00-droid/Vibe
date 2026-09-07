@@ -2,7 +2,8 @@ name: Build Vibe Android
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -11,8 +12,6 @@ permissions:
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    env:
-      VIBE_SIGNING_ENABLED: ${{ secrets.VIBE_KEYSTORE_BASE64 != '' }}
 
     steps:
       - name: Checkout Vibe
@@ -35,8 +34,9 @@ jobs:
 
       - name: Prepare web bundle
         run: |
+          set -e
           rm -rf www
-          mkdir www
+          mkdir -p www
           rsync -a ./ www/ \
             --exclude='.git' \
             --exclude='.github' \
@@ -48,58 +48,37 @@ jobs:
         run: npx cap add android
 
       - name: Configure Android version
-        env:
-          VERSION_CODE: ${{ github.run_number }}
         run: |
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-          p = Path('android/app/build.gradle')
-          s = p.read_text()
-          s = s.replace('versionCode 1', f'versionCode {os.environ["VERSION_CODE"]}', 1)
-          s = s.replace('versionName "1.0"', 'versionName "1.0.0"', 1)
-          p.write_text(s)
-          PY
+          set -e
+          sed -i "0,/versionCode 1/s//versionCode ${GITHUB_RUN_NUMBER}/" android/app/build.gradle
+          sed -i '0,/versionName "1.0"/s//versionName "1.0.0"/' android/app/build.gradle
 
       - name: Sync Vibe into Android
         run: npx cap sync android
 
-      - name: Prepare signing configuration
-        if: env.VIBE_SIGNING_ENABLED == 'true'
+      - name: Configure optional Play signing
         env:
           VIBE_KEYSTORE_BASE64: ${{ secrets.VIBE_KEYSTORE_BASE64 }}
           VIBE_KEYSTORE_PASSWORD: ${{ secrets.VIBE_KEYSTORE_PASSWORD }}
           VIBE_KEY_ALIAS: ${{ secrets.VIBE_KEY_ALIAS }}
           VIBE_KEY_PASSWORD: ${{ secrets.VIBE_KEY_PASSWORD }}
         run: |
-          set -euo pipefail
-          echo "$VIBE_KEYSTORE_BASE64" | base64 --decode > android/vibe-upload.jks
-          test -s android/vibe-upload.jks
-          cat >> android/gradle.properties <<EOF
-          VIBE_KEYSTORE_PATH=$GITHUB_WORKSPACE/android/vibe-upload.jks
-          VIBE_KEYSTORE_PASSWORD=$VIBE_KEYSTORE_PASSWORD
-          VIBE_KEY_ALIAS=$VIBE_KEY_ALIAS
-          VIBE_KEY_PASSWORD=$VIBE_KEY_PASSWORD
-          EOF
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('android/app/build.gradle')
-          s = p.read_text()
-          if 'signingConfigs {' not in s:
-              s = s.replace('android {', '''android {
-    signingConfigs {
-        release {
-            storeFile file(project.findProperty("VIBE_KEYSTORE_PATH"))
-            storePassword project.findProperty("VIBE_KEYSTORE_PASSWORD")
-            keyAlias project.findProperty("VIBE_KEY_ALIAS")
-            keyPassword project.findProperty("VIBE_KEY_PASSWORD")
-        }
-    }''', 1)
-          marker = 'buildTypes {\n'
-          if 'signingConfig signingConfigs.release' not in s and marker in s:
-              s = s.replace(marker, marker + '        release {\n            signingConfig signingConfigs.release\n        }\n', 1)
-          p.write_text(s)
-          PY
+          set -e
+          if [ -n "$VIBE_KEYSTORE_BASE64" ]; then
+            echo "$VIBE_KEYSTORE_BASE64" | base64 --decode > android/vibe-upload.jks
+            test -s android/vibe-upload.jks
+            {
+              echo "VIBE_KEYSTORE_PATH=$GITHUB_WORKSPACE/android/vibe-upload.jks"
+              echo "VIBE_KEYSTORE_PASSWORD=$VIBE_KEYSTORE_PASSWORD"
+              echo "VIBE_KEY_ALIAS=$VIBE_KEY_ALIAS"
+              echo "VIBE_KEY_PASSWORD=$VIBE_KEY_PASSWORD"
+            } >> android/gradle.properties
+            sed -i '/^android {/a\    signingConfigs { release { storeFile file(project.findProperty("VIBE_KEYSTORE_PATH")); storePassword project.findProperty("VIBE_KEYSTORE_PASSWORD"); keyAlias project.findProperty("VIBE_KEY_ALIAS"); keyPassword project.findProperty("VIBE_KEY_PASSWORD") } }' android/app/build.gradle
+            sed -i '/^    buildTypes {/a\        release { signingConfig signingConfigs.release }' android/app/build.gradle
+            echo "VIBE_SIGNING_ENABLED=true" >> "$GITHUB_ENV"
+          else
+            echo "VIBE_SIGNING_ENABLED=false" >> "$GITHUB_ENV"
+          fi
 
       - name: Verify Android project
         working-directory: android
@@ -138,8 +117,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -e
           TAG="android-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" android/app/build/outputs/bundle/release/app-release.aab android/app/build/outputs/apk/debug/app-debug.apk \
+          gh release create "$TAG" \
+            android/app/build/outputs/bundle/release/app-release.aab \
+            android/app/build/outputs/apk/debug/app-debug.apk \
             --title "Vibe Android ${GITHUB_RUN_NUMBER}" \
             --notes "Version Android Vibe : App Bundle release pour Google Play et APK de test." \
             --prerelease
