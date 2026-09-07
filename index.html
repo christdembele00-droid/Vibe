@@ -53,6 +53,10 @@
   <input id="toast" class="toast" aria-live="assertive" readonly>
   <script type="module" src="./vibe-app.js?v=4"></script>
   <script type="module" src="./vibe-theme.js?v=1"></script>
+  <script type="module">
+    import { initVibeChannels } from './vibe-channels.js?v=1';
+    initVibeChannels();
+  </script>
   <script>
     (() => {
       const contact = document.getElementById('vibe-download-contact');
@@ -61,7 +65,6 @@
       const email = document.getElementById('vibe-send-email');
       const share = document.getElementById('vibe-share-link');
       if (!contact || !feedback || !sms || !email || !share) return;
-
       const appLink = window.location.href.split('#')[0];
       const message = `Télécharge et ouvre Vibe : ${appLink}`;
       const showFeedback = (text, error = false) => {
@@ -71,9 +74,7 @@
         window.clearTimeout(showFeedback.timer);
         showFeedback.timer = window.setTimeout(() => { feedback.style.display = 'none'; }, 4500);
       };
-
       const getContact = () => contact.value.trim();
-
       sms.addEventListener('click', () => {
         const target = getContact();
         if (!target) return showFeedback('Entrez un numéro de téléphone.', true);
@@ -82,14 +83,12 @@
         window.location.href = `sms:${encodeURIComponent(phone)}?body=${encodeURIComponent(message)}`;
         showFeedback('Votre application SMS va s’ouvrir avec le lien Vibe.');
       });
-
       email.addEventListener('click', () => {
         const target = getContact();
         if (!target || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target)) return showFeedback('Entrez une adresse e-mail valide.', true);
         window.location.href = `mailto:${encodeURIComponent(target)}?subject=${encodeURIComponent('Télécharger Vibe')}&body=${encodeURIComponent(message)}`;
         showFeedback('Votre application e-mail va s’ouvrir avec le lien Vibe.');
       });
-
       share.addEventListener('click', async () => {
         try {
           if (navigator.share) {
