@@ -38,7 +38,8 @@
 
         <div id="vibe-download-card" style="margin:22px auto 0;max-width:430px;width:calc(100% - 30px);padding:18px;border-radius:14px;background:rgba(255,255,255,.92);box-shadow:0 4px 18px rgba(0,0,0,.08);text-align:left;">
           <div style="font-size:17px;font-weight:700;color:#111b21;margin-bottom:5px;">📱 Télécharger Vibe sur mobile</div>
-          <div style="font-size:13px;line-height:1.45;color:#667781;margin-bottom:12px;">Envoyez le lien Vibe à votre téléphone ou à un proche par SMS ou e-mail.</div>
+          <div style="font-size:13px;line-height:1.45;color:#667781;margin-bottom:12px;">Installez la version Android de Vibe ou envoyez le lien à votre téléphone.</div>
+          <button id="btn-download-vibe" type="button" style="width:100%;border:0;border-radius:9px;padding:11px;background:#00a884;color:#fff;font-weight:700;cursor:pointer;margin-bottom:9px;">⬇️ Télécharger Vibe pour Android</button>
           <input id="vibe-download-contact" type="text" inputmode="email" autocomplete="email" placeholder="Numéro de téléphone ou e-mail" style="box-sizing:border-box;width:100%;padding:11px 12px;border:1px solid #dfe5e7;border-radius:9px;outline:none;font-size:14px;margin-bottom:9px;background:#fff;color:#111b21;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <button id="vibe-send-sms" type="button" style="border:0;border-radius:9px;padding:10px;background:#00a884;color:#fff;font-weight:600;cursor:pointer;">💬 SMS</button>
@@ -56,6 +57,10 @@
   <script type="module">
     import { initVibeChannels } from './vibe-channels.js?v=1';
     initVibeChannels();
+  </script>
+  <script type="module">
+    import { initVibeDownload } from './vibe-download.js?v=2';
+    initVibeDownload();
   </script>
   <script>
     (() => {
