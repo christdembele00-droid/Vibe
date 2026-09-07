@@ -4,6 +4,7 @@ import {
   getFirestore,
   collection,
   doc,
+  getDoc,
   setDoc,
   addDoc,
   query,
@@ -28,6 +29,7 @@ export const db = app ? getFirestore(app) : null;
 export {
   collection,
   doc,
+  getDoc,
   setDoc,
   addDoc,
   query,
