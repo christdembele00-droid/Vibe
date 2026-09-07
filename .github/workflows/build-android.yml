@@ -11,6 +11,8 @@ permissions:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    env:
+      VIBE_SIGNING_ENABLED: ${{ secrets.VIBE_KEYSTORE_BASE64 != '' }}
 
     steps:
       - name: Checkout Vibe
@@ -20,15 +22,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Prepare web bundle
         run: |
@@ -62,16 +66,18 @@ jobs:
         run: npx cap sync android
 
       - name: Prepare signing configuration
-        if: ${{ secrets.VIBE_KEYSTORE_BASE64 != '' }}
+        if: env.VIBE_SIGNING_ENABLED == 'true'
         env:
           VIBE_KEYSTORE_BASE64: ${{ secrets.VIBE_KEYSTORE_BASE64 }}
           VIBE_KEYSTORE_PASSWORD: ${{ secrets.VIBE_KEYSTORE_PASSWORD }}
           VIBE_KEY_ALIAS: ${{ secrets.VIBE_KEY_ALIAS }}
           VIBE_KEY_PASSWORD: ${{ secrets.VIBE_KEY_PASSWORD }}
         run: |
+          set -euo pipefail
           echo "$VIBE_KEYSTORE_BASE64" | base64 --decode > android/vibe-upload.jks
+          test -s android/vibe-upload.jks
           cat >> android/gradle.properties <<EOF
-          VIBE_KEYSTORE_PATH=$GITHUB_WORKSPACE/vibe-upload.jks
+          VIBE_KEYSTORE_PATH=$GITHUB_WORKSPACE/android/vibe-upload.jks
           VIBE_KEYSTORE_PASSWORD=$VIBE_KEYSTORE_PASSWORD
           VIBE_KEY_ALIAS=$VIBE_KEY_ALIAS
           VIBE_KEY_PASSWORD=$VIBE_KEY_PASSWORD
@@ -81,35 +87,55 @@ jobs:
           p = Path('android/app/build.gradle')
           s = p.read_text()
           if 'signingConfigs {' not in s:
-              s = s.replace('android {', '''android {\n    signingConfigs {\n        release {\n            storeFile file(project.findProperty("VIBE_KEYSTORE_PATH"))\n            storePassword project.findProperty("VIBE_KEYSTORE_PASSWORD")\n            keyAlias project.findProperty("VIBE_KEY_ALIAS")\n            keyPassword project.findProperty("VIBE_KEY_PASSWORD")\n        }\n    }''', 1)
+              s = s.replace('android {', '''android {
+    signingConfigs {
+        release {
+            storeFile file(project.findProperty("VIBE_KEYSTORE_PATH"))
+            storePassword project.findProperty("VIBE_KEYSTORE_PASSWORD")
+            keyAlias project.findProperty("VIBE_KEY_ALIAS")
+            keyPassword project.findProperty("VIBE_KEY_PASSWORD")
+        }
+    }''', 1)
           marker = 'buildTypes {\n'
           if 'signingConfig signingConfigs.release' not in s and marker in s:
               s = s.replace(marker, marker + '        release {\n            signingConfig signingConfigs.release\n        }\n', 1)
           p.write_text(s)
           PY
 
+      - name: Verify Android project
+        working-directory: android
+        run: ./gradlew tasks --no-daemon --stacktrace
+
       - name: Build release Android App Bundle
         working-directory: android
-        run: ./gradlew bundleRelease --no-daemon
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: Verify Play Store bundle
+        run: test -s android/app/build/outputs/bundle/release/app-release.aab
 
       - name: Upload Play Store bundle
         uses: actions/upload-artifact@v4
         with:
           name: Vibe-Android-AAB
           path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
 
       - name: Build debug APK for testing
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Verify debug APK
+        run: test -s android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Vibe-Android-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
 
       - name: Publish signed bundle release
-        if: ${{ secrets.VIBE_KEYSTORE_BASE64 != '' }}
+        if: env.VIBE_SIGNING_ENABLED == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
