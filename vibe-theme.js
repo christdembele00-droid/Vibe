@@ -1,3 +1,5 @@
+import './vibe-profile-sync.js?v=1';
+
 const THEME_KEY = 'vibe_theme';
 
 function applySavedTheme() {
