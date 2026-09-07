@@ -1,4 +1,4 @@
-import { auth, db, collection, addDoc, getDocs, query, where, onSnapshot, serverTimestamp } from './firebase-client.js';
+import { auth, db, collection, doc, setDoc, getDocs, query, where, onSnapshot, serverTimestamp } from './firebase-client.js';
 import { ouvrirDiscussion } from './vibe-chat.js';
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
@@ -22,10 +22,17 @@ function injectContactStyles() {
   document.head.appendChild(style);
 }
 
+function makeDirectChatId(uidA, uidB) {
+  return `private_${[String(uidA), String(uidB)].sort().join('_')}`;
+}
+
 async function demarrerOuTrouverDiscussion(targetUid, targetName) {
   const uid = String(auth?.currentUser?.uid || '').trim();
   const target = String(targetUid || '').trim();
   if (!uid || !db || !target || target === uid || estProfilVible({ name: targetName })) return null;
+
+  // On conserve la compatibilité avec les anciennes discussions créées
+  // avec un identifiant aléatoire.
   const existing = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', uid)));
   const found = existing.docs.find(item => {
     const data = item.data();
@@ -33,8 +40,32 @@ async function demarrerOuTrouverDiscussion(targetUid, targetName) {
     return data.type === 'private' && ids.length === 2 && ids.includes(uid) && ids.includes(target);
   });
   if (found) return found.id;
-  const chatRef = await addDoc(collection(db, 'chats'), { name: targetName, ownerId: uid, participantIds: [uid, target], createdAt: serverTimestamp(), lastUpdated: serverTimestamp(), type: 'private' });
-  return chatRef.id;
+
+  // Les deux utilisateurs obtiennent maintenant le même chatId.
+  const chatId = makeDirectChatId(uid, target);
+  const chatRef = doc(db, 'chats', chatId);
+  const snapshot = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', target)));
+  const legacy = snapshot.docs.find(item => {
+    const data = item.data();
+    const ids = Array.isArray(data.participantIds) ? data.participantIds.map(value => String(value).trim()) : [];
+    return data.type === 'private' && ids.length === 2 && ids.includes(uid) && ids.includes(target);
+  });
+  if (legacy) return legacy.id;
+
+  await setDoc(chatRef, {
+    name: targetName || 'Discussion',
+    ownerId: uid,
+    participantIds: [uid, target].sort(),
+    participantNames: {
+      [uid]: auth.currentUser?.displayName || 'Utilisateur',
+      [target]: targetName || 'Utilisateur'
+    },
+    createdAt: serverTimestamp(),
+    lastUpdated: serverTimestamp(),
+    type: 'private'
+  }, { merge: true });
+
+  return chatId;
 }
 
 let stopUsersListener = null;
