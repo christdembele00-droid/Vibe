@@ -27,6 +27,7 @@ let allChats = [...fallbackChats];
 let currentUser = null;
 let stopChats = null;
 let toastTimer = null;
+let favoriteChatIds = new Set();
 
 function showToast(message) {
   if (!toastElement) return;
@@ -37,7 +38,61 @@ function showToast(message) {
 }
 
 function sortChats(items) {
-  return [...items].sort((a, b) => (b.lastUpdated?.toMillis?.() ?? 0) - (a.lastUpdated?.toMillis?.() ?? 0));
+  return [...items].sort((a, b) => {
+    const favoriteDiff = Number(Boolean(b.favorite)) - Number(Boolean(a.favorite));
+    if (favoriteDiff) return favoriteDiff;
+    return (b.lastUpdated?.toMillis?.() ?? 0) - (a.lastUpdated?.toMillis?.() ?? 0);
+  });
+}
+
+function isFavorite(chatId, item = null) {
+  return Boolean(item?.favorite) || favoriteChatIds.has(chatId);
+}
+
+async function toggleFavorite(chat, event) {
+  event?.stopPropagation();
+  if (!currentUser || !db) {
+    showToast('Connectez-vous pour gérer les favoris.');
+    return;
+  }
+
+  const nextValue = !isFavorite(chat.id, chat);
+  const previous = new Set(favoriteChatIds);
+  if (nextValue) favoriteChatIds.add(chat.id);
+  else favoriteChatIds.delete(chat.id);
+
+  chat.favorite = nextValue;
+  allChats = sortChats(allChats);
+  render(allChats);
+
+  try {
+    await setDoc(doc(db, 'userFavorites', currentUser.uid), {
+      [chat.id]: nextValue,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    await setDoc(doc(db, 'chats', chat.id), { favorite: nextValue }, { merge: true });
+    showToast(nextValue ? 'Discussion ajoutée aux favoris.' : 'Discussion retirée des favoris.');
+  } catch (error) {
+    favoriteChatIds = previous;
+    chat.favorite = !nextValue;
+    allChats = sortChats(allChats);
+    render(allChats);
+    console.error('[Vibe] Favori:', error);
+    showToast('Impossible de modifier le favori.');
+  }
+}
+
+async function loadFavorites(user) {
+  favoriteChatIds = new Set();
+  if (!db || !user) return;
+  try {
+    const snapshot = await getDoc(doc(db, 'userFavorites', user.uid));
+    if (!snapshot.exists()) return;
+    const data = snapshot.data() || {};
+    favoriteChatIds = new Set(Object.entries(data).filter(([key, value]) => key !== 'updatedAt' && value === true).map(([key]) => key));
+  } catch (error) {
+    console.error('[Vibe] Favoris:', error);
+  }
 }
 
 function render(items = allChats) {
@@ -49,11 +104,22 @@ function render(items = allChats) {
   }
   for (const item of items) {
     const name = item.name || 'Discussion Vibe';
+    const favorite = isFavorite(item.id, item);
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'chat-item';
     button.dataset.chatId = item.id;
-    button.innerHTML = `<div class="chat-avatar">${escapeHtml(name.slice(0,1).toUpperCase())}</div><div class="chat-meta"><strong>${escapeHtml(name)}</strong><p>${escapeHtml(item.lastMessage || 'Appuyez pour commencer...')}</p></div>`;
+    button.innerHTML = `<div class="chat-avatar">${escapeHtml(name.slice(0,1).toUpperCase())}</div><div class="chat-meta"><strong>${escapeHtml(name)}</strong><p>${escapeHtml(item.lastMessage || 'Appuyez pour commencer...')}</p></div><span class="chat-favorite" role="button" tabindex="0" title="${favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}" aria-label="${favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}">${favorite ? '★' : '☆'}</span>`;
+
+    const favoriteButton = button.querySelector('.chat-favorite');
+    favoriteButton?.addEventListener('click', event => toggleFavorite(item, event));
+    favoriteButton?.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleFavorite(item, event);
+      }
+    });
+
     button.addEventListener('click', () => {
       document.querySelectorAll('.chat-item.active').forEach(el => el.classList.remove('active'));
       button.classList.add('active');
@@ -124,6 +190,9 @@ if (!firebaseConfigured || !auth || !db) {
     if (status) status.textContent = 'connecté';
     initWhatsAppNavigation();
     await loadCurrentProfile(user);
+    await loadFavorites(user);
+    allChats = sortChats(allChats);
+    render(allChats);
 
     try {
       await ensureGeneralChat();
