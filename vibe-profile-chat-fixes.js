@@ -1,4 +1,4 @@
-import { auth, db, doc, getDoc, setDoc, onAuthStateChanged } from './firebase-client.js';
+import { auth, db, doc, getDoc, setDoc, deleteField, onAuthStateChanged } from './firebase-client.js';
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#39;' }[char]));
 
@@ -8,11 +8,12 @@ let settingsOpening = false;
 
 function currentGoogleProfile() {
   const user = auth?.currentUser;
+  const google = user?.providerData?.find(provider => provider?.providerId === 'google.com') || {};
   return {
     uid: user?.uid || '',
-    name: String(user?.displayName || 'Utilisateur Vibe').trim(),
-    photoURL: String(user?.photoURL || '').trim(),
-    email: String(user?.email || '').trim()
+    name: String(user?.displayName || google?.displayName || '').trim(),
+    photoURL: String(user?.photoURL || google?.photoURL || '').trim(),
+    email: String(user?.email || google?.email || '').trim()
   };
 }
 
@@ -29,8 +30,8 @@ async function syncProfile() {
       displayName: profile.name,
       photoURL: profile.photoURL || String(old.photoURL || '').trim(),
       email: profile.email,
-      vibeId: old.vibeId || `vibe-${profile.uid.slice(-8).toLowerCase()}`,
-      about: typeof old.about === 'string' ? old.about.slice(0, 180) : ''
+      about: typeof old.about === 'string' ? old.about.slice(0, 180) : '',
+      vibeId: deleteField()
     }, { merge: true });
   } catch (error) {
     console.warn('[Vibe] Synchronisation profil:', error);
@@ -88,10 +89,9 @@ async function openFixedSettings() {
       <header class="feature-header"><div><h2>Paramètres</h2><p>Votre identité est gérée par votre compte Google.</p></div></header>
       <div class="feature-content">
         <div class="feature-card">
-          <div class="feature-card-title"><div id="vibe-settings-avatar" class="feature-avatar" style="width:64px;height:64px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none;"></div><div><h3>${escapeHtml(profile.name)}</h3><p>${escapeHtml(profile.email || 'Compte Google')}</p></div></div>
-          <div class="setting-row"><span>Nom</span><strong>${escapeHtml(profile.name)}</strong></div>
+          <div class="feature-card-title"><div id="vibe-settings-avatar" class="feature-avatar" style="width:64px;height:64px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none;"></div><div><h3>${escapeHtml(profile.name || 'Compte Google')}</h3><p>${escapeHtml(profile.email || 'Compte Google')}</p></div></div>
+          <div class="setting-row"><span>Nom</span><strong>${escapeHtml(profile.name || 'Compte Google')}</strong></div>
           <div class="setting-row"><span>Photo de profil</span><strong>Compte Google</strong></div>
-          <div class="setting-row"><span>ID Vibe</span><strong>${escapeHtml(saved.vibeId || `vibe-${user.uid.slice(-8).toLowerCase()}`)}</strong></div>
           <label class="setting-row" style="display:block"><span>À propos</span><textarea id="vibe-about-input" maxlength="180" style="width:100%;margin-top:8px;min-height:80px;resize:vertical;">${escapeHtml(saved.about || '')}</textarea></label>
           <div class="feature-actions"><button class="primary-btn" id="vibe-save-settings" type="button">Enregistrer</button></div>
         </div>
@@ -111,7 +111,8 @@ async function openFixedSettings() {
           name: profile.name,
           displayName: profile.name,
           photoURL: profile.photoURL,
-          email: profile.email
+          email: profile.email,
+          vibeId: deleteField()
         }, { merge: true });
         button.textContent = 'Enregistré ✓';
         setTimeout(() => {
@@ -168,7 +169,7 @@ async function syncOpenedChatProfile() {
       if (profileSnapshot.exists()) other = { ...profileSnapshot.data(), ...other };
     }
 
-    const name = other.name || other.displayName || chat.participantNames?.[otherUid] || chat.name || 'Utilisateur Vibe';
+    const name = other.name || other.displayName || chat.participantNames?.[otherUid] || chat.name || 'Compte Google';
     const photoURL = other.photoURL || '';
     const title = view.querySelector('.chat-title-wrap strong');
     if (title && title.textContent !== name) title.textContent = name;
