@@ -3,11 +3,12 @@ import {
   db,
   collection,
   doc,
+  getDoc,
   setDoc,
   onSnapshot,
   serverTimestamp,
   onAuthStateChanged,
-  signInAnonymously,
+  ensureAnonymousAuth,
   firebaseConfigured
 } from './firebase-client.js';
 import { ouvrirDiscussion } from './vibe-chat.js';
@@ -64,11 +65,15 @@ function sortChats(items) {
 async function ensureGeneralChat() {
   if (!db || !currentUser) return;
   try {
-    await setDoc(doc(db, 'chats', 'general'), {
-      name: 'Discussion générale',
-      lastMessage: 'Bienvenue sur Vibe',
-      lastUpdated: serverTimestamp()
-    }, { merge: true });
+    const reference = doc(db, 'chats', 'general');
+    const snapshot = await getDoc(reference);
+    if (!snapshot.exists()) {
+      await setDoc(reference, {
+        name: 'Discussion générale',
+        lastMessage: 'Bienvenue sur Vibe',
+        lastUpdated: serverTimestamp()
+      });
+    }
   } catch (error) {
     console.error('[Vibe] Initialisation conversation:', error);
   }
@@ -77,7 +82,7 @@ async function ensureGeneralChat() {
 render();
 
 if (!firebaseConfigured || !auth || !db) {
-  status && (status.textContent = 'Firebase non configuré');
+  if (status) status.textContent = 'Firebase non configuré';
 } else {
   onAuthStateChanged(auth, async user => {
     currentUser = user;
@@ -85,7 +90,7 @@ if (!firebaseConfigured || !auth || !db) {
     if (user) await ensureGeneralChat();
   });
 
-  signInAnonymously(auth).catch(error => {
+  ensureAnonymousAuth().catch(error => {
     console.error('[Vibe] Authentification:', error);
     if (status) status.textContent = 'Erreur de connexion';
   });
