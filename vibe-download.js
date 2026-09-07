@@ -1,4 +1,4 @@
-const DEFAULT_ANDROID_URL = '';
+const DEFAULT_ANDROID_URL = 'https://github.com/christdembele00-droid/Vibe/releases';
 
 function getAndroidDownloadUrl() {
   return window.VIBE_ANDROID_DOWNLOAD_URL || DEFAULT_ANDROID_URL;
@@ -6,11 +6,7 @@ function getAndroidDownloadUrl() {
 
 export function downloadVibeAndroid() {
   const url = getAndroidDownloadUrl();
-  if (!url) {
-    window.alert('Le téléchargement Android sera disponible dès que l’APK Vibe sera publié.');
-    return;
-  }
-  window.location.assign(url);
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 export function initVibeDownload() {
