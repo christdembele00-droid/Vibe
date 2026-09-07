@@ -5,7 +5,6 @@ import {
   doc,
   setDoc,
   addDoc,
-  query,
   onSnapshot,
   serverTimestamp
 } from './firebase-client.js';
@@ -13,48 +12,24 @@ import {
 let activeChatId = null;
 let stopMessages = null;
 
-const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, char => ({
-  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-}[char]));
+const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 function formatTime(value) {
   const date = value?.toDate?.() ?? (value ? new Date(value) : null);
-  return date && !Number.isNaN(date.getTime())
-    ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    : '';
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '';
 }
 
 function sortMessages(snapshot) {
-  return snapshot.docs
-    .map(item => ({ id: item.id, ...item.data() }))
-    .sort((a, b) => {
-      const ta = a.timestamp?.toMillis?.() ?? 0;
-      const tb = b.timestamp?.toMillis?.() ?? 0;
-      return ta - tb;
-    });
+  return snapshot.docs.map(item => ({id:item.id, ...item.data()})).sort((a,b) => (a.timestamp?.toMillis?.() ?? 0) - (b.timestamp?.toMillis?.() ?? 0));
 }
 
 export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onClose = null) {
+  if (!auth?.currentUser) return;
   activeChatId = chatId;
   const panel = document.getElementById('main-chat-panel');
   if (!panel) return;
 
-  panel.innerHTML = `
-    <section class="chat-view">
-      <header class="chat-header">
-        <button class="chat-back" id="chat-back" type="button" title="Retour" aria-label="Retour">‹</button>
-        <div class="chat-avatar">${escapeHtml(recipientName.slice(0, 1).toUpperCase())}</div>
-        <div class="chat-title-wrap">
-          <strong>${escapeHtml(recipientName)}</strong>
-          <small id="chat-presence">Discussion Vibe</small>
-        </div>
-      </header>
-      <div class="messages" id="chat-messages" aria-live="polite"></div>
-      <form class="composer" id="chat-form">
-        <input id="chat-input" type="text" maxlength="2000" placeholder="Écrire un message" autocomplete="off" required>
-        <button type="submit" title="Envoyer" aria-label="Envoyer">➤</button>
-      </form>
-    </section>`;
+  panel.innerHTML = `<section class="chat-view"><header class="chat-header"><button class="chat-back" id="chat-back" type="button" title="Retour" aria-label="Retour">‹</button><div class="chat-avatar">${escapeHtml(recipientName.slice(0,1).toUpperCase())}</div><div class="chat-title-wrap"><strong>${escapeHtml(recipientName)}</strong><small>Discussion Vibe</small></div></header><div class="messages" id="chat-messages" aria-live="polite"></div><form class="composer" id="chat-form"><input id="chat-input" type="text" maxlength="2000" placeholder="Écrire un message" autocomplete="off" required><button type="submit" title="Envoyer" aria-label="Envoyer">➤</button></form></section>`;
 
   const form = document.getElementById('chat-form');
   const input = document.getElementById('chat-input');
@@ -71,20 +46,9 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
     const text = input?.value.trim();
     const user = auth?.currentUser;
     if (!text || !user || !db || !activeChatId) return;
-
     try {
-      await addDoc(collection(db, 'chats', activeChatId, 'messages'), {
-        uid: user.uid,
-        text,
-        timestamp: serverTimestamp()
-      });
-
-      await setDoc(doc(db, 'chats', activeChatId), {
-        name: recipientName,
-        lastMessage: text,
-        lastUpdated: serverTimestamp()
-      }, { merge: true });
-
+      await addDoc(collection(db, 'chats', activeChatId, 'messages'), {uid:user.uid, text, timestamp:serverTimestamp()});
+      await setDoc(doc(db, 'chats', activeChatId), {name:recipientName, lastMessage:text, lastUpdated:serverTimestamp()}, {merge:true});
       input.value = '';
       input.removeAttribute('aria-invalid');
     } catch (error) {
@@ -95,21 +59,16 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
 
   stopMessages?.();
   stopMessages = null;
-
   if (!db) return;
 
-  const messagesRef = collection(db, 'chats', activeChatId, 'messages');
-
-  stopMessages = onSnapshot(messagesRef, snapshot => {
+  stopMessages = onSnapshot(collection(db, 'chats', activeChatId, 'messages'), snapshot => {
     const container = document.getElementById('chat-messages');
     if (!container) return;
-
     const messages = sortMessages(snapshot);
     if (!messages.length) {
       container.innerHTML = '<div class="empty-state">Aucun message. Écrivez le premier.</div>';
       return;
     }
-
     container.innerHTML = '';
     for (const data of messages) {
       const bubble = document.createElement('div');
