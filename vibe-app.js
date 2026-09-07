@@ -6,7 +6,7 @@ import { ouvrirDiscussion } from './vibe-chat.js';
 import { initWhatsAppNavigation } from './whatsapp-extra-features.js';
 import { ensureVibeProfile } from './vibe-direct-chat.js';
 import { afficherFenetreRechercheUtilisateurs } from './vibe-contacts.js';
-import { creerAvatarPersonnalise, creerAvatarDepuisProfil } from './vibe-avatar.js';
+import { creerAvatarDepuisProfil } from './vibe-avatar.js';
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
 const list = document.getElementById('chats-list-container');
@@ -88,10 +88,10 @@ function render(items=allChats){
     const profile=getParticipantProfile(item);
     const name=profile?.name||profile?.displayName||item.name||'Discussion';
     const favorite=isFavorite(item.id);const button=document.createElement('button');button.type='button';button.className='chat-item';button.dataset.chatId=item.id;
-    const avatar=profile?.photoURL?creerAvatarDepuisProfil(profile,{className:'chat-avatar'}):creerAvatarPersonnalise(name,{className:'chat-avatar'});
+    if(profile?.photoURL){button.appendChild(creerAvatarDepuisProfil(profile,{className:'chat-avatar'}));}
     const meta=document.createElement('div');meta.className='chat-meta';meta.innerHTML=`<strong>${escapeHtml(name)}</strong><p>${escapeHtml(item.lastMessage||'Appuyez pour commencer...')}</p>`;
     const favoriteButton=document.createElement('span');favoriteButton.className='chat-favorite';favoriteButton.setAttribute('role','button');favoriteButton.setAttribute('tabindex','0');favoriteButton.title=favorite?'Retirer des favoris':'Ajouter aux favoris';favoriteButton.setAttribute('aria-label',favorite?'Retirer des favoris':'Ajouter aux favoris');favoriteButton.textContent=favorite?'★':'☆';
-    button.append(avatar,meta,favoriteButton);
+    button.append(meta,favoriteButton);
     favoriteButton.addEventListener('click',event=>toggleFavorite(item,event));favoriteButton.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleFavorite(item,event)}});
     activerAppuiLong(button,item,()=>supprimerDiscussion(item));
     button.addEventListener('click',()=>{document.querySelectorAll('.chat-item.active').forEach(el=>el.classList.remove('active'));button.classList.add('active');shell?.classList.add('chat-open');ouvrirDiscussion(item.id,name,()=>shell?.classList.remove('chat-open'))});
