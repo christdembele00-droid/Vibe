@@ -1,12 +1,15 @@
 // Avatars Vibe : photo de profil Google si disponible, sinon initiales.
+const nomEstVible = (nom = '') => String(nom || '').trim().toLowerCase() === 'vible';
+
 export function creerAvatarPersonnalise(nom, options = {}) {
   const value = String(nom || '').trim();
-  const fallback = options.fallback || 'V';
-  const initiales = value ? value.substring(0, 2).toUpperCase() : fallback;
+  const nomAffiche = nomEstVible(value) ? '' : value;
+  const fallback = options.fallback || 'U';
+  const initiales = nomAffiche ? nomAffiche.substring(0, 2).toUpperCase() : fallback;
 
   let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = value.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < nomAffiche.length; i += 1) {
+    hash = nomAffiche.charCodeAt(i) + ((hash << 5) - hash);
     hash |= 0;
   }
 
@@ -17,7 +20,7 @@ export function creerAvatarPersonnalise(nom, options = {}) {
   div.style.color = '#fff';
   div.textContent = initiales;
   div.setAttribute('aria-hidden', 'true');
-  div.title = value || 'Utilisateur';
+  div.title = nomAffiche || 'Utilisateur';
   return div;
 }
 
@@ -25,6 +28,7 @@ export function creerAvatarDepuisProfil(profil = {}, options = {}) {
   const nom = String(profil?.name || profil?.displayName || 'Utilisateur').trim();
   const photoURL = String(profil?.photoURL || '').trim();
 
+  if (nomEstVible(nom)) return creerAvatarPersonnalise('', options);
   if (!photoURL) return creerAvatarPersonnalise(nom, options);
 
   const wrapper = document.createElement('div');
