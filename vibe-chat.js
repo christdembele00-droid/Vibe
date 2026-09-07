@@ -12,9 +12,12 @@ import { enregistrerAppel } from './whatsapp-extra-features.js';
 
 let activeChatId = null;
 let stopMessages = null;
+const localMessageCache = new Map();
 
 const MAX_ATTACHMENT_BYTES = 450 * 1024;
 const MAX_IMAGE_SIDE = 1280;
+const MESSAGE_CACHE_PREFIX = 'vibe-messages:';
+const MESSAGE_CACHE_LIMIT = 80;
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
 
@@ -34,6 +37,41 @@ function showToast(message) {
 
 function sortMessages(snapshot) {
   return snapshot.docs.map(item => ({id:item.id, ...item.data()})).sort((a,b) => (a.timestamp?.toMillis?.() ?? 0) - (b.timestamp?.toMillis?.() ?? 0));
+}
+
+function cacheKey(chatId) {
+  return `${MESSAGE_CACHE_PREFIX}${chatId}`;
+}
+
+function saveMessagesToCache(chatId, messages) {
+  if (!chatId) return;
+  const compact = messages.slice(-MESSAGE_CACHE_LIMIT).map(message => ({
+    id: message.id,
+    uid: message.uid || '',
+    text: message.text || '',
+    attachment: message.attachment || null,
+    timestamp: message.timestamp?.toDate?.()?.toISOString?.() || message.timestamp || null
+  }));
+  localMessageCache.set(chatId, compact);
+  try { localStorage.setItem(cacheKey(chatId), JSON.stringify(compact)); } catch (error) { console.warn('[Vibe] Cache messages:', error); }
+}
+
+function loadMessagesFromCache(chatId) {
+  if (!chatId) return [];
+  if (localMessageCache.has(chatId)) return localMessageCache.get(chatId) || [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(cacheKey(chatId)) || '[]');
+    const messages = Array.isArray(parsed) ? parsed : [];
+    localMessageCache.set(chatId, messages);
+    return messages;
+  } catch { return []; }
+}
+
+function renderCachedMessages(container, messages) {
+  if (!container || !messages.length) return;
+  container.innerHTML = '';
+  for (const data of messages) appendMessageBubble(container, data);
+  container.scrollTop = container.scrollHeight;
 }
 
 function fileToDataUrl(file) {
@@ -56,10 +94,7 @@ function imageToCompressedDataUrl(file) {
       canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
       canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
       const context = canvas.getContext('2d');
-      if (!context) {
-        reject(new Error('Compression d’image indisponible.'));
-        return;
-      }
+      if (!context) { reject(new Error('Compression d’image indisponible.')); return; }
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
       let quality = 0.82;
       let dataUrl = canvas.toDataURL('image/jpeg', quality);
@@ -69,10 +104,7 @@ function imageToCompressedDataUrl(file) {
       }
       resolve(dataUrl);
     };
-    image.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error('Image invalide.'));
-    };
+    image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Image invalide.')); };
     image.src = objectUrl;
   });
 }
@@ -83,22 +115,11 @@ async function prepareAttachment(file) {
     showToast('Fichier trop volumineux. Limite : 450 Ko.');
     return null;
   }
-
   try {
-    const dataUrl = file.type.startsWith('image/')
-      ? await imageToCompressedDataUrl(file)
-      : await fileToDataUrl(file);
+    const dataUrl = file.type.startsWith('image/') ? await imageToCompressedDataUrl(file) : await fileToDataUrl(file);
     const payloadBytes = Math.ceil(dataUrl.length * 0.75);
-    if (payloadBytes > MAX_ATTACHMENT_BYTES) {
-      showToast('Pièce jointe trop volumineuse après compression.');
-      return null;
-    }
-    return {
-      name: file.name.slice(0, 180),
-      type: file.type || 'application/octet-stream',
-      size: payloadBytes,
-      dataUrl
-    };
+    if (payloadBytes > MAX_ATTACHMENT_BYTES) { showToast('Pièce jointe trop volumineuse après compression.'); return null; }
+    return {name:file.name.slice(0,180),type:file.type || 'application/octet-stream',size:payloadBytes,dataUrl};
   } catch (error) {
     console.error('[Vibe] Pièce jointe:', error);
     showToast('Impossible de préparer la pièce jointe.');
@@ -112,17 +133,8 @@ async function sendAttachment(file, recipientName) {
   const attachment = await prepareAttachment(file);
   if (!attachment) return;
   try {
-    await addDoc(collection(db, 'chats', activeChatId, 'messages'), {
-      uid: user.uid,
-      text: '',
-      attachment,
-      timestamp: serverTimestamp()
-    });
-    await setDoc(doc(db, 'chats', activeChatId), {
-      name: recipientName,
-      lastMessage: `📎 ${attachment.name}`,
-      lastUpdated: serverTimestamp()
-    }, {merge:true});
+    await addDoc(collection(db, 'chats', activeChatId, 'messages'), {uid:user.uid,text:'',attachment,timestamp:serverTimestamp()});
+    await setDoc(doc(db, 'chats', activeChatId), {name:recipientName,lastMessage:`📎 ${attachment.name}`,lastUpdated:serverTimestamp()},{merge:true});
     showToast('Pièce jointe envoyée.');
   } catch (error) {
     console.error('[Vibe] Envoi pièce jointe:', error);
@@ -134,10 +146,17 @@ function renderAttachment(attachment) {
   if (!attachment?.dataUrl) return '';
   const name = escapeHtml(attachment.name || 'Pièce jointe');
   const type = String(attachment.type || '');
-  if (type.startsWith('image/')) {
-    return `<div class="message-attachment"><img src="${escapeHtml(attachment.dataUrl)}" alt="${name}" loading="lazy"><a href="${escapeHtml(attachment.dataUrl)}" download="${name}">${name}</a></div>`;
-  }
+  if (type.startsWith('image/')) return `<div class="message-attachment"><img src="${escapeHtml(attachment.dataUrl)}" alt="${name}" loading="lazy"><a href="${escapeHtml(attachment.dataUrl)}" download="${name}">${name}</a></div>`;
   return `<div class="message-attachment"><a href="${escapeHtml(attachment.dataUrl)}" download="${name}">📎 ${name}</a></div>`;
+}
+
+function appendMessageBubble(container, data) {
+  const bubble = document.createElement('div');
+  bubble.className = `message message-bubble${data.uid === auth?.currentUser?.uid ? ' mine' : ''}`;
+  const attachmentHtml = renderAttachment(data.attachment);
+  const textHtml = data.text ? `<span>${escapeHtml(data.text)}</span>` : '';
+  bubble.innerHTML = `${attachmentHtml}${textHtml}<time>${formatTime(data.timestamp)}</time>`;
+  container.appendChild(bubble);
 }
 
 export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onClose = null) {
@@ -151,10 +170,7 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
       <button class="chat-back" id="chat-back" type="button" title="Retour" aria-label="Retour">‹</button>
       <div class="chat-avatar">${escapeHtml(recipientName.slice(0,1).toUpperCase())}</div>
       <div class="chat-title-wrap"><strong>${escapeHtml(recipientName)}</strong><small>Discussion Vibe</small></div>
-      <div class="chat-header-actions">
-        <button class="chat-call-btn" id="chat-video-call" type="button" title="Appel vidéo" aria-label="Appel vidéo">▣</button>
-        <button class="chat-call-btn" id="chat-audio-call" type="button" title="Appel audio" aria-label="Appel audio">☎</button>
-      </div>
+      <div class="chat-header-actions"><button class="chat-call-btn" id="chat-video-call" type="button" title="Appel vidéo" aria-label="Appel vidéo">▣</button><button class="chat-call-btn" id="chat-audio-call" type="button" title="Appel audio" aria-label="Appel audio">☎</button></div>
     </header>
     <div class="messages" id="chat-messages" aria-live="polite"></div>
     <form class="composer" id="chat-form">
@@ -169,29 +185,15 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
   const input = document.getElementById('chat-input');
   const back = document.getElementById('chat-back');
 
-  back?.addEventListener('click', () => {
-    fermerDiscussion();
-    onClose?.();
-    document.dispatchEvent(new CustomEvent('vibe:close-chat'));
-  });
-
+  back?.addEventListener('click', () => { fermerDiscussion(); onClose?.(); document.dispatchEvent(new CustomEvent('vibe:close-chat')); });
   document.getElementById('chat-video-call')?.addEventListener('click', () => enregistrerAppel('video', recipientName));
   document.getElementById('chat-audio-call')?.addEventListener('click', () => enregistrerAppel('audio', recipientName));
-  document.getElementById('emoji-btn')?.addEventListener('click', () => {
-    if (input) input.value += '🙂';
-    input?.focus();
-  });
+  document.getElementById('emoji-btn')?.addEventListener('click', () => { if (input) input.value += '🙂'; input?.focus(); });
 
   const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = 'image/*,video/*,audio/*,.pdf,.txt,.doc,.docx';
-  fileInput.hidden = true;
+  fileInput.type = 'file'; fileInput.accept = 'image/*,video/*,audio/*,.pdf,.txt,.doc,.docx'; fileInput.hidden = true;
   document.body.appendChild(fileInput);
-  fileInput.addEventListener('change', async () => {
-    const file = fileInput.files?.[0];
-    fileInput.value = '';
-    if (file) await sendAttachment(file, recipientName);
-  });
+  fileInput.addEventListener('change', async () => { const file = fileInput.files?.[0]; fileInput.value = ''; if (file) await sendAttachment(file, recipientName); });
   document.getElementById('attach-btn')?.addEventListener('click', () => fileInput.click());
 
   form?.addEventListener('submit', async event => {
@@ -200,40 +202,34 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
     const user = auth?.currentUser;
     if (!text || !user || !activeChatId) return;
     try {
-      await addDoc(collection(db, 'chats', activeChatId, 'messages'), {uid:user.uid, text, timestamp:serverTimestamp()});
-      await setDoc(doc(db, 'chats', activeChatId), {name:recipientName, lastMessage:text, lastUpdated:serverTimestamp()}, {merge:true});
-      input.value = '';
-      input.removeAttribute('aria-invalid');
+      await addDoc(collection(db, 'chats', activeChatId, 'messages'), {uid:user.uid,text,timestamp:serverTimestamp()});
+      await setDoc(doc(db, 'chats', activeChatId), {name:recipientName,lastMessage:text,lastUpdated:serverTimestamp()},{merge:true});
+      input.value = ''; input.removeAttribute('aria-invalid');
     } catch (error) {
-      console.error('[Vibe] Envoi:', error);
-      input?.setAttribute('aria-invalid', 'true');
-      showToast('Envoi impossible.');
+      console.error('[Vibe] Envoi:', error); input?.setAttribute('aria-invalid','true'); showToast('Envoi impossible.');
     }
   });
 
   stopMessages?.();
+  const container = document.getElementById('chat-messages');
+  renderCachedMessages(container, loadMessagesFromCache(chatId));
+
   stopMessages = onSnapshot(collection(db, 'chats', activeChatId, 'messages'), snapshot => {
-    const container = document.getElementById('chat-messages');
-    if (!container) return;
+    const currentContainer = document.getElementById('chat-messages');
+    if (!currentContainer || activeChatId !== chatId) return;
     const messages = sortMessages(snapshot);
+    saveMessagesToCache(chatId, messages);
     if (!messages.length) {
-      container.innerHTML = '<div class="empty-state">Aucun message. Écrivez le premier.</div>';
+      currentContainer.innerHTML = '<div class="empty-state">Aucun message. Écrivez le premier.</div>';
       return;
     }
-    container.innerHTML = '';
-    for (const data of messages) {
-      const bubble = document.createElement('div');
-      bubble.className = `message${data.uid === auth?.currentUser?.uid ? ' mine' : ''}`;
-      const attachmentHtml = renderAttachment(data.attachment);
-      const textHtml = data.text ? `<span>${escapeHtml(data.text)}</span>` : '';
-      bubble.innerHTML = `${attachmentHtml}${textHtml}<time>${formatTime(data.timestamp)}</time>`;
-      container.appendChild(bubble);
-    }
-    container.scrollTop = container.scrollHeight;
+    currentContainer.innerHTML = '';
+    for (const data of messages) appendMessageBubble(currentContainer, data);
+    currentContainer.scrollTop = currentContainer.scrollHeight;
   }, error => {
     console.error('[Vibe] Messages:', error);
-    const container = document.getElementById('chat-messages');
-    if (container) container.innerHTML = '<div class="empty-state">Impossible de charger les messages.</div>';
+    const currentContainer = document.getElementById('chat-messages');
+    if (currentContainer && !loadMessagesFromCache(chatId).length) currentContainer.innerHTML = '<div class="empty-state">Impossible de charger les messages.</div>';
   });
 
   input?.focus();
