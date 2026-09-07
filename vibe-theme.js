@@ -1,4 +1,4 @@
-import { auth, signOut } from './firebase-client.js';
+import { auth } from './firebase-client.js';
 import './vibe-profile-sync.js?v=1';
 
 const THEME_KEY = 'vibe_theme';
@@ -35,34 +35,6 @@ function installThemeControl() {
   sync();
 }
 
-function installLogoutControl() {
-  const settingsCard = [...document.querySelectorAll('.feature-card')].find(card => card.querySelector('.setting-row'));
-  if (!settingsCard || settingsCard.querySelector('#vibe-logout-button')) return;
-
-  const row = document.createElement('div');
-  row.className = 'setting-row vibe-logout-row';
-  row.innerHTML = `<span>Compte</span><button class="secondary-btn" id="vibe-logout-button" type="button">Se déconnecter</button>`;
-  settingsCard.appendChild(row);
-
-  row.querySelector('#vibe-logout-button')?.addEventListener('click', async () => {
-    if (!auth) return;
-    const button = row.querySelector('#vibe-logout-button');
-    if (button) {
-      button.disabled = true;
-      button.textContent = 'Déconnexion…';
-    }
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('[Vibe] Déconnexion:', error);
-      if (button) {
-        button.disabled = false;
-        button.textContent = 'Se déconnecter';
-      }
-    }
-  });
-}
-
 applySavedTheme();
 
 document.addEventListener('click', event => {
@@ -71,18 +43,12 @@ document.addEventListener('click', event => {
   setTimeout(installThemeControl, 0);
   setTimeout(installThemeControl, 100);
   setTimeout(installThemeControl, 300);
-  setTimeout(installLogoutControl, 0);
-  setTimeout(installLogoutControl, 100);
-  setTimeout(installLogoutControl, 300);
   setTimeout(() => import('./vibe-profile-lock.js?v=1'), 0);
 });
 
 const observer = new MutationObserver(() => {
-  if (document.getElementById('btn-settings')) {
-    installThemeControl();
-    installLogoutControl();
-  }
+  if (document.getElementById('btn-settings')) installThemeControl();
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-export { setTheme, applySavedTheme, installThemeControl, installLogoutControl };
+export { setTheme, applySavedTheme, installThemeControl };
