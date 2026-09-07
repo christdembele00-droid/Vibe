@@ -24,9 +24,28 @@ const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, char => ({
 const list = document.getElementById('chats-list-container');
 const search = document.getElementById('search-chat');
 const status = document.getElementById('connection-status');
+const shell = document.getElementById('app-shell');
+const toastElement = document.getElementById('toast');
 
 let allChats = [...fallbackChats];
 let currentUser = null;
+let toastTimer = null;
+
+function showToast(message) {
+  if (!toastElement) return;
+  toastElement.value = message;
+  toastElement.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastElement.classList.remove('show'), 2400);
+}
+
+function chatTime(value) {
+  return value?.toMillis?.() ?? 0;
+}
+
+function sortChats(items) {
+  return [...items].sort((a, b) => chatTime(b.lastUpdated) - chatTime(a.lastUpdated));
+}
 
 function render(items = allChats) {
   if (!list) return;
@@ -49,17 +68,16 @@ function render(items = allChats) {
         <strong>${escapeHtml(name)}</strong>
         <p>${escapeHtml(item.lastMessage || 'Appuyez pour commencer...')}</p>
       </div>`;
-    button.addEventListener('click', () => ouvrirDiscussion(item.id, name));
+
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.chat-item.active').forEach(item => item.classList.remove('active'));
+      button.classList.add('active');
+      shell?.classList.add('chat-open');
+      ouvrirDiscussion(item.id, name, () => shell?.classList.remove('chat-open'));
+    });
+
     list.appendChild(button);
   }
-}
-
-function sortChats(items) {
-  return [...items].sort((a, b) => {
-    const ta = a.lastUpdated?.toMillis?.() ?? 0;
-    const tb = b.lastUpdated?.toMillis?.() ?? 0;
-    return tb - ta;
-  });
 }
 
 async function ensureGeneralChat() {
@@ -112,3 +130,9 @@ search?.addEventListener('input', event => {
     item.hidden = !item.textContent.toLowerCase().includes(term);
   });
 });
+
+document.getElementById('btn-status')?.addEventListener('click', () => showToast('Les statuts Vibe arrivent dans le module suivant.'));
+document.getElementById('btn-calls')?.addEventListener('click', () => showToast('Les appels seront ajoutés après la messagerie.'));
+document.getElementById('btn-settings')?.addEventListener('click', () => showToast('Paramètres Vibe : module en préparation.'));
+
+document.addEventListener('vibe:close-chat', () => shell?.classList.remove('chat-open'));
