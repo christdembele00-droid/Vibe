@@ -11,9 +11,7 @@ const esc = (value = '') => String(value).replace(/[&<>\"']/g, char => ({
 
 const time = value => {
   const date = value?.toDate?.() ?? (value ? new Date(value) : null);
-  return date && !Number.isNaN(date.getTime())
-    ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    : '';
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
 };
 
 function toast(message) {
@@ -26,10 +24,7 @@ function toast(message) {
 }
 
 function shell(title, subtitle, body) {
-  return `<section class="feature-view">
-    <header class="feature-header"><div><h2>${esc(title)}</h2><p>${esc(subtitle)}</p></div></header>
-    <div class="feature-content">${body}</div>
-  </section>`;
+  return `<section class="feature-view"><header class="feature-header"><div><h2>${esc(title)}</h2><p>${esc(subtitle)}</p></div></header><div class="feature-content">${body}</div></section>`;
 }
 
 function show(html) {
@@ -97,9 +92,7 @@ async function createChannel() {
       ownerPhotoURL: user.photoURL || profile.photoURL || '',
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(), followersCount: 1, type: 'channel'
     });
-    await setDoc(doc(db, 'channelFollowers', `${channel.id}_${user.uid}`), {
-      channelId: channel.id, uid: user.uid, active: true, followedAt: serverTimestamp()
-    });
+    await setDoc(doc(db, 'channelFollowers', `${channel.id}_${user.uid}`), { channelId: channel.id, uid: user.uid, active: true, followedAt: serverTimestamp() });
     toast('Chaîne créée et suivie.');
     openChannel(channel.id);
   } catch (error) {
@@ -132,17 +125,10 @@ function renderPosts(channel) {
   if (!container || !db) return;
   const q = query(collection(db, 'channels', channel.id, 'posts'), orderBy('createdAt', 'desc'));
   stopPosts = onSnapshot(q, snapshot => {
-    if (snapshot.empty) {
-      container.innerHTML = '<div class="feature-empty">Aucune publication pour le moment.</div>';
-      return;
-    }
+    if (snapshot.empty) return void (container.innerHTML = '<div class="feature-empty">Aucune publication pour le moment.</div>');
     container.innerHTML = snapshot.docs.slice(0, 50).map(item => {
       const post = item.data();
-      const initial = (post.authorName || channel.name || 'V').slice(0, 1).toUpperCase();
-      return `<article class="status-card">
-        <div class="feature-avatar">${esc(initial)}</div>
-        <div class="status-body"><strong>${esc(post.authorName || channel.name)}</strong><p>${esc(post.text || '')}</p><time>${time(post.createdAt)}</time></div>
-      </article>`;
+      return `<article class="status-card"><div class="feature-avatar">${esc((post.authorName || channel.name || 'V').slice(0, 1).toUpperCase())}</div><div class="status-body"><strong>${esc(post.authorName || channel.name)}</strong><p>${esc(post.text || '')}</p><time>${time(post.createdAt)}</time></div></article>`;
     }).join('');
   }, error => {
     console.error('[Vibe] Publications chaîne:', error);
@@ -157,10 +143,7 @@ async function openChannel(channelId) {
   if (!snap.exists()) return toast('Cette chaîne n’existe plus.');
   const channel = { id: snap.id, ...snap.data() };
   const following = await isFollowing(channel.id, auth.currentUser.uid);
-  show(shell(channel.name || 'Chaîne Vibe', channel.description || 'Chaîne publique Vibe', `<div class="feature-card">
-    <div class="feature-card-title"><span class="feature-icon">📢</span><div><h3>${esc(channel.name || 'Chaîne Vibe')}</h3><p>${esc(channel.ownerName || 'Créateur Vibe')} · ${Number(channel.followersCount || 0)} abonnés</p></div></div>
-    <div class="feature-actions"><button class="secondary-btn" id="vibe-channel-follow" type="button">${following ? 'Suivi' : 'Suivre'}</button>${channel.ownerId === auth.currentUser.uid ? '<button class="primary-btn" id="vibe-channel-publish" type="button">Publier</button>' : ''}</div>
-  </div><div class="feature-card"><div class="feature-card-title"><div><h3>Publications</h3><p>Les dernières publications de la chaîne.</p></div></div><div id="vibe-channel-posts" class="status-list"><div class="feature-empty">Chargement...</div></div></div>`));
+  show(shell(channel.name || 'Chaîne Vibe', channel.description || 'Chaîne publique Vibe', `<div class="feature-card"><div class="feature-card-title"><span class="feature-icon">📢</span><div><h3>${esc(channel.name || 'Chaîne Vibe')}</h3><p>${esc(channel.ownerName || 'Créateur Vibe')} · ${Number(channel.followersCount || 0)} abonnés</p></div></div><div class="feature-actions"><button class="secondary-btn" id="vibe-channel-follow" type="button">${following ? 'Suivi' : 'Suivre'}</button>${channel.ownerId === auth.currentUser.uid ? '<button class="primary-btn" id="vibe-channel-publish" type="button">Publier</button>' : ''}</div></div><div class="feature-card"><div class="feature-card-title"><div><h3>Publications</h3><p>Les dernières publications de la chaîne.</p></div></div><div id="vibe-channel-posts" class="status-list"><div class="feature-empty">Chargement...</div></div></div>`));
   document.getElementById('vibe-channel-follow')?.addEventListener('click', event => toggleFollow(channel, event.currentTarget));
   document.getElementById('vibe-channel-publish')?.addEventListener('click', () => publishPost(channel));
   renderPosts(channel);
@@ -172,16 +155,9 @@ function loadChannels() {
   if (!container || !db || !auth?.currentUser) return;
   const q = query(collection(db, 'channels'), orderBy('updatedAt', 'desc'));
   stopChannels = onSnapshot(q, snapshot => {
-    if (snapshot.empty) {
-      container.innerHTML = '<div class="feature-empty">Aucune chaîne pour le moment. Créez la première chaîne Vibe.</div>';
-      return;
-    }
+    if (snapshot.empty) return void (container.innerHTML = '<div class="feature-empty">Aucune chaîne pour le moment. Créez la première chaîne Vibe.</div>');
     const channels = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-    container.innerHTML = channels.map(channel => `<article class="call-row channel-row" data-channel-id="${esc(channel.id)}">
-      <div class="feature-avatar">${esc((channel.name || 'V').slice(0,1).toUpperCase())}</div>
-      <div class="call-main"><strong>${esc(channel.name || 'Chaîne Vibe')}</strong><p>${esc(channel.description || 'Chaîne publique Vibe')} · ${Number(channel.followersCount || 0)} abonnés</p></div>
-      <button class="secondary-btn vibe-channel-open" type="button">Ouvrir</button>
-    </article>`).join('');
+    container.innerHTML = channels.map(channel => `<article class="call-row channel-row" data-channel-id="${esc(channel.id)}"><div class="feature-avatar">${esc((channel.name || 'V').slice(0,1).toUpperCase())}</div><div class="call-main"><strong>${esc(channel.name || 'Chaîne Vibe')}</strong><p>${esc(channel.description || 'Chaîne publique Vibe')} · ${Number(channel.followersCount || 0)} abonnés</p></div><button class="secondary-btn vibe-channel-open" type="button">Ouvrir</button></article>`).join('');
     container.querySelectorAll('.vibe-channel-open').forEach(button => button.addEventListener('click', () => openChannel(button.closest('[data-channel-id]')?.dataset.channelId)));
   }, error => {
     console.error('[Vibe] Chaînes:', error);
@@ -192,10 +168,7 @@ function loadChannels() {
 export function afficherFenetreChaines(containerId = 'main-chat-panel') {
   if (!auth?.currentUser || !db) return toast('Connectez-vous avec Google pour accéder aux chaînes.');
   cleanupChannels();
-  show(shell('Chaînes', 'Découvrez, suivez et créez des chaînes Vibe.', `<div class="feature-card call-hero">
-    <div class="call-hero-icon">📢</div><h3>Chaînes Vibe</h3><p>Suivez vos créateurs, recevez leurs publications et créez votre propre chaîne.</p>
-    <div class="feature-actions feature-actions-center"><button class="primary-btn" id="vibe-create-channel" type="button">+ Créer une chaîne</button></div>
-  </div><div class="feature-card"><div class="feature-card-title"><div><h3>Découvrir</h3><p>Les chaînes publiques disponibles sur Vibe.</p></div></div><div id="vibe-channels-list" class="calls-list"><div class="feature-empty">Chargement des chaînes...</div></div></div>`));
+  show(shell('Chaînes', 'Découvrez, suivez et créez des chaînes Vibe.', `<div class="feature-card call-hero"><div class="call-hero-icon">📢</div><h3>Chaînes Vibe</h3><p>Suivez vos créateurs, recevez leurs publications et créez votre propre chaîne.</p><div class="feature-actions feature-actions-center"><button class="primary-btn" id="vibe-create-channel" type="button">+ Créer une chaîne</button></div></div><div class="feature-card"><div class="feature-card-title"><div><h3>Découvrir</h3><p>Les chaînes publiques disponibles sur Vibe.</p></div></div><div id="vibe-channels-list" class="calls-list"><div class="feature-empty">Chargement des chaînes...</div></div></div>`));
   document.getElementById('vibe-create-channel')?.addEventListener('click', createChannel);
   loadChannels();
 }
@@ -204,5 +177,9 @@ export function initVibeChannels() {
   const button = document.getElementById('btn-channels');
   if (!button || button.dataset.vibeChannelsBound) return;
   button.dataset.vibeChannelsBound = 'true';
-  button.addEventListener('click', () => afficherFenetreChaines('main-chat-panel'), true);
+  button.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    afficherFenetreChaines('main-chat-panel');
+  }, true);
 }
