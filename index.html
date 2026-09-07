@@ -13,8 +13,8 @@
     <aside class="left-sidebar">
       <div class="sidebar-header">
         <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <div class="user-avatar" id="current-user-avatar" style="width:40px;height:40px;border-radius:50%;background:#00a884;color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;flex:0 0 40px;">V</div>
-          <div style="min-width:0;"><strong id="current-user-name" style="font-weight:500;color:#111b21;">Vibe</strong><small id="connection-status">Connexion…</small></div>
+          <div class="user-avatar" id="current-user-avatar" style="width:40px;height:40px;border-radius:50%;background:#dfe5e7;color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;flex:0 0 40px;overflow:hidden;"> </div>
+          <div style="min-width:0;"><strong id="current-user-name" style="font-weight:500;color:#111b21;">Compte Google</strong><small id="connection-status">Connexion Google requise</small></div>
         </div>
         <div class="sidebar-actions" style="display:flex;gap:15px;font-size:18px;color:#54656f;cursor:pointer;">
           <button id="btn-status" type="button" title="Statuts" aria-label="Statuts" style="background:none;border:none;cursor:pointer;font-size:18px;">💬</button>
@@ -33,12 +33,13 @@
         <div class="welcome-illustration" aria-hidden="true">◌</div>
         <h1>Vibe Web</h1>
         <p>Une messagerie en temps réel propulsée par Firestore.</p>
-        <small>Choisissez une discussion pour commencer.</small>
+        <small>Connectez votre compte Google pour commencer.</small>
+        <button id="google-login-button" type="button" style="margin-top:18px;padding:12px 22px;border:0;border-radius:10px;background:#00a884;color:#fff;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12);">Continuer avec Google</button>
       </section>
     </main>
   </div>
   <input id="toast" class="toast" aria-live="assertive" readonly>
-  <script type="module" src="./vibe-app.js?v=3"></script>
+  <script type="module" src="./vibe-app.js?v=4"></script>
   <script type="module" src="./vibe-theme.js?v=1"></script>
 </body>
 </html>
