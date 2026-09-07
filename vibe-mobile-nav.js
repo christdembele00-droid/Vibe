@@ -1,5 +1,5 @@
 import { afficherFenetreRechercheUtilisateurs } from './vibe-contacts.js';
-import { auth } from './firebase-client.js';
+import { auth, onAuthStateChanged } from './firebase-client.js';
 
 function setActive(button){
   document.querySelectorAll('.vibe-mobile-nav button').forEach(item => item.classList.remove('active'));
@@ -27,7 +27,7 @@ function openCalls(){
   document.getElementById('btn-calls')?.click();
 }
 
-function installGoogleAvatar(){
+function installGoogleAvatar(user = auth?.currentUser){
   const header=document.querySelector('.sidebar-header');
   const actions=header?.querySelector('.sidebar-actions');
   if(!header||!actions)return;
@@ -40,7 +40,6 @@ function installGoogleAvatar(){
     avatar.title='Compte Google';
     actions.insertAdjacentElement('afterend',avatar);
   }
-  const user=auth?.currentUser;
   const photoURL=String(user?.photoURL||'').trim();
   avatar.innerHTML='';
   if(!photoURL){avatar.style.display='none';return}
@@ -88,7 +87,9 @@ function install(){
   });
 
   installGoogleAvatar();
-  auth?.onAuthStateChanged?.(()=>installGoogleAvatar());
+  if(auth && typeof onAuthStateChanged === 'function'){
+    onAuthStateChanged(auth, user => installGoogleAvatar(user));
+  }
   document.addEventListener('vibe:close-chat',openHome);
 }
 
