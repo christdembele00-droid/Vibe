@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#00a884">
   <title>Vibe - Messagerie</title>
-  <link rel="stylesheet" href="vibe-whatsapp-final.css?v=3">
+  <link rel="stylesheet" href="vibe-whatsapp-final.css?v=4">
   <link rel="stylesheet" href="vibe-transitions.css?v=2">
+  <link rel="stylesheet" href="vibe-mobile-nav.css?v=1">
 </head>
 <body>
   <div class="app-shell" id="app-shell">
@@ -24,7 +25,7 @@
         </div>
       </div>
       <div class="search-container">
-        <label class="search-input-wrapper" for="search-chat"><span aria-hidden="true">⌕</span><input type="search" id="search-chat" placeholder="Rechercher ou démarrer une discussion" autocomplete="off"></label>
+        <label class="search-input-wrapper" for="search-chat"><span aria-hidden="true">⌕</span><input type="search" id="search-chat" placeholder="Demander à Vibe ou rechercher" autocomplete="off"></label>
       </div>
       <div class="chats-list" id="chats-list-container" aria-live="polite"></div>
     </aside>
@@ -52,8 +53,9 @@
     </main>
   </div>
   <input id="toast" class="toast" aria-live="assertive" readonly>
-  <script type="module" src="./vibe-app.js?v=4"></script>
+  <script type="module" src="./vibe-app.js?v=5"></script>
   <script type="module" src="./vibe-theme.js?v=1"></script>
+  <script type="module" src="./vibe-mobile-nav.js?v=1"></script>
   <script type="module">
     import { initVibeChannels } from './vibe-channels.js?v=1';
     initVibeChannels();
