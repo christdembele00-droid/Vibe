@@ -39,14 +39,14 @@ function showToast(message) {
 
 function sortChats(items) {
   return [...items].sort((a, b) => {
-    const favoriteDiff = Number(Boolean(b.favorite)) - Number(Boolean(a.favorite));
+    const favoriteDiff = Number(favoriteChatIds.has(b.id)) - Number(favoriteChatIds.has(a.id));
     if (favoriteDiff) return favoriteDiff;
     return (b.lastUpdated?.toMillis?.() ?? 0) - (a.lastUpdated?.toMillis?.() ?? 0);
   });
 }
 
-function isFavorite(chatId, item = null) {
-  return Boolean(item?.favorite) || favoriteChatIds.has(chatId);
+function isFavorite(chatId) {
+  return favoriteChatIds.has(chatId);
 }
 
 async function toggleFavorite(chat, event) {
@@ -56,12 +56,11 @@ async function toggleFavorite(chat, event) {
     return;
   }
 
-  const nextValue = !isFavorite(chat.id, chat);
+  const nextValue = !isFavorite(chat.id);
   const previous = new Set(favoriteChatIds);
   if (nextValue) favoriteChatIds.add(chat.id);
   else favoriteChatIds.delete(chat.id);
 
-  chat.favorite = nextValue;
   allChats = sortChats(allChats);
   render(allChats);
 
@@ -70,11 +69,9 @@ async function toggleFavorite(chat, event) {
       [chat.id]: nextValue,
       updatedAt: serverTimestamp()
     }, { merge: true });
-    await setDoc(doc(db, 'chats', chat.id), { favorite: nextValue }, { merge: true });
     showToast(nextValue ? 'Discussion ajoutée aux favoris.' : 'Discussion retirée des favoris.');
   } catch (error) {
     favoriteChatIds = previous;
-    chat.favorite = !nextValue;
     allChats = sortChats(allChats);
     render(allChats);
     console.error('[Vibe] Favori:', error);
@@ -89,7 +86,11 @@ async function loadFavorites(user) {
     const snapshot = await getDoc(doc(db, 'userFavorites', user.uid));
     if (!snapshot.exists()) return;
     const data = snapshot.data() || {};
-    favoriteChatIds = new Set(Object.entries(data).filter(([key, value]) => key !== 'updatedAt' && value === true).map(([key]) => key));
+    favoriteChatIds = new Set(
+      Object.entries(data)
+        .filter(([key, value]) => key !== 'updatedAt' && value === true)
+        .map(([key]) => key)
+    );
   } catch (error) {
     console.error('[Vibe] Favoris:', error);
   }
@@ -102,9 +103,9 @@ function render(items = allChats) {
     list.innerHTML = '<div class="empty-state">Aucune conversation.</div>';
     return;
   }
-  for (const item of items) {
+  for (const item of sortChats(items)) {
     const name = item.name || 'Discussion Vibe';
-    const favorite = isFavorite(item.id, item);
+    const favorite = isFavorite(item.id);
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'chat-item';
@@ -148,7 +149,7 @@ function startChatsListener() {
   stopChats?.();
   stopChats = onSnapshot(collection(db, 'chats'), snapshot => {
     const remoteChats = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-    allChats = remoteChats.length ? sortChats(remoteChats) : [...fallbackChats];
+    allChats = remoteChats.length ? remoteChats : [...fallbackChats];
     render(allChats);
   }, error => {
     console.error('[Vibe] Conversations:', error);
@@ -191,7 +192,6 @@ if (!firebaseConfigured || !auth || !db) {
     initWhatsAppNavigation();
     await loadCurrentProfile(user);
     await loadFavorites(user);
-    allChats = sortChats(allChats);
     render(allChats);
 
     try {
