@@ -5,6 +5,7 @@ import {
   doc,
   setDoc,
   addDoc,
+  updateDoc,
   onSnapshot,
   serverTimestamp
 } from './firebase-client.js';
@@ -12,6 +13,9 @@ import { enregistrerAppel } from './whatsapp-extra-features.js';
 
 let activeChatId = null;
 let stopMessages = null;
+let stopChatMeta = null;
+let typingTimeout = null;
+let typingHeartbeat = null;
 const localMessageCache = new Map();
 
 const MAX_ATTACHMENT_BYTES = 450 * 1024;
@@ -49,6 +53,8 @@ function saveMessagesToCache(chatId, messages) {
     id: message.id,
     uid: message.uid || '',
     text: message.text || '',
+    read: Boolean(message.read),
+    reactions: message.reactions || {},
     attachment: message.attachment || null,
     timestamp: message.timestamp?.toDate?.()?.toISOString?.() || message.timestamp || null
   }));
@@ -133,7 +139,7 @@ async function sendAttachment(file, recipientName) {
   const attachment = await prepareAttachment(file);
   if (!attachment) return;
   try {
-    await addDoc(collection(db, 'chats', activeChatId, 'messages'), {uid:user.uid,text:'',attachment,timestamp:serverTimestamp()});
+    await addDoc(collection(db, 'chats', activeChatId, 'messages'), {uid:user.uid,text:'',attachment,read:false,timestamp:serverTimestamp()});
     await setDoc(doc(db, 'chats', activeChatId), {name:recipientName,lastMessage:`📎 ${attachment.name}`,lastUpdated:serverTimestamp()},{merge:true});
     showToast('Pièce jointe envoyée.');
   } catch (error) {
@@ -150,17 +156,118 @@ function renderAttachment(attachment) {
   return `<div class="message-attachment"><a href="${escapeHtml(attachment.dataUrl)}" download="${name}">📎 ${name}</a></div>`;
 }
 
+function renderReactions(reactions = {}) {
+  const entries = Object.entries(reactions).filter(([, emoji]) => emoji);
+  if (!entries.length) return '';
+  const counts = new Map();
+  for (const [, emoji] of entries) counts.set(emoji, (counts.get(emoji) || 0) + 1);
+  return `<div class="message-reactions">${[...counts.entries()].map(([emoji,count]) => `<span>${escapeHtml(emoji)}${count > 1 ? `<b>${count}</b>` : ''}</span>`).join('')}</div>`;
+}
+
 function appendMessageBubble(container, data) {
+  const user = auth?.currentUser;
+  const isMe = data.uid === user?.uid;
   const bubble = document.createElement('div');
-  bubble.className = `message message-bubble${data.uid === auth?.currentUser?.uid ? ' mine' : ''}`;
+  bubble.className = `message message-bubble${isMe ? ' mine' : ''}`;
   const attachmentHtml = renderAttachment(data.attachment);
-  const textHtml = data.text ? `<span>${escapeHtml(data.text)}</span>` : '';
-  bubble.innerHTML = `${attachmentHtml}${textHtml}<time>${formatTime(data.timestamp)}</time>`;
+  const textHtml = data.text ? `<span class="message-text">${escapeHtml(data.text)}</span>` : '';
+  const statusIcon = isMe
+    ? (data.read ? '<span class="message-status read" aria-label="Lu">✓✓</span>' : '<span class="message-status" aria-label="Envoyé">✓</span>')
+    : '';
+  bubble.innerHTML = `
+    ${attachmentHtml}${textHtml}
+    <time>${formatTime(data.timestamp)}${statusIcon}</time>
+    <button class="reaction-trigger" type="button" title="Réagir" aria-label="Réagir">☺</button>
+    <div class="reaction-picker" role="menu" aria-label="Réactions">
+      ${['👍','❤️','😂','😮','😢','🙏'].map(emoji => `<button type="button" data-reaction="${emoji}" role="menuitem">${emoji}</button>`).join('')}
+    </div>
+    ${renderReactions(data.reactions)}
+  `;
+  const picker = bubble.querySelector('.reaction-picker');
+  bubble.querySelector('.reaction-trigger')?.addEventListener('click', event => {
+    event.stopPropagation();
+    picker?.classList.toggle('show');
+  });
+  bubble.querySelectorAll('[data-reaction]').forEach(button => {
+    button.addEventListener('click', async event => {
+      event.stopPropagation();
+      await reactToMessage(data.id, button.dataset.reaction || '👍');
+      picker?.classList.remove('show');
+    });
+  });
   container.appendChild(bubble);
+}
+
+async function reactToMessage(messageId, emoji) {
+  const user = auth?.currentUser;
+  if (!user || !db || !activeChatId || !messageId) return;
+  try {
+    await updateDoc(doc(db, 'chats', activeChatId, 'messages', messageId), {
+      [`reactions.${user.uid}`]: emoji
+    });
+  } catch (error) {
+    console.error('[Vibe] Réaction:', error);
+    showToast('Réaction impossible.');
+  }
+}
+
+async function markMessagesAsRead(messages) {
+  const user = auth?.currentUser;
+  if (!user || !db || !activeChatId) return;
+  const unread = messages.filter(message => message.uid && message.uid !== user.uid && !message.read).slice(0, 30);
+  await Promise.all(unread.map(message => updateDoc(doc(db, 'chats', activeChatId, 'messages', message.id), {read:true}).catch(error => console.warn('[Vibe] Lecture:', error))));
+}
+
+async function setTypingState(isTyping) {
+  const user = auth?.currentUser;
+  if (!user || !db || !activeChatId) return;
+  try {
+    await updateDoc(doc(db, 'chats', activeChatId), {
+      [`typing_${user.uid}`]: Boolean(isTyping)
+    });
+  } catch (error) {
+    console.warn('[Vibe] Indicateur de frappe:', error);
+  }
+}
+
+function startTyping(input) {
+  if (!input) return;
+  input.addEventListener('input', () => {
+    if (!activeChatId || !auth?.currentUser) return;
+    setTypingState(true);
+    clearTimeout(typingTimeout);
+    clearInterval(typingHeartbeat);
+    typingHeartbeat = setInterval(() => setTypingState(true), 1200);
+    typingTimeout = setTimeout(() => {
+      clearInterval(typingHeartbeat);
+      typingHeartbeat = null;
+      setTypingState(false);
+    }, 2000);
+  });
+}
+
+function stopTyping() {
+  clearTimeout(typingTimeout);
+  clearInterval(typingHeartbeat);
+  typingTimeout = null;
+  typingHeartbeat = null;
+  if (auth?.currentUser && activeChatId) setTypingState(false);
+}
+
+function updateTypingIndicator(data) {
+  const user = auth?.currentUser;
+  const title = document.querySelector('.chat-title-wrap small');
+  if (!title || !data || !user) return;
+  const someoneTyping = Object.entries(data).some(([key,value]) => key.startsWith('typing_') && key !== `typing_${user.uid}` && value === true);
+  title.textContent = someoneTyping ? 'est en train d’écrire…' : 'Discussion Vibe';
+  title.classList.toggle('typing-indicator', someoneTyping);
 }
 
 export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onClose = null) {
   if (!auth?.currentUser || !db) return;
+  stopTyping();
+  stopMessages?.();
+  stopChatMeta?.();
   activeChatId = chatId;
   const panel = document.getElementById('main-chat-panel');
   if (!panel) return;
@@ -185,10 +292,11 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
   const input = document.getElementById('chat-input');
   const back = document.getElementById('chat-back');
 
-  back?.addEventListener('click', () => { fermerDiscussion(); onClose?.(); document.dispatchEvent(new CustomEvent('vibe:close-chat')); });
+  back?.addEventListener('click', () => { stopTyping(); fermerDiscussion(); onClose?.(); document.dispatchEvent(new CustomEvent('vibe:close-chat')); });
   document.getElementById('chat-video-call')?.addEventListener('click', () => enregistrerAppel('video', recipientName));
   document.getElementById('chat-audio-call')?.addEventListener('click', () => enregistrerAppel('audio', recipientName));
   document.getElementById('emoji-btn')?.addEventListener('click', () => { if (input) input.value += '🙂'; input?.focus(); });
+  startTyping(input);
 
   const fileInput = document.createElement('input');
   fileInput.type = 'file'; fileInput.accept = 'image/*,video/*,audio/*,.pdf,.txt,.doc,.docx'; fileInput.hidden = true;
@@ -202,17 +310,25 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
     const user = auth?.currentUser;
     if (!text || !user || !activeChatId) return;
     try {
-      await addDoc(collection(db, 'chats', activeChatId, 'messages'), {uid:user.uid,text,timestamp:serverTimestamp()});
-      await setDoc(doc(db, 'chats', activeChatId), {name:recipientName,lastMessage:text,lastUpdated:serverTimestamp()},{merge:true});
+      await addDoc(collection(db, 'chats', activeChatId, 'messages'), {uid:user.uid,text,timestamp:serverTimestamp(),read:false,reactions:{}});
+      await setDoc(doc(db, 'chats', activeChatId), {name:recipientName,lastMessage:text,lastUpdated:serverTimestamp(),[`typing_${user.uid}`]:false},{merge:true});
       input.value = ''; input.removeAttribute('aria-invalid');
+      clearTimeout(typingTimeout);
+      clearInterval(typingHeartbeat);
+      typingTimeout = null;
+      typingHeartbeat = null;
     } catch (error) {
       console.error('[Vibe] Envoi:', error); input?.setAttribute('aria-invalid','true'); showToast('Envoi impossible.');
     }
   });
 
-  stopMessages?.();
   const container = document.getElementById('chat-messages');
   renderCachedMessages(container, loadMessagesFromCache(chatId));
+
+  stopChatMeta = onSnapshot(doc(db, 'chats', activeChatId), snapshot => {
+    if (!snapshot.exists() || activeChatId !== chatId) return;
+    updateTypingIndicator(snapshot.data());
+  }, error => console.warn('[Vibe] Présence de frappe:', error));
 
   stopMessages = onSnapshot(collection(db, 'chats', activeChatId, 'messages'), snapshot => {
     const currentContainer = document.getElementById('chat-messages');
@@ -226,6 +342,7 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
     currentContainer.innerHTML = '';
     for (const data of messages) appendMessageBubble(currentContainer, data);
     currentContainer.scrollTop = currentContainer.scrollHeight;
+    markMessagesAsRead(messages);
   }, error => {
     console.error('[Vibe] Messages:', error);
     const currentContainer = document.getElementById('chat-messages');
@@ -236,7 +353,10 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
 }
 
 export function fermerDiscussion() {
+  stopTyping();
   stopMessages?.();
+  stopChatMeta?.();
   stopMessages = null;
+  stopChatMeta = null;
   activeChatId = null;
 }
