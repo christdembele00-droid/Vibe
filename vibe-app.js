@@ -5,6 +5,7 @@ import {
 import { ouvrirDiscussion } from './vibe-chat.js';
 import { initWhatsAppNavigation } from './whatsapp-extra-features.js';
 import { ensureVibeProfile } from './vibe-direct-chat.js';
+import { afficherFenetreRechercheUtilisateurs } from './vibe-contacts.js';
 
 const fallbackChats = [{ id: 'general', name: 'Discussion générale', lastMessage: 'Bienvenue sur Vibe', type: 'general' }];
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
@@ -35,8 +36,30 @@ function stopPresenceHeartbeat(){if(presenceTimer)clearInterval(presenceTimer);p
 function startPresenceHeartbeat(user,profile){stopPresenceHeartbeat();enregistrerUtilisateurActif(user,profile);presenceTimer=setInterval(()=>enregistrerUtilisateurActif(user,profile),60000)}
 function startChatsListener(){if(!db||!currentUser)return;stopChats?.();stopChats=null;const privateChatsQuery=query(collection(db,'chats'),where('participantIds','array-contains',currentUser.uid));const stopPrivateChats=onSnapshot(privateChatsQuery,snapshot=>{const privateChats=snapshot.docs.map(item=>({id:item.id,...item.data()})).filter(item=>item.id!=='general');const general=allChats.find(item=>item.id==='general')||fallbackChats[0];allChats=[general,...privateChats];render(allChats)},error=>{console.error('[Vibe] Conversations privées:',error);allChats=[allChats.find(item=>item.id==='general')||fallbackChats[0]];render(allChats)});const stopGeneral=onSnapshot(doc(db,'chats','general'),snapshot=>{const general=snapshot.exists()?{id:snapshot.id,...snapshot.data()}:fallbackChats[0];const privateChats=allChats.filter(item=>item.id!=='general');allChats=[general,...privateChats];render(allChats)},error=>console.error('[Vibe] Discussion générale:',error));stopChats=()=>{stopPrivateChats?.();stopGeneral?.()}}
 async function loadCurrentProfile(user){if(!db||!user)return null;try{const profile=await ensureVibeProfile();const name=profile?.name||'Vibe';const avatar=document.getElementById('current-user-avatar');const userName=document.getElementById('current-user-name');if(avatar)avatar.textContent=name.slice(0,1).toUpperCase();if(userName)userName.textContent=name;return profile}catch(error){console.error('[Vibe] Profil initial:',error);return null}}
+
+function installNewDiscussionButton(){
+  const searchContainer=document.querySelector('.search-container');
+  if(!searchContainer || document.getElementById('vibe-new-discussion')) return;
+  const button=document.createElement('button');
+  button.id='vibe-new-discussion';
+  button.type='button';
+  button.title='Nouvelle discussion';
+  button.setAttribute('aria-label','Nouvelle discussion');
+  button.textContent='✎';
+  button.style.cssText='position:absolute;right:18px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;background:#00a884;color:#fff;font-size:17px;display:grid;place-items:center;z-index:2;';
+  searchContainer.style.position='relative';
+  const wrapper=searchContainer.querySelector('.search-input-wrapper');
+  if(wrapper) wrapper.style.paddingRight='52px';
+  searchContainer.appendChild(button);
+  button.addEventListener('click',()=>{
+    if(!currentUser){showToast('Connexion nécessaire.');return;}
+    afficherFenetreRechercheUtilisateurs('chats-list-container');
+  });
+}
+
 if(search){search.value=getSearchTerm();search.addEventListener('input',event=>{saveSearchTerm(event.target.value);applySearch(event.target.value)})}
 render();
-if(!firebaseConfigured||!auth||!db){if(status)status.textContent='Firebase non configuré'}else{onAuthStateChanged(auth,async user=>{currentUser=user;stopChats?.();stopChats=null;stopPresenceHeartbeat();if(!user){if(status)status.textContent='connexion...';return}if(status)status.textContent='connecté';initWhatsAppNavigation();const profile=await loadCurrentProfile(user);await enregistrerUtilisateurActif(user,profile);startPresenceHeartbeat(user,profile);await loadFavorites(user);render(allChats);try{await ensureGeneralChat();startChatsListener()}catch(error){console.error('[Vibe] Firestore après authentification:',error);if(status)status.textContent='Firestore refusé'}});ensureAnonymousAuth().catch(error=>{console.error('[Vibe] Authentification:',error);if(status)status.textContent='Authentification refusée';showToast('Vérifiez que la connexion anonyme Firebase est activée.')})}
+installNewDiscussionButton();
+if(!firebaseConfigured||!auth||!db){if(status)status.textContent='Firebase non configuré'}else{onAuthStateChanged(auth,async user=>{currentUser=user;stopChats?.();stopChats=null;stopPresenceHeartbeat();if(!user){if(status)status.textContent='connexion...';return}if(status)status.textContent='connecté';initWhatsAppNavigation();const profile=await loadCurrentProfile(user);await enregistrerUtilisateurActif(user,profile);startPresenceHeartbeat(user,profile);await loadFavorites(user);render(allChats);installNewDiscussionButton();try{await ensureGeneralChat();startChatsListener()}catch(error){console.error('[Vibe] Firestore après authentification:',error);if(status)status.textContent='Firestore refusé'}});ensureAnonymousAuth().catch(error=>{console.error('[Vibe] Authentification:',error);if(status)status.textContent='Authentification refusée';showToast('Vérifiez que la connexion anonyme Firebase est activée.')})}
 document.addEventListener('vibe:close-chat',()=>shell?.classList.remove('chat-open'));
 window.addEventListener('pagehide',()=>stopPresenceHeartbeat());
