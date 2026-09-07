@@ -1,4 +1,5 @@
 import { afficherFenetreRechercheUtilisateurs } from './vibe-contacts.js';
+import { auth } from './firebase-client.js';
 
 function setActive(button){
   document.querySelectorAll('.vibe-mobile-nav button').forEach(item => item.classList.remove('active'));
@@ -24,6 +25,32 @@ function openCommunities(){
 function openCalls(){
   setActive(document.getElementById('mobile-nav-calls'));
   document.getElementById('btn-calls')?.click();
+}
+
+function installGoogleAvatar(){
+  const header=document.querySelector('.sidebar-header');
+  const actions=header?.querySelector('.sidebar-actions');
+  if(!header||!actions)return;
+  let avatar=document.getElementById('vibe-mobile-google-avatar');
+  if(!avatar){
+    avatar=document.createElement('div');
+    avatar.id='vibe-mobile-google-avatar';
+    avatar.className='vibe-mobile-google-avatar';
+    avatar.setAttribute('aria-label','Photo du compte Google');
+    avatar.title='Compte Google';
+    actions.insertAdjacentElement('afterend',avatar);
+  }
+  const user=auth?.currentUser;
+  const photoURL=String(user?.photoURL||'').trim();
+  avatar.innerHTML='';
+  if(!photoURL){avatar.style.display='none';return}
+  const image=document.createElement('img');
+  image.src=photoURL;
+  image.alt='';
+  image.referrerPolicy='no-referrer';
+  image.addEventListener('error',()=>{avatar.style.display='none'}, {once:true});
+  avatar.appendChild(image);
+  avatar.style.display='flex';
 }
 
 function install(){
@@ -56,11 +83,12 @@ function install(){
   document.getElementById('mobile-nav-communities')?.addEventListener('click',openCommunities);
   document.getElementById('mobile-nav-calls')?.addEventListener('click',openCalls);
   newChat.addEventListener('click',()=>{
-    const user=window.firebase?.auth?.currentUser;
     if(document.getElementById('vibe-new-discussion')) document.getElementById('vibe-new-discussion').click();
     else afficherFenetreRechercheUtilisateurs('chats-list-container');
   });
 
+  installGoogleAvatar();
+  auth?.onAuthStateChanged?.(()=>installGoogleAvatar());
   document.addEventListener('vibe:close-chat',openHome);
 }
 
