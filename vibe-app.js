@@ -1,11 +1,11 @@
 import {
   auth, db, collection, doc, getDoc, setDoc, onSnapshot, serverTimestamp,
-  onAuthStateChanged, ensureAnonymousAuth, firebaseConfigured
+  onAuthStateChanged, ensureAnonymousAuth, firebaseConfigured, query, where
 } from './firebase-client.js';
 import { ouvrirDiscussion } from './vibe-chat.js';
 import { initWhatsAppNavigation } from './whatsapp-extra-features.js';
 
-const fallbackChats = [{ id: 'general', name: 'Discussion générale', lastMessage: 'Bienvenue sur Vibe' }];
+const fallbackChats = [{ id: 'general', name: 'Discussion générale', lastMessage: 'Bienvenue sur Vibe', type: 'general' }];
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
 const list = document.getElementById('chats-list-container');
 const search = document.getElementById('search-chat');
@@ -118,21 +118,53 @@ async function ensureGeneralChat() {
   if (!db || !currentUser) return;
   const reference = doc(db, 'chats', 'general');
   const snapshot = await getDoc(reference);
-  if (!snapshot.exists()) await setDoc(reference, { name: 'Discussion générale', lastMessage: 'Bienvenue sur Vibe', lastUpdated: serverTimestamp() });
+  if (!snapshot.exists()) {
+    await setDoc(reference, {
+      name: 'Discussion générale',
+      lastMessage: 'Bienvenue sur Vibe',
+      lastUpdated: serverTimestamp(),
+      type: 'general'
+    });
+  }
 }
 
 function startChatsListener() {
   if (!db || !currentUser) return;
   stopChats?.();
-  stopChats = onSnapshot(collection(db, 'chats'), snapshot => {
-    const remoteChats = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-    allChats = remoteChats.length ? remoteChats : [...fallbackChats];
+  stopChats = null;
+
+  const privateChatsQuery = query(
+    collection(db, 'chats'),
+    where('participantIds', 'array-contains', currentUser.uid)
+  );
+
+  const stopPrivateChats = onSnapshot(privateChatsQuery, snapshot => {
+    const privateChats = snapshot.docs
+      .map(item => ({ id: item.id, ...item.data() }))
+      .filter(item => item.id !== 'general');
+
+    const general = allChats.find(item => item.id === 'general') || fallbackChats[0];
+    allChats = [general, ...privateChats];
     render(allChats);
   }, error => {
-    console.error('[Vibe] Conversations:', error);
-    allChats = [...fallbackChats];
+    console.error('[Vibe] Conversations privées:', error);
+    allChats = [allChats.find(item => item.id === 'general') || fallbackChats[0]];
     render(allChats);
   });
+
+  const stopGeneral = onSnapshot(doc(db, 'chats', 'general'), snapshot => {
+    const general = snapshot.exists()
+      ? { id: snapshot.id, ...snapshot.data() }
+      : fallbackChats[0];
+    const privateChats = allChats.filter(item => item.id !== 'general');
+    allChats = [general, ...privateChats];
+    render(allChats);
+  }, error => console.error('[Vibe] Discussion générale:', error));
+
+  stopChats = () => {
+    stopPrivateChats?.();
+    stopGeneral?.();
+  };
 }
 
 async function loadCurrentProfile(user) {
