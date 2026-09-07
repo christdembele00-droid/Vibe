@@ -12,9 +12,10 @@ import {
   firebaseConfigured
 } from './firebase-client.js';
 import { ouvrirDiscussion } from './vibe-chat.js';
+import { initWhatsAppNavigation } from './whatsapp-extra-features.js';
 
 const fallbackChats = [{ id: 'general', name: 'Discussion générale', lastMessage: 'Bienvenue sur Vibe' }];
-const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
 
 const list = document.getElementById('chats-list-container');
 const search = document.getElementById('search-chat');
@@ -90,6 +91,21 @@ function startChatsListener() {
   });
 }
 
+async function loadCurrentProfile(user) {
+  if (!db || !user) return;
+  try {
+    const snapshot = await getDoc(doc(db, 'profiles', user.uid));
+    const profile = snapshot.exists() ? snapshot.data() : null;
+    const name = profile?.name || 'Vibe';
+    const avatar = document.getElementById('current-user-avatar');
+    const userName = document.getElementById('current-user-name');
+    if (avatar) avatar.textContent = name.slice(0, 1).toUpperCase();
+    if (userName) userName.textContent = name;
+  } catch (error) {
+    console.error('[Vibe] Profil initial:', error);
+  }
+}
+
 render();
 
 if (!firebaseConfigured || !auth || !db) {
@@ -106,6 +122,9 @@ if (!firebaseConfigured || !auth || !db) {
     }
 
     if (status) status.textContent = 'connecté';
+    initWhatsAppNavigation();
+    await loadCurrentProfile(user);
+
     try {
       await ensureGeneralChat();
       startChatsListener();
@@ -129,7 +148,4 @@ search?.addEventListener('input', event => {
   });
 });
 
-document.getElementById('btn-status')?.addEventListener('click', () => showToast('Les statuts Vibe arrivent dans le module suivant.'));
-document.getElementById('btn-calls')?.addEventListener('click', () => showToast('Les appels seront ajoutés après la messagerie.'));
-document.getElementById('btn-settings')?.addEventListener('click', () => showToast('Paramètres Vibe : module en préparation.'));
 document.addEventListener('vibe:close-chat', () => shell?.classList.remove('chat-open'));
