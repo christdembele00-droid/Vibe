@@ -1,34 +1,49 @@
 /* Transitions fluides Vibe : sans modifier la structure visuelle existante. */
-.main-chat-panel{
-  animation: fadeInPanel .2s cubic-bezier(.16,1,.3,1) forwards;
-}
+.main-chat-panel{animation:fadeInPanel .2s cubic-bezier(.16,1,.3,1) forwards}
+@keyframes fadeInPanel{from{opacity:0;transform:scale(.99) translateY(4px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.message-bubble{position:relative;animation:popInMessage .15s ease-out forwards}
+@keyframes popInMessage{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.sidebar-actions button,.chat-call-btn,.composer-tool,.primary-btn,.secondary-btn{transition:background-color .15s ease,transform .15s ease,opacity .15s ease}
 
-@keyframes fadeInPanel{
-  from{opacity:0;transform:scale(.99) translateY(4px)}
-  to{opacity:1;transform:scale(1) translateY(0)}
-}
+.reaction-trigger{position:absolute;top:-10px;right:10px;width:30px;height:24px;background:#fff;border:1px solid #e9edef;border-radius:12px;padding:2px 6px;font-size:12px;cursor:pointer;opacity:0;transition:opacity .2s,transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.1);z-index:3}
+.message-bubble:hover .reaction-trigger,.message-bubble:focus-within .reaction-trigger{opacity:1}
+.reaction-trigger:hover{transform:scale(1.05)}
+.reaction-picker{position:absolute;top:-43px;right:8px;display:flex;gap:2px;padding:4px 5px;background:#fff;border:1px solid #e9edef;border-radius:18px;box-shadow:0 2px 8px rgba(0,0,0,.12);opacity:0;visibility:hidden;transform:translateY(4px) scale(.98);transition:opacity .15s,transform .15s,visibility .15s;z-index:4}
+.reaction-picker.show{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
+.reaction-picker button{width:30px;height:30px;border-radius:50%;font-size:18px;display:grid;place-items:center;cursor:pointer}
+.reaction-picker button:hover{background:#f0f2f5;transform:scale(1.08)}
+.message-reactions{position:absolute;bottom:-9px;left:8px;display:flex;gap:3px;padding:2px 5px;background:#fff;border:1px solid #e9edef;border-radius:10px;font-size:12px;line-height:16px;box-shadow:0 1px 2px rgba(0,0,0,.08);z-index:2}
+.message.mine .message-reactions{left:auto;right:8px}
+.message-reactions span{display:inline-flex;align-items:center;gap:2px}.message-reactions b{font-size:10px;color:#667781;font-weight:600}
+.message-status{margin-left:5px;color:#8696a0;font-size:11px;letter-spacing:-2px}.message-status.read{color:#53bdeb}
+.typing-indicator{color:#00a884!important;font-weight:500}
+.message-attachment{margin-bottom:3px}.message-attachment img{display:block;max-width:100%;max-height:420px;border-radius:6px;object-fit:contain}.message-attachment a{display:block;margin-top:4px;color:#008f72;font-size:12px;overflow-wrap:anywhere}
 
-.message-bubble{
-  animation: popInMessage .15s ease-out forwards;
-}
+body.dark-theme{background:#0b141a;color:#e9edef}
+body.dark-theme .app-shell{background:#0b141a}
+body.dark-theme .left-sidebar{background:#111b21;border-color:#222d34}
+body.dark-theme .sidebar-header,body.dark-theme .chat-header,body.dark-theme .composer,body.dark-theme .feature-header{background:#202c33;border-color:#222d34}
+body.dark-theme .search-container,body.dark-theme .chats-list,body.dark-theme .chat-item{background:#111b21;border-color:#222d34}
+body.dark-theme .chat-item:hover{background:#202c33}
+body.dark-theme .chat-item.active{background:#2a3942}
+body.dark-theme .search-input-wrapper,body.dark-theme .composer input{background:#202c33;color:#e9edef}
+body.dark-theme .search-input-wrapper input,body.dark-theme .composer input{color:#e9edef}
+body.dark-theme .sidebar-actions button,body.dark-theme .chat-call-btn,body.dark-theme .composer-tool,body.dark-theme .chat-back{color:#aebac1}
+body.dark-theme .chat-meta strong,body.dark-theme .chat-title-wrap strong,body.dark-theme .feature-header h2{color:#e9edef}
+body.dark-theme .chat-meta p,body.dark-theme .chat-title-wrap small,body.dark-theme .feature-header p,body.dark-theme .welcome-screen small{color:#8696a0}
+body.dark-theme .main-chat-panel,body.dark-theme .feature-view{background:#0b141a}
+body.dark-theme .welcome-screen{color:#aebac1}.dark-theme .welcome-screen h1{color:#e9edef}
+body.dark-theme .message{background:#202c33;color:#e9edef}.dark-theme .message.mine{background:#005c4b;color:#e9edef}
+body.dark-theme .message time{color:#aebac1}
+body.dark-theme .message-reactions,body.dark-theme .reaction-trigger,body.dark-theme .reaction-picker{background:#202c33;border-color:#344047;color:#e9edef}
+body.dark-theme .reaction-picker button:hover,body.dark-theme .chat-favorite:hover{background:#2a3942}
+body.dark-theme .feature-card{background:#202c33;color:#e9edef}
+body.dark-theme .feature-card-title h3,body.dark-theme .feature-card-title p,body.dark-theme .setting-row,body.dark-theme .security-card h3{color:#e9edef}
+body.dark-theme .feature-card-title p,body.dark-theme .setting-row code,body.dark-theme .security-card p,body.dark-theme .status-body p,body.dark-theme .call-main p{color:#aebac1}
+body.dark-theme .status-card,body.dark-theme .call-row,body.dark-theme .setting-row{border-color:#344047}
+body.dark-theme .status-publisher textarea,body.dark-theme .profile-fields textarea,body.dark-theme .profile-fields input{background:#111b21;color:#e9edef;border-color:#344047}
+body.dark-theme .secondary-btn{background:#2a3942;color:#e9edef}.dark-theme .secondary-btn:hover{background:#344047}
 
-@keyframes popInMessage{
-  from{opacity:0;transform:translateY(6px)}
-  to{opacity:1;transform:translateY(0)}
-}
-
-.sidebar-actions button,
-.chat-call-btn,
-.composer-tool,
-.primary-btn,
-.secondary-btn{
-  transition:background-color .15s ease,transform .15s ease,opacity .15s ease;
-}
-
-::-webkit-scrollbar{width:6px;height:6px}
-::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2);border-radius:3px}
-
-@media(prefers-reduced-motion:reduce){
-  .main-chat-panel,.message-bubble{animation:none}
-  .sidebar-actions button,.chat-call-btn,.composer-tool,.primary-btn,.secondary-btn{transition:none}
-}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2);border-radius:3px}
+@media(max-width:700px){.reaction-trigger{opacity:1;right:7px;top:-8px;width:28px;height:23px}.reaction-picker{right:4px;max-width:calc(100vw - 36px)}}
+@media(prefers-reduced-motion:reduce){.main-chat-panel,.message-bubble{animation:none}.sidebar-actions button,.chat-call-btn,.composer-tool,.primary-btn,.secondary-btn,.reaction-trigger,.reaction-picker{transition:none}}
