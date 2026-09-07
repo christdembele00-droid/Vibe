@@ -10,17 +10,18 @@
 <body>
   <div class="app-shell" id="app-shell">
     <aside class="left-sidebar">
-      <header class="sidebar-header">
-        <div class="user-block">
-          <div class="user-avatar" id="current-user-avatar">V</div>
-          <div><strong id="current-user-name">Vibe</strong><small id="connection-status">Connexion…</small></div>
+      <div class="sidebar-header">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+          <div class="user-avatar" id="current-user-avatar" style="width:40px;height:40px;border-radius:50%;background:#00a884;color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;flex:0 0 40px;">V</div>
+          <div style="min-width:0;"><strong id="current-user-name" style="font-weight:500;color:#111b21;">Vibe</strong><small id="connection-status">Connexion…</small></div>
         </div>
-        <div class="sidebar-actions">
-          <button id="btn-status" type="button" title="Statuts">◉</button>
-          <button id="btn-calls" type="button" title="Appels">☎</button>
-          <button id="btn-settings" type="button" title="Paramètres">⚙</button>
+        <div class="sidebar-actions" style="display:flex;gap:15px;font-size:18px;color:#54656f;cursor:pointer;">
+          <button id="btn-status" type="button" title="Statuts" aria-label="Statuts" style="background:none;border:none;cursor:pointer;font-size:18px;">💬</button>
+          <button id="btn-channels" type="button" title="Chaînes" aria-label="Chaînes" style="background:none;border:none;cursor:pointer;font-size:18px;">📢</button>
+          <button id="btn-calls" type="button" title="Appels" aria-label="Appels" style="background:none;border:none;cursor:pointer;font-size:18px;">📞</button>
+          <button id="btn-settings" type="button" title="Paramètres" aria-label="Paramètres" style="background:none;border:none;cursor:pointer;font-size:18px;">⚙️</button>
         </div>
-      </header>
+      </div>
       <div class="search-container">
         <label class="search-input-wrapper" for="search-chat"><span aria-hidden="true">⌕</span><input type="search" id="search-chat" placeholder="Rechercher ou démarrer une discussion" autocomplete="off"></label>
       </div>
@@ -36,6 +37,6 @@
     </main>
   </div>
   <input id="toast" class="toast" aria-live="assertive" readonly>
-  <script type="module" src="./vibe-app.js?v=2"></script>
+  <script type="module" src="./vibe-app.js?v=3"></script>
 </body>
 </html>
