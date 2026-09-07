@@ -2,11 +2,8 @@ import { auth, db, collection, addDoc, getDocs, query, where, onSnapshot, server
 import { ouvrirDiscussion } from './vibe-chat.js';
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
-const estProfilVible = (profil = {}) => {
-  const noms = [profil?.name, profil?.displayName, profil?.username]
-    .map(value => String(value || '').trim().toLowerCase());
-  return noms.includes('vible');
-};
+const estProfilVible = (profil = {}) => [profil?.name, profil?.displayName, profil?.username].map(value => String(value || '').trim().toLowerCase()).includes('vible');
+const getUserUid = (user = {}) => String(user?.uid || user?.id || '').trim();
 
 function showToast(message) {
   const toast = document.getElementById('toast');
@@ -26,15 +23,17 @@ function injectContactStyles() {
 }
 
 async function demarrerOuTrouverDiscussion(targetUid, targetName) {
-  const uid = auth?.currentUser?.uid;
-  if (!uid || !db || !targetUid || targetUid === uid || estProfilVible({ name: targetName })) return null;
+  const uid = String(auth?.currentUser?.uid || '').trim();
+  const target = String(targetUid || '').trim();
+  if (!uid || !db || !target || target === uid || estProfilVible({ name: targetName })) return null;
   const existing = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', uid)));
   const found = existing.docs.find(item => {
     const data = item.data();
-    return data.type === 'private' && Array.isArray(data.participantIds) && data.participantIds.length === 2 && data.participantIds.includes(targetUid);
+    const ids = Array.isArray(data.participantIds) ? data.participantIds.map(value => String(value).trim()) : [];
+    return data.type === 'private' && ids.length === 2 && ids.includes(uid) && ids.includes(target);
   });
   if (found) return found.id;
-  const chatRef = await addDoc(collection(db, 'chats'), { name: targetName, ownerId: uid, participantIds: [uid, targetUid], createdAt: serverTimestamp(), lastUpdated: serverTimestamp(), type: 'private' });
+  const chatRef = await addDoc(collection(db, 'chats'), { name: targetName, ownerId: uid, participantIds: [uid, target], createdAt: serverTimestamp(), lastUpdated: serverTimestamp(), type: 'private' });
   return chatRef.id;
 }
 
@@ -45,9 +44,11 @@ let latestFilter = '';
 function renderUsers(users) {
   const resultsContainer = document.getElementById('users-results-list');
   if (!resultsContainer) return;
+  const currentUid = String(auth?.currentUser?.uid || '').trim();
   const filter = latestFilter;
   const filtered = users
-    .filter(user => user.uid && user.uid !== auth?.currentUser?.uid)
+    .map(user => ({ ...user, uid: getUserUid(user) }))
+    .filter(user => user.uid && user.uid !== currentUid)
     .filter(user => !estProfilVible(user))
     .filter(user => !filter || `${user.name || user.displayName || ''}`.toLowerCase().includes(filter));
 
@@ -58,12 +59,12 @@ function renderUsers(users) {
 
   resultsContainer.innerHTML = '';
   for (const user of filtered) {
+    const uid = getUserUid(user);
     const name = user.name || user.displayName || 'Utilisateur Vibe';
-    if (estProfilVible(user)) continue;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'vibe-contact-row';
-    button.dataset.uid = user.uid;
+    button.dataset.uid = uid;
 
     const avatar = document.createElement('span');
     avatar.className = 'vibe-contact-avatar';
@@ -72,25 +73,17 @@ function renderUsers(users) {
       image.src = user.photoURL;
       image.alt = '';
       image.referrerPolicy = 'no-referrer';
-      image.addEventListener('error', () => {
-        image.remove();
-        avatar.textContent = name.substring(0, 2).toUpperCase();
-      });
+      image.addEventListener('error', () => { image.remove(); avatar.textContent = name.substring(0, 2).toUpperCase(); }, { once: true });
       avatar.appendChild(image);
-    } else {
-      avatar.textContent = name.substring(0, 2).toUpperCase();
-    }
+    } else avatar.textContent = name.substring(0, 2).toUpperCase();
 
     const info = document.createElement('span');
     info.className = 'vibe-contact-main';
     info.innerHTML = `<strong>${escapeHtml(name)}</strong>`;
-
-    button.appendChild(avatar);
-    button.appendChild(info);
-
+    button.append(avatar, info);
     button.addEventListener('click', async () => {
       try {
-        const chatId = await demarrerOuTrouverDiscussion(user.uid, name);
+        const chatId = await demarrerOuTrouverDiscussion(uid, name);
         if (chatId) ouvrirDiscussion(chatId, name);
       } catch (error) {
         console.error('[Vibe] Discussion contact:', error);
@@ -106,9 +99,7 @@ function demarrerEcoutePresence() {
   stopUsersListener = null;
   if (!db || !auth?.currentUser) return;
   stopUsersListener = onSnapshot(collection(db, 'users'), snapshot => {
-    latestUsers = snapshot.docs
-      .map(item => ({ id: item.id, ...item.data() }))
-      .filter(user => !estProfilVible(user));
+    latestUsers = snapshot.docs.map(item => ({ id: item.id, ...item.data(), uid: String(item.data()?.uid || item.id || '').trim() })).filter(user => !estProfilVible(user));
     latestUsers.sort((a, b) => String(a.name || a.displayName || '').localeCompare(String(b.name || b.displayName || ''), 'fr'));
     renderUsers(latestUsers);
   }, error => {
