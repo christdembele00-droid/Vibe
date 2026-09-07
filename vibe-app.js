@@ -6,7 +6,7 @@ import { ouvrirDiscussion } from './vibe-chat.js';
 import { initWhatsAppNavigation } from './whatsapp-extra-features.js';
 import { ensureVibeProfile } from './vibe-direct-chat.js';
 import { afficherFenetreRechercheUtilisateurs } from './vibe-contacts.js';
-import { creerAvatarDepuisProfil } from './vibe-avatar.js';
+import { creerAvatarPersonnalise, creerAvatarDepuisProfil } from './vibe-avatar.js';
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
 const list = document.getElementById('chats-list-container');
@@ -19,11 +19,9 @@ const SEARCH_STORAGE_KEY = 'vibe-chat-search';
 let allChats = [];
 let currentUser = null;
 let stopChats = null;
-let stopUsersProfiles = null;
 let toastTimer = null;
 let favoriteChatIds = new Set();
 let presenceTimer = null;
-const userProfiles = new Map();
 const longPressTimers = new WeakMap();
 
 function showToast(message){
@@ -35,12 +33,6 @@ function showToast(message){
 }
 function sortChats(items){return [...items].sort((a,b)=>{const favoriteDiff=Number(favoriteChatIds.has(b.id))-Number(favoriteChatIds.has(a.id));if(favoriteDiff)return favoriteDiff;return (b.lastUpdated?.toMillis?.()??0)-(a.lastUpdated?.toMillis?.()??0)})}
 function isFavorite(chatId){return favoriteChatIds.has(chatId)}
-function getParticipantProfile(chat){
-  const ids=Array.isArray(chat?.participantIds)?chat.participantIds:[];
-  const otherUid=ids.find(uid=>String(uid)!==String(currentUser?.uid));
-  if(!otherUid)return null;
-  return userProfiles.get(String(otherUid))||null;
-}
 
 async function toggleFavorite(chat,event){
   event?.stopPropagation();
@@ -85,13 +77,10 @@ function applySearch(term=''){const normalized=String(term).toLowerCase().trim()
 function render(items=allChats){
   if(!list)return;list.innerHTML='';if(!currentUser){list.innerHTML='';return}if(!items.length){list.innerHTML='<div class="empty-state">Aucune conversation.</div>';return}
   for(const item of sortChats(items)){
-    const profile=getParticipantProfile(item);
-    const name=profile?.name||profile?.displayName||item.name||'Discussion';
-    const favorite=isFavorite(item.id);const button=document.createElement('button');button.type='button';button.className='chat-item';button.dataset.chatId=item.id;
-    if(profile?.photoURL){button.appendChild(creerAvatarDepuisProfil(profile,{className:'chat-avatar'}));}
-    const meta=document.createElement('div');meta.className='chat-meta';meta.innerHTML=`<strong>${escapeHtml(name)}</strong><p>${escapeHtml(item.lastMessage||'Appuyez pour commencer...')}</p>`;
+    const name=item.name||'Discussion';const favorite=isFavorite(item.id);const button=document.createElement('button');button.type='button';button.className='chat-item';button.dataset.chatId=item.id;
+    const avatar=creerAvatarPersonnalise(name,{className:'chat-avatar'});const meta=document.createElement('div');meta.className='chat-meta';meta.innerHTML=`<strong>${escapeHtml(name)}</strong><p>${escapeHtml(item.lastMessage||'Appuyez pour commencer...')}</p>`;
     const favoriteButton=document.createElement('span');favoriteButton.className='chat-favorite';favoriteButton.setAttribute('role','button');favoriteButton.setAttribute('tabindex','0');favoriteButton.title=favorite?'Retirer des favoris':'Ajouter aux favoris';favoriteButton.setAttribute('aria-label',favorite?'Retirer des favoris':'Ajouter aux favoris');favoriteButton.textContent=favorite?'★':'☆';
-    button.append(meta,favoriteButton);
+    button.append(avatar,meta,favoriteButton);
     favoriteButton.addEventListener('click',event=>toggleFavorite(item,event));favoriteButton.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleFavorite(item,event)}});
     activerAppuiLong(button,item,()=>supprimerDiscussion(item));
     button.addEventListener('click',()=>{document.querySelectorAll('.chat-item.active').forEach(el=>el.classList.remove('active'));button.classList.add('active');shell?.classList.add('chat-open');ouvrirDiscussion(item.id,name,()=>shell?.classList.remove('chat-open'))});
@@ -102,21 +91,11 @@ function render(items=allChats){
 
 async function supprimerDiscussionGeneraleExistante(){
   if(!db||!currentUser)return;
-  try{const reference=doc(db,'chats','general');const snapshot=await getDoc(reference);if(snapshot.exists())await deleteDoc(reference)}catch(error){console.warn('[Vibe] Suppression discussion générale:',error)}
-}
-
-function startUserProfilesListener(){
-  if(!db||!currentUser)return;
-  stopUsersProfiles?.();
-  stopUsersProfiles=onSnapshot(collection(db,'users'),snapshot=>{
-    userProfiles.clear();
-    snapshot.docs.forEach(item=>{
-      const data=item.data()||{};
-      const uid=String(data.uid||item.id||'').trim();
-      if(uid)userProfiles.set(uid,{...data,uid});
-    });
-    render(allChats);
-  },error=>console.warn('[Vibe] Profils utilisateurs:',error));
+  try{
+    const reference=doc(db,'chats','general');
+    const snapshot=await getDoc(reference);
+    if(snapshot.exists()) await deleteDoc(reference);
+  }catch(error){console.warn('[Vibe] Suppression discussion générale:',error)}
 }
 
 async function enregistrerUtilisateurActif(user,profile=null){if(!user||!db)return;const data=profile||{};const name=user.displayName||data.name||'Utilisateur';const photoURL=user.photoURL||data.photoURL||'';const vibeId=data.vibeId||`vibe-${user.uid.slice(-8).toLowerCase()}`;try{await setDoc(doc(db,'users',user.uid),{uid:user.uid,name,displayName:name,photoURL,vibeId,email:user.email||data.email||'',lastSeen:serverTimestamp(),online:true},{merge:true});const currentAvatar=document.getElementById('current-user-avatar');if(currentAvatar){const avatar=creerAvatarDepuisProfil({name,photoURL},{className:'user-avatar'});avatar.id='current-user-avatar';avatar.style.width='40px';avatar.style.height='40px';avatar.style.minWidth='40px';currentAvatar.replaceWith(avatar)}const userName=document.getElementById('current-user-name');if(userName)userName.textContent=name}catch(error){console.error('[Vibe] Présence utilisateur:',error)}}
@@ -130,5 +109,5 @@ function installNewDiscussionButton(){const searchContainer=document.querySelect
 function installGoogleLoginButton(){let button=document.getElementById('google-login-button');if(button)return button;if(!welcomeScreen)return null;button.addEventListener('click',async()=>{if(!firebaseConfigured||!auth){showToast('Firebase n’est pas configuré.');return}button.disabled=true;button.textContent='Connexion Google…';try{await signInWithGoogle()}catch(error){console.error('[Vibe] Connexion Google:',error);showToast(error?.code==='auth/popup-closed-by-user'?'Connexion annulée.':'Connexion Google impossible.');button.disabled=false;button.textContent='Continuer avec Google'}});return button}
 if(search){search.value=getSearchTerm();search.addEventListener('input',event=>{saveSearchTerm(event.target.value);applySearch(event.target.value)})}
 render();installNewDiscussionButton();startPresenceLifecycle();installGoogleLoginButton();
-if(!firebaseConfigured||!auth||!db){if(status)status.textContent='Firebase non configuré'}else{onAuthStateChanged(auth,async user=>{currentUser=user;stopChats?.();stopChats=null;stopUsersProfiles?.();stopUsersProfiles=null;stopPresenceHeartbeat();const loginButton=document.getElementById('google-login-button');if(!user){if(status)status.textContent='Connexion Google requise';if(loginButton){loginButton.disabled=false;loginButton.textContent='Continuer avec Google'}const userName=document.getElementById('current-user-name');if(userName)userName.textContent='Compte Google';userProfiles.clear();render([]);return}if(status)status.textContent='Compte Google connecté';if(loginButton)loginButton.style.display='none';initWhatsAppNavigation();const profile=await loadCurrentProfile(user);await enregistrerUtilisateurActif(user,profile);startUserProfilesListener();startPresenceHeartbeat(user,profile);await loadFavorites(user);await supprimerDiscussionGeneraleExistante();render(allChats);installNewDiscussionButton();try{startChatsListener()}catch(error){console.error('[Vibe] Firestore après authentification:',error);if(status)status.textContent='Firestore refusé'}})}
+if(!firebaseConfigured||!auth||!db){if(status)status.textContent='Firebase non configuré'}else{onAuthStateChanged(auth,async user=>{currentUser=user;stopChats?.();stopChats=null;stopPresenceHeartbeat();const loginButton=document.getElementById('google-login-button');if(!user){if(status)status.textContent='Connexion Google requise';if(loginButton){loginButton.disabled=false;loginButton.textContent='Continuer avec Google'}const userName=document.getElementById('current-user-name');if(userName)userName.textContent='Compte Google';render([]);return}if(status)status.textContent='Compte Google connecté';if(loginButton)loginButton.style.display='none';initWhatsAppNavigation();const profile=await loadCurrentProfile(user);await enregistrerUtilisateurActif(user,profile);startPresenceHeartbeat(user,profile);await loadFavorites(user);await supprimerDiscussionGeneraleExistante();render(allChats);installNewDiscussionButton();try{startChatsListener()}catch(error){console.error('[Vibe] Firestore après authentification:',error);if(status)status.textContent='Firestore refusé'}})}
 document.addEventListener('vibe:close-chat',()=>shell?.classList.remove('chat-open'));
