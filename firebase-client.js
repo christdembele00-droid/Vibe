@@ -10,6 +10,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   query,
   where,
   orderBy,
@@ -26,7 +27,7 @@ export const db = app ? getFirestore(app) : null;
 export const firebaseConfigured = configured;
 
 export {
-  collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
+  collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, deleteField,
   query, where, orderBy, onSnapshot, serverTimestamp, onAuthStateChanged,
   GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence
 };
