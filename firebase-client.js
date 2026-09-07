@@ -41,7 +41,11 @@ async function prepareAuthPersistence() {
 export async function signInWithGoogle() {
   if (!auth) return null;
   await prepareAuthPersistence();
-  if (auth.currentUser) return auth.currentUser;
+
+  const currentUser = auth.currentUser;
+  const hasGoogleProvider = Boolean(currentUser?.providerData?.some(provider => provider?.providerId === 'google.com'));
+  if (currentUser && hasGoogleProvider) return currentUser;
+
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   const result = await signInWithPopup(auth, provider);
