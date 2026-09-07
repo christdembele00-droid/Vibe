@@ -31,8 +31,6 @@ async function demarrerOuTrouverDiscussion(targetUid, targetName) {
   const target = String(targetUid || '').trim();
   if (!uid || !db || !target || target === uid || estProfilVible({ name: targetName })) return null;
 
-  // On conserve la compatibilité avec les anciennes discussions créées
-  // avec un identifiant aléatoire.
   const existing = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', uid)));
   const found = existing.docs.find(item => {
     const data = item.data();
@@ -41,7 +39,6 @@ async function demarrerOuTrouverDiscussion(targetUid, targetName) {
   });
   if (found) return found.id;
 
-  // Les deux utilisateurs obtiennent maintenant le même chatId.
   const chatId = makeDirectChatId(uid, target);
   const chatRef = doc(db, 'chats', chatId);
   const snapshot = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', target)));
@@ -129,8 +126,12 @@ function demarrerEcoutePresence() {
   stopUsersListener?.();
   stopUsersListener = null;
   if (!db || !auth?.currentUser) return;
+  const currentUid = String(auth.currentUser.uid || '').trim();
   stopUsersListener = onSnapshot(collection(db, 'users'), snapshot => {
-    latestUsers = snapshot.docs.map(item => ({ id: item.id, ...item.data(), uid: String(item.data()?.uid || item.id || '').trim() })).filter(user => !estProfilVible(user));
+    latestUsers = snapshot.docs
+      .map(item => ({ id: item.id, ...item.data(), uid: String(item.data()?.uid || item.id || '').trim() }))
+      .filter(user => user.uid && user.uid !== currentUid)
+      .filter(user => !estProfilVible(user));
     latestUsers.sort((a, b) => String(a.name || a.displayName || '').localeCompare(String(b.name || b.displayName || ''), 'fr'));
     renderUsers(latestUsers);
   }, error => {
