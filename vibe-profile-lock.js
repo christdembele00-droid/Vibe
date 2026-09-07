@@ -1,14 +1,51 @@
 // Verrouillage du nom et de la photo de profil dans les paramètres Vibe.
 // Le nom et la photo restent ceux fournis par le compte Google.
 
-function getGoogleProfileName() {
-  return String(window.firebase?.auth?.currentUser?.displayName || '').trim();
+function getGoogleUser() {
+  return window.firebase?.auth?.currentUser || null;
+}
+
+function getGoogleProfile() {
+  const user = getGoogleUser();
+  return {
+    name: String(user?.displayName || '').trim(),
+    photoURL: String(user?.photoURL || '').trim()
+  };
+}
+
+function renderGooglePhoto(element, name, photoURL) {
+  if (!element) return;
+  element.innerHTML = '';
+  element.style.overflow = 'hidden';
+  element.style.display = 'flex';
+  element.style.alignItems = 'center';
+  element.style.justifyContent = 'center';
+  element.title = 'Photo de profil gérée par votre compte Google.';
+
+  if (!photoURL) {
+    element.textContent = (name || 'V').slice(0, 1).toUpperCase();
+    return;
+  }
+
+  const image = document.createElement('img');
+  image.src = photoURL;
+  image.alt = `Photo de profil Google de ${name || 'Utilisateur'}`;
+  image.referrerPolicy = 'no-referrer';
+  image.style.width = '100%';
+  image.style.height = '100%';
+  image.style.objectFit = 'cover';
+  image.addEventListener('error', () => {
+    image.remove();
+    element.textContent = (name || 'V').slice(0, 1).toUpperCase();
+  }, { once: true });
+  element.appendChild(image);
 }
 
 function lockProfileEditing() {
+  const { name: googleName, photoURL: googlePhoto } = getGoogleProfile();
+
   const nameInput = document.getElementById('profile-name');
   if (nameInput) {
-    const googleName = getGoogleProfileName();
     if (googleName) nameInput.value = googleName;
     nameInput.readOnly = true;
     nameInput.disabled = false;
@@ -35,6 +72,11 @@ function lockProfileEditing() {
     element.removeAttribute('role');
     element.removeAttribute('tabindex');
     element.removeAttribute('onclick');
+
+    // Dans les paramètres, toujours afficher la photo Google actuelle.
+    if (element.id === 'settings-profile-avatar' || element.closest('.profile-card')) {
+      renderGooglePhoto(element, googleName, googlePhoto);
+    }
   });
 }
 
