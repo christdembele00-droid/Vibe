@@ -1,5 +1,6 @@
-import { auth, db, collection, doc, addDoc, getDocs, query, where, serverTimestamp } from './firebase-client.js';
+import { auth, db, collection, doc, addDoc, getDocs, query, where, onSnapshot, serverTimestamp } from './firebase-client.js';
 import { ouvrirDiscussion } from './vibe-chat.js';
+import { creerAvatarPersonnalise } from './vibe-avatar.js';
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
 
@@ -16,7 +17,7 @@ function injectContactStyles() {
   if (document.getElementById('vibe-contact-styles')) return;
   const style = document.createElement('style');
   style.id = 'vibe-contact-styles';
-  style.textContent = `.vibe-contacts-search{padding:14px 12px;background:#f0f2f5;border-bottom:1px solid #e9edef}.vibe-contacts-search strong{display:block;margin:0 0 9px;color:#111b21;font-size:16px;font-weight:500}.vibe-contacts-search input{width:100%;height:40px;border:0;border-radius:9px;outline:0;padding:0 12px;background:#fff;color:#111b21;box-shadow:0 1px 1px rgba(0,0,0,.04)}.vibe-contacts-search input:focus{box-shadow:0 0 0 2px rgba(0,168,132,.16)}.vibe-contacts-results{min-height:0;overflow-y:auto;background:#fff}.vibe-contact-row{width:100%;display:flex;align-items:center;gap:13px;padding:12px 16px;text-align:left;border-bottom:1px solid #f0f2f5;background:#fff;transition:background .12s ease}.vibe-contact-row:hover,.vibe-contact-row:focus-visible{background:#f5f6f6}.vibe-contact-row:focus-visible{outline:2px solid #00a884;outline-offset:-2px}.vibe-contact-avatar{width:46px;height:46px;flex:0 0 46px;display:grid;place-items:center;border-radius:50%;background:#00a884;color:#fff;font-weight:700}.vibe-contact-main{min-width:0;display:grid;gap:4px}.vibe-contact-main strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#111b21;font-size:15px;font-weight:500}.vibe-contact-main small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#667781;font-size:12px}.vibe-contact-state.online{color:#00a884}`;
+  style.textContent = `.vibe-contacts-search{padding:14px 12px;background:#f0f2f5;border-bottom:1px solid #e9edef}.vibe-contacts-search strong{display:block;margin:0 0 9px;color:#111b21;font-size:16px;font-weight:500}.vibe-contacts-search input{width:100%;height:40px;border:0;border-radius:9px;outline:0;padding:0 12px;background:#fff;color:#111b21;box-shadow:0 1px 1px rgba(0,0,0,.04)}.vibe-contacts-search input:focus{box-shadow:0 0 0 2px rgba(0,168,132,.16)}.vibe-contacts-results{min-height:0;overflow-y:auto;background:#fff}.vibe-contact-row{width:100%;display:flex;align-items:center;gap:13px;padding:12px 16px;text-align:left;border:0;border-bottom:1px solid #f0f2f5;background:#fff;transition:background .12s ease}.vibe-contact-row:hover,.vibe-contact-row:focus-visible{background:#f5f6f6}.vibe-contact-row:focus-visible{outline:2px solid #00a884;outline-offset:-2px}.vibe-contact-avatar{width:46px;height:46px;min-width:46px;flex:0 0 46px;display:grid;place-items:center;border-radius:50%;overflow:hidden;background:#00a884;color:#fff;font-weight:700}.vibe-contact-main{min-width:0;display:grid;gap:4px}.vibe-contact-main strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#111b21;font-size:15px;font-weight:500}.vibe-contact-main small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#667781;font-size:12px}.vibe-contact-state.online{color:#00a884}`;
   document.head.appendChild(style);
 }
 
@@ -33,44 +34,68 @@ async function demarrerOuTrouverDiscussion(targetUid, targetName) {
   return chatRef.id;
 }
 
-async function chargerUtilisateurs(filtreRecherche = '') {
+let stopUsersListener = null;
+let latestUsers = [];
+let latestFilter = '';
+
+function renderUsers(users) {
   const resultsContainer = document.getElementById('users-results-list');
-  if (!resultsContainer || !db || !auth?.currentUser) return;
-  try {
-    const snapshot = await getDocs(collection(db, 'users'));
-    const filter = String(filtreRecherche).toLowerCase().trim();
-    const users = snapshot.docs
-      .map(item => ({ id: item.id, ...item.data() }))
-      .filter(user => user.uid && user.uid !== auth.currentUser.uid)
-      .filter(user => !filter || `${user.name || ''} ${user.vibeId || ''}`.toLowerCase().includes(filter))
-      .sort((a, b) => Number(b.online === true) - Number(a.online === true));
+  if (!resultsContainer) return;
+  const filter = latestFilter;
+  const filtered = users
+    .filter(user => user.uid && user.uid !== auth?.currentUser?.uid)
+    .filter(user => !filter || `${user.name || ''} ${user.vibeId || ''}`.toLowerCase().includes(filter));
 
-    if (!users.length) {
-      resultsContainer.innerHTML = '<div class="empty-state">Aucun utilisateur trouvé.</div>';
-      return;
-    }
+  if (!filtered.length) {
+    resultsContainer.innerHTML = '<div class="empty-state">Aucun utilisateur trouvé.</div>';
+    return;
+  }
 
-    resultsContainer.innerHTML = users.map(user => {
-      const name = user.name || 'Utilisateur Vibe';
-      const online = user.online === true;
-      return `<button type="button" class="vibe-contact-row" data-uid="${escapeHtml(user.uid)}"><span class="vibe-contact-avatar">${escapeHtml(name.slice(0,1).toUpperCase())}</span><span class="vibe-contact-main"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(user.vibeId || 'Identifiant Vibe')} · <span class="vibe-contact-state ${online ? 'online' : ''}">${online ? 'En ligne' : 'Hors ligne'}</span></small></span></button>`;
-    }).join('');
+  resultsContainer.innerHTML = '';
+  for (const user of filtered) {
+    const name = user.name || 'Utilisateur Vibe';
+    const online = user.online === true;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'vibe-contact-row';
+    button.dataset.uid = user.uid;
 
-    resultsContainer.querySelectorAll('.vibe-contact-row').forEach(item => item.addEventListener('click', async () => {
-      const target = users.find(user => user.uid === item.dataset.uid);
-      if (!target) return;
+    const avatar = creerAvatarPersonnalise(name, { className: 'vibe-contact-avatar' });
+    const info = document.createElement('span');
+    info.className = 'vibe-contact-main';
+    info.innerHTML = `<strong>${escapeHtml(name)}</strong><small>${escapeHtml(user.vibeId || 'Identifiant Vibe')} · <span class="vibe-contact-state ${online ? 'online' : ''}">${online ? '● En ligne' : 'Hors ligne'}</span></small>`;
+    button.append(avatar, info);
+
+    button.addEventListener('click', async () => {
       try {
-        const chatId = await demarrerOuTrouverDiscussion(target.uid, target.name || 'Utilisateur Vibe');
-        if (chatId) ouvrirDiscussion(chatId, target.name || 'Utilisateur Vibe');
+        const chatId = await demarrerOuTrouverDiscussion(user.uid, name);
+        if (chatId) ouvrirDiscussion(chatId, name);
       } catch (error) {
         console.error('[Vibe] Discussion contact:', error);
         showToast('Impossible d’ouvrir cette discussion.');
       }
-    }));
-  } catch (error) {
-    console.error('[Vibe] Contacts:', error);
-    resultsContainer.innerHTML = '<div class="empty-state">Erreur de chargement des contacts.</div>';
+    });
+    resultsContainer.appendChild(button);
   }
+}
+
+function demarrerEcoutePresence() {
+  stopUsersListener?.();
+  stopUsersListener = null;
+  if (!db || !auth?.currentUser) return;
+  stopUsersListener = onSnapshot(collection(db, 'users'), snapshot => {
+    latestUsers = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    latestUsers.sort((a, b) => Number(b.online === true) - Number(a.online === true) || String(a.name || '').localeCompare(String(b.name || ''), 'fr'));
+    renderUsers(latestUsers);
+  }, error => {
+    console.error('[Vibe] Présence contacts:', error);
+    showToast('Impossible de mettre à jour les statuts.');
+  });
+}
+
+function chargerUtilisateurs(filtreRecherche = '') {
+  latestFilter = String(filtreRecherche).toLowerCase().trim();
+  renderUsers(latestUsers);
 }
 
 export function afficherFenetreRechercheUtilisateurs(containerId = 'chats-list-container') {
@@ -79,9 +104,10 @@ export function afficherFenetreRechercheUtilisateurs(containerId = 'chats-list-c
   injectContactStyles();
   container.innerHTML = `<div class="vibe-contacts-search"><strong>Nouvelle discussion</strong><input type="search" id="search-user-input" placeholder="Rechercher par nom ou identifiant Vibe..." autocomplete="off"></div><div id="users-results-list" class="vibe-contacts-results"><div class="empty-state">Chargement des contacts...</div></div>`;
   const input = document.getElementById('search-user-input');
-  let timer = null;
-  input?.addEventListener('input', event => { clearTimeout(timer); timer = setTimeout(() => chargerUtilisateurs(event.target.value), 120); });
-  chargerUtilisateurs('');
+  input?.addEventListener('input', event => chargerUtilisateurs(event.target.value));
+  latestUsers = [];
+  latestFilter = '';
+  demarrerEcoutePresence();
   input?.focus();
 }
 
