@@ -2,6 +2,11 @@ import { auth, db, collection, addDoc, getDocs, query, where, onSnapshot, server
 import { ouvrirDiscussion } from './vibe-chat.js';
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
+const estProfilVible = (profil = {}) => {
+  const noms = [profil?.name, profil?.displayName, profil?.username]
+    .map(value => String(value || '').trim().toLowerCase());
+  return noms.includes('vible');
+};
 
 function showToast(message) {
   const toast = document.getElementById('toast');
@@ -22,7 +27,7 @@ function injectContactStyles() {
 
 async function demarrerOuTrouverDiscussion(targetUid, targetName) {
   const uid = auth?.currentUser?.uid;
-  if (!uid || !db || !targetUid || targetUid === uid) return null;
+  if (!uid || !db || !targetUid || targetUid === uid || estProfilVible({ name: targetName })) return null;
   const existing = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', uid)));
   const found = existing.docs.find(item => {
     const data = item.data();
@@ -43,6 +48,7 @@ function renderUsers(users) {
   const filter = latestFilter;
   const filtered = users
     .filter(user => user.uid && user.uid !== auth?.currentUser?.uid)
+    .filter(user => !estProfilVible(user))
     .filter(user => !filter || `${user.name || user.displayName || ''}`.toLowerCase().includes(filter));
 
   if (!filtered.length) {
@@ -53,6 +59,7 @@ function renderUsers(users) {
   resultsContainer.innerHTML = '';
   for (const user of filtered) {
     const name = user.name || user.displayName || 'Utilisateur Vibe';
+    if (estProfilVible(user)) continue;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'vibe-contact-row';
@@ -99,7 +106,9 @@ function demarrerEcoutePresence() {
   stopUsersListener = null;
   if (!db || !auth?.currentUser) return;
   stopUsersListener = onSnapshot(collection(db, 'users'), snapshot => {
-    latestUsers = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    latestUsers = snapshot.docs
+      .map(item => ({ id: item.id, ...item.data() }))
+      .filter(user => !estProfilVible(user));
     latestUsers.sort((a, b) => String(a.name || a.displayName || '').localeCompare(String(b.name || b.displayName || ''), 'fr'));
     renderUsers(latestUsers);
   }, error => {
