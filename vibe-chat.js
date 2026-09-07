@@ -13,6 +13,9 @@ import { enregistrerAppel } from './whatsapp-extra-features.js';
 let activeChatId = null;
 let stopMessages = null;
 
+const MAX_ATTACHMENT_BYTES = 450 * 1024;
+const MAX_IMAGE_SIDE = 1280;
+
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
 
 function formatTime(value) {
@@ -20,8 +23,121 @@ function formatTime(value) {
   return date && !Number.isNaN(date.getTime()) ? date.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '';
 }
 
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.value = message;
+  toast.classList.add('show');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
 function sortMessages(snapshot) {
   return snapshot.docs.map(item => ({id:item.id, ...item.data()})).sort((a,b) => (a.timestamp?.toMillis?.() ?? 0) - (b.timestamp?.toMillis?.() ?? 0));
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Lecture du fichier impossible.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function imageToCompressedDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext('2d');
+      if (!context) {
+        reject(new Error('Compression d’image indisponible.'));
+        return;
+      }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      let quality = 0.82;
+      let dataUrl = canvas.toDataURL('image/jpeg', quality);
+      while (dataUrl.length > MAX_ATTACHMENT_BYTES * 1.33 && quality > 0.45) {
+        quality -= 0.08;
+        dataUrl = canvas.toDataURL('image/jpeg', quality);
+      }
+      resolve(dataUrl);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Image invalide.'));
+    };
+    image.src = objectUrl;
+  });
+}
+
+async function prepareAttachment(file) {
+  if (!file) return null;
+  if (file.size > MAX_ATTACHMENT_BYTES && !file.type.startsWith('image/')) {
+    showToast('Fichier trop volumineux. Limite : 450 Ko.');
+    return null;
+  }
+
+  try {
+    const dataUrl = file.type.startsWith('image/')
+      ? await imageToCompressedDataUrl(file)
+      : await fileToDataUrl(file);
+    const payloadBytes = Math.ceil(dataUrl.length * 0.75);
+    if (payloadBytes > MAX_ATTACHMENT_BYTES) {
+      showToast('Pièce jointe trop volumineuse après compression.');
+      return null;
+    }
+    return {
+      name: file.name.slice(0, 180),
+      type: file.type || 'application/octet-stream',
+      size: payloadBytes,
+      dataUrl
+    };
+  } catch (error) {
+    console.error('[Vibe] Pièce jointe:', error);
+    showToast('Impossible de préparer la pièce jointe.');
+    return null;
+  }
+}
+
+async function sendAttachment(file, recipientName) {
+  const user = auth?.currentUser;
+  if (!user || !db || !activeChatId || !file) return;
+  const attachment = await prepareAttachment(file);
+  if (!attachment) return;
+  try {
+    await addDoc(collection(db, 'chats', activeChatId, 'messages'), {
+      uid: user.uid,
+      text: '',
+      attachment,
+      timestamp: serverTimestamp()
+    });
+    await setDoc(doc(db, 'chats', activeChatId), {
+      name: recipientName,
+      lastMessage: `📎 ${attachment.name}`,
+      lastUpdated: serverTimestamp()
+    }, {merge:true});
+    showToast('Pièce jointe envoyée.');
+  } catch (error) {
+    console.error('[Vibe] Envoi pièce jointe:', error);
+    showToast('Envoi impossible. Vérifiez les règles Firestore.');
+  }
+}
+
+function renderAttachment(attachment) {
+  if (!attachment?.dataUrl) return '';
+  const name = escapeHtml(attachment.name || 'Pièce jointe');
+  const type = String(attachment.type || '');
+  if (type.startsWith('image/')) {
+    return `<div class="message-attachment"><img src="${escapeHtml(attachment.dataUrl)}" alt="${name}" loading="lazy"><a href="${escapeHtml(attachment.dataUrl)}" download="${name}">${name}</a></div>`;
+  }
+  return `<div class="message-attachment"><a href="${escapeHtml(attachment.dataUrl)}" download="${name}">📎 ${name}</a></div>`;
 }
 
 export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onClose = null) {
@@ -44,7 +160,7 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
     <form class="composer" id="chat-form">
       <button class="composer-tool" id="emoji-btn" type="button" title="Emoji" aria-label="Emoji">☺</button>
       <button class="composer-tool" id="attach-btn" type="button" title="Joindre" aria-label="Joindre">＋</button>
-      <input id="chat-input" type="text" maxlength="2000" placeholder="Écrire un message" autocomplete="off" required>
+      <input id="chat-input" type="text" maxlength="2000" placeholder="Écrire un message" autocomplete="off">
       <button type="submit" title="Envoyer" aria-label="Envoyer">➤</button>
     </form>
   </section>`;
@@ -65,14 +181,18 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
     if (input) input.value += '🙂';
     input?.focus();
   });
-  document.getElementById('attach-btn')?.addEventListener('click', () => {
-    const toast = document.getElementById('toast');
-    if (toast) {
-      toast.value = 'Les pièces jointes seront ajoutées dans le prochain module.';
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2400);
-    }
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*,video/*,audio/*,.pdf,.txt,.doc,.docx';
+  fileInput.hidden = true;
+  document.body.appendChild(fileInput);
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    fileInput.value = '';
+    if (file) await sendAttachment(file, recipientName);
   });
+  document.getElementById('attach-btn')?.addEventListener('click', () => fileInput.click());
 
   form?.addEventListener('submit', async event => {
     event.preventDefault();
@@ -87,6 +207,7 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
     } catch (error) {
       console.error('[Vibe] Envoi:', error);
       input?.setAttribute('aria-invalid', 'true');
+      showToast('Envoi impossible.');
     }
   });
 
@@ -103,7 +224,9 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
     for (const data of messages) {
       const bubble = document.createElement('div');
       bubble.className = `message${data.uid === auth?.currentUser?.uid ? ' mine' : ''}`;
-      bubble.innerHTML = `<span>${escapeHtml(data.text || '')}</span><time>${formatTime(data.timestamp)}</time>`;
+      const attachmentHtml = renderAttachment(data.attachment);
+      const textHtml = data.text ? `<span>${escapeHtml(data.text)}</span>` : '';
+      bubble.innerHTML = `${attachmentHtml}${textHtml}<time>${formatTime(data.timestamp)}</time>`;
       container.appendChild(bubble);
     }
     container.scrollTop = container.scrollHeight;
