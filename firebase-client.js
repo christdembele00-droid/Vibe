@@ -9,6 +9,7 @@ import {
   setDoc,
   addDoc,
   query,
+  where,
   orderBy,
   onSnapshot,
   serverTimestamp
@@ -36,6 +37,7 @@ export {
   setDoc,
   addDoc,
   query,
+  where,
   orderBy,
   onSnapshot,
   serverTimestamp,
