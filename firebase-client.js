@@ -5,6 +5,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   addDoc,
   query,
@@ -25,11 +26,13 @@ const app = getApps().length ? getApp() : (configured ? initializeApp(firebaseCo
 
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
+export const firebaseConfigured = configured;
 
 export {
   collection,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   addDoc,
   query,
@@ -39,8 +42,6 @@ export {
   onAuthStateChanged,
   signInAnonymously
 };
-
-export const firebaseConfigured = configured;
 
 export async function ensureAnonymousAuth() {
   if (!auth) return null;
