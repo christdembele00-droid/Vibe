@@ -1,27 +1,18 @@
 import {
-  auth,
-  db,
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  onSnapshot,
-  serverTimestamp,
-  onAuthStateChanged,
-  ensureAnonymousAuth,
-  firebaseConfigured
+  auth, db, collection, doc, getDoc, setDoc, onSnapshot, serverTimestamp,
+  onAuthStateChanged, ensureAnonymousAuth, firebaseConfigured
 } from './firebase-client.js';
 import { ouvrirDiscussion } from './vibe-chat.js';
 import { initWhatsAppNavigation } from './whatsapp-extra-features.js';
 
 const fallbackChats = [{ id: 'general', name: 'Discussion générale', lastMessage: 'Bienvenue sur Vibe' }];
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
-
 const list = document.getElementById('chats-list-container');
 const search = document.getElementById('search-chat');
 const status = document.getElementById('connection-status');
 const shell = document.getElementById('app-shell');
 const toastElement = document.getElementById('toast');
+const SEARCH_STORAGE_KEY = 'vibe-chat-search';
 
 let allChats = [...fallbackChats];
 let currentUser = null;
@@ -45,30 +36,18 @@ function sortChats(items) {
   });
 }
 
-function isFavorite(chatId) {
-  return favoriteChatIds.has(chatId);
-}
+function isFavorite(chatId) { return favoriteChatIds.has(chatId); }
 
 async function toggleFavorite(chat, event) {
   event?.stopPropagation();
-  if (!currentUser || !db) {
-    showToast('Connectez-vous pour gérer les favoris.');
-    return;
-  }
-
+  if (!currentUser || !db) { showToast('Connectez-vous pour gérer les favoris.'); return; }
   const nextValue = !isFavorite(chat.id);
   const previous = new Set(favoriteChatIds);
-  if (nextValue) favoriteChatIds.add(chat.id);
-  else favoriteChatIds.delete(chat.id);
-
+  if (nextValue) favoriteChatIds.add(chat.id); else favoriteChatIds.delete(chat.id);
   allChats = sortChats(allChats);
   render(allChats);
-
   try {
-    await setDoc(doc(db, 'userFavorites', currentUser.uid), {
-      [chat.id]: nextValue,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
+    await setDoc(doc(db, 'userFavorites', currentUser.uid), { [chat.id]: nextValue, updatedAt: serverTimestamp() }, { merge: true });
     showToast(nextValue ? 'Discussion ajoutée aux favoris.' : 'Discussion retirée des favoris.');
   } catch (error) {
     favoriteChatIds = previous;
@@ -85,24 +64,32 @@ async function loadFavorites(user) {
   try {
     const snapshot = await getDoc(doc(db, 'userFavorites', user.uid));
     if (!snapshot.exists()) return;
-    const data = snapshot.data() || {};
-    favoriteChatIds = new Set(
-      Object.entries(data)
-        .filter(([key, value]) => key !== 'updatedAt' && value === true)
-        .map(([key]) => key)
-    );
-  } catch (error) {
-    console.error('[Vibe] Favoris:', error);
-  }
+    favoriteChatIds = new Set(Object.entries(snapshot.data() || {}).filter(([key, value]) => key !== 'updatedAt' && value === true).map(([key]) => key));
+  } catch (error) { console.error('[Vibe] Favoris:', error); }
+}
+
+function getSearchTerm() {
+  try { return localStorage.getItem(SEARCH_STORAGE_KEY) || ''; } catch { return ''; }
+}
+
+function saveSearchTerm(value) {
+  try {
+    if (value) localStorage.setItem(SEARCH_STORAGE_KEY, value);
+    else localStorage.removeItem(SEARCH_STORAGE_KEY);
+  } catch (error) { console.warn('[Vibe] Recherche locale:', error); }
+}
+
+function applySearch(term = '') {
+  const normalized = String(term).toLowerCase().trim();
+  document.querySelectorAll('.chat-item').forEach(item => {
+    item.hidden = !item.textContent.toLowerCase().includes(normalized);
+  });
 }
 
 function render(items = allChats) {
   if (!list) return;
   list.innerHTML = '';
-  if (!items.length) {
-    list.innerHTML = '<div class="empty-state">Aucune conversation.</div>';
-    return;
-  }
+  if (!items.length) { list.innerHTML = '<div class="empty-state">Aucune conversation.</div>'; return; }
   for (const item of sortChats(items)) {
     const name = item.name || 'Discussion Vibe';
     const favorite = isFavorite(item.id);
@@ -111,16 +98,11 @@ function render(items = allChats) {
     button.className = 'chat-item';
     button.dataset.chatId = item.id;
     button.innerHTML = `<div class="chat-avatar">${escapeHtml(name.slice(0,1).toUpperCase())}</div><div class="chat-meta"><strong>${escapeHtml(name)}</strong><p>${escapeHtml(item.lastMessage || 'Appuyez pour commencer...')}</p></div><span class="chat-favorite" role="button" tabindex="0" title="${favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}" aria-label="${favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}">${favorite ? '★' : '☆'}</span>`;
-
     const favoriteButton = button.querySelector('.chat-favorite');
     favoriteButton?.addEventListener('click', event => toggleFavorite(item, event));
     favoriteButton?.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        toggleFavorite(item, event);
-      }
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleFavorite(item, event); }
     });
-
     button.addEventListener('click', () => {
       document.querySelectorAll('.chat-item.active').forEach(el => el.classList.remove('active'));
       button.classList.add('active');
@@ -129,19 +111,14 @@ function render(items = allChats) {
     });
     list.appendChild(button);
   }
+  applySearch(search?.value || '');
 }
 
 async function ensureGeneralChat() {
   if (!db || !currentUser) return;
   const reference = doc(db, 'chats', 'general');
   const snapshot = await getDoc(reference);
-  if (!snapshot.exists()) {
-    await setDoc(reference, {
-      name: 'Discussion générale',
-      lastMessage: 'Bienvenue sur Vibe',
-      lastUpdated: serverTimestamp()
-    });
-  }
+  if (!snapshot.exists()) await setDoc(reference, { name: 'Discussion générale', lastMessage: 'Bienvenue sur Vibe', lastUpdated: serverTimestamp() });
 }
 
 function startChatsListener() {
@@ -168,9 +145,12 @@ async function loadCurrentProfile(user) {
     const userName = document.getElementById('current-user-name');
     if (avatar) avatar.textContent = name.slice(0, 1).toUpperCase();
     if (userName) userName.textContent = name;
-  } catch (error) {
-    console.error('[Vibe] Profil initial:', error);
-  }
+  } catch (error) { console.error('[Vibe] Profil initial:', error); }
+}
+
+if (search) {
+  search.value = getSearchTerm();
+  search.addEventListener('input', event => { saveSearchTerm(event.target.value); applySearch(event.target.value); });
 }
 
 render();
@@ -182,39 +162,20 @@ if (!firebaseConfigured || !auth || !db) {
     currentUser = user;
     stopChats?.();
     stopChats = null;
-
-    if (!user) {
-      if (status) status.textContent = 'connexion...';
-      return;
-    }
-
+    if (!user) { if (status) status.textContent = 'connexion...'; return; }
     if (status) status.textContent = 'connecté';
     initWhatsAppNavigation();
     await loadCurrentProfile(user);
     await loadFavorites(user);
     render(allChats);
-
-    try {
-      await ensureGeneralChat();
-      startChatsListener();
-    } catch (error) {
-      console.error('[Vibe] Firestore après authentification:', error);
-      if (status) status.textContent = 'Firestore refusé';
-    }
+    try { await ensureGeneralChat(); startChatsListener(); }
+    catch (error) { console.error('[Vibe] Firestore après authentification:', error); if (status) status.textContent = 'Firestore refusé'; }
   });
-
   ensureAnonymousAuth().catch(error => {
     console.error('[Vibe] Authentification:', error);
     if (status) status.textContent = 'Authentification refusée';
     showToast('Vérifiez que la connexion anonyme Firebase est activée.');
   });
 }
-
-search?.addEventListener('input', event => {
-  const term = event.target.value.toLowerCase().trim();
-  document.querySelectorAll('.chat-item').forEach(item => {
-    item.hidden = !item.textContent.toLowerCase().includes(term);
-  });
-});
 
 document.addEventListener('vibe:close-chat', () => shell?.classList.remove('chat-open'));
