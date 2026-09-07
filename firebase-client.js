@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import {
   getFirestore,
   collection,
@@ -42,11 +42,26 @@ export {
   onSnapshot,
   serverTimestamp,
   onAuthStateChanged,
-  signInAnonymously
+  signInAnonymously,
+  setPersistence,
+  browserLocalPersistence
 };
+
+let persistenceReady = null;
+
+async function prepareAuthPersistence() {
+  if (!auth) return;
+  if (!persistenceReady) {
+    persistenceReady = setPersistence(auth, browserLocalPersistence).catch(error => {
+      console.warn('[Vibe] Persistance Firebase Auth:', error);
+    });
+  }
+  await persistenceReady;
+}
 
 export async function ensureAnonymousAuth() {
   if (!auth) return null;
+  await prepareAuthPersistence();
   if (auth.currentUser) return auth.currentUser;
   const result = await signInAnonymously(auth);
   return result.user;
