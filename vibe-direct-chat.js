@@ -1,4 +1,4 @@
-import { auth, db, collection, doc, addDoc, setDoc, getDocs, query, where, serverTimestamp } from './firebase-client.js';
+import { auth, db, collection, doc, addDoc, setDoc, getDoc, getDocs, query, where, serverTimestamp } from './firebase-client.js';
 
 const toast = message => {
   const el = document.getElementById('toast');
@@ -11,6 +11,37 @@ const toast = message => {
 
 const userId = () => auth?.currentUser?.uid || null;
 
+function makeVibeId(uid) {
+  return uid ? `vibe-${uid.slice(-8).toLowerCase()}` : '';
+}
+
+export async function ensureVibeProfile() {
+  const uid = userId();
+  if (!uid || !db) return null;
+
+  const profileRef = doc(db, 'profiles', uid);
+  const snapshot = await getDoc(profileRef);
+  const current = snapshot.exists() ? snapshot.data() : {};
+  const vibeId = current.vibeId || makeVibeId(uid);
+  const name = current.name || 'Vibe';
+
+  await setDoc(profileRef, {
+    name,
+    about: current.about || 'Disponible sur Vibe',
+    vibeId,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+
+  await setDoc(doc(db, 'userSearch', vibeId), {
+    uid,
+    vibeId,
+    displayName: name,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+
+  return { uid, vibeId, name };
+}
+
 export async function createDirectChat() {
   const uid = userId();
   if (!uid || !db) {
@@ -18,13 +49,14 @@ export async function createDirectChat() {
     return null;
   }
 
-  const email = String(prompt('E-mail de la personne à contacter :') || '').trim().toLowerCase();
-  if (!email) return null;
+  await ensureVibeProfile();
+  const identifier = String(prompt('Identifiant Vibe de la personne à contacter (ex. vibe-1234abcd) :') || '').trim().toLowerCase();
+  if (!identifier) return null;
 
   try {
-    const users = await getDocs(query(collection(db, 'userSearch'), where('email', '==', email)));
+    const users = await getDocs(query(collection(db, 'userSearch'), where('vibeId', '==', identifier)));
     if (users.empty) {
-      toast('Utilisateur introuvable.');
+      toast('Identifiant Vibe introuvable.');
       return null;
     }
 
@@ -36,7 +68,6 @@ export async function createDirectChat() {
 
     const existing = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', uid)));
     let found = null;
-
     existing.forEach(item => {
       const data = item.data();
       if (!found && data.type === 'private' && Array.isArray(data.participantIds) && data.participantIds.length === 2 && data.participantIds.includes(target.uid)) {
@@ -50,7 +81,7 @@ export async function createDirectChat() {
       return found;
     }
 
-    const name = target.displayName || target.email || 'Discussion';
+    const name = target.displayName || target.vibeId || 'Discussion';
     const ref = await addDoc(collection(db, 'chats'), {
       name,
       ownerId: uid,
@@ -68,7 +99,6 @@ export async function createDirectChat() {
       type: 'private'
     };
 
-    await setDoc(doc(db, 'profiles', uid), { updatedAt: serverTimestamp() }, { merge: true });
     toast('Discussion créée.');
     document.dispatchEvent(new CustomEvent('vibe:open-chat', { detail: { chat } }));
     return chat;
@@ -86,4 +116,4 @@ document.addEventListener('vibe:open-chat', event => {
   if (item) item.click();
 });
 
-window.VibeDirectChat = { createDirectChat };
+window.VibeDirectChat = { createDirectChat, ensureVibeProfile };
