@@ -8,11 +8,12 @@ import {
   onSnapshot,
   serverTimestamp
 } from './firebase-client.js';
+import { enregistrerAppel } from './whatsapp-extra-features.js';
 
 let activeChatId = null;
 let stopMessages = null;
 
-const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
 
 function formatTime(value) {
   const date = value?.toDate?.() ?? (value ? new Date(value) : null);
@@ -24,12 +25,29 @@ function sortMessages(snapshot) {
 }
 
 export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onClose = null) {
-  if (!auth?.currentUser) return;
+  if (!auth?.currentUser || !db) return;
   activeChatId = chatId;
   const panel = document.getElementById('main-chat-panel');
   if (!panel) return;
 
-  panel.innerHTML = `<section class="chat-view"><header class="chat-header"><button class="chat-back" id="chat-back" type="button" title="Retour" aria-label="Retour">‹</button><div class="chat-avatar">${escapeHtml(recipientName.slice(0,1).toUpperCase())}</div><div class="chat-title-wrap"><strong>${escapeHtml(recipientName)}</strong><small>Discussion Vibe</small></div></header><div class="messages" id="chat-messages" aria-live="polite"></div><form class="composer" id="chat-form"><input id="chat-input" type="text" maxlength="2000" placeholder="Écrire un message" autocomplete="off" required><button type="submit" title="Envoyer" aria-label="Envoyer">➤</button></form></section>`;
+  panel.innerHTML = `<section class="chat-view">
+    <header class="chat-header">
+      <button class="chat-back" id="chat-back" type="button" title="Retour" aria-label="Retour">‹</button>
+      <div class="chat-avatar">${escapeHtml(recipientName.slice(0,1).toUpperCase())}</div>
+      <div class="chat-title-wrap"><strong>${escapeHtml(recipientName)}</strong><small>Discussion Vibe</small></div>
+      <div class="chat-header-actions">
+        <button class="chat-call-btn" id="chat-video-call" type="button" title="Appel vidéo" aria-label="Appel vidéo">▣</button>
+        <button class="chat-call-btn" id="chat-audio-call" type="button" title="Appel audio" aria-label="Appel audio">☎</button>
+      </div>
+    </header>
+    <div class="messages" id="chat-messages" aria-live="polite"></div>
+    <form class="composer" id="chat-form">
+      <button class="composer-tool" id="emoji-btn" type="button" title="Emoji" aria-label="Emoji">☺</button>
+      <button class="composer-tool" id="attach-btn" type="button" title="Joindre" aria-label="Joindre">＋</button>
+      <input id="chat-input" type="text" maxlength="2000" placeholder="Écrire un message" autocomplete="off" required>
+      <button type="submit" title="Envoyer" aria-label="Envoyer">➤</button>
+    </form>
+  </section>`;
 
   const form = document.getElementById('chat-form');
   const input = document.getElementById('chat-input');
@@ -41,11 +59,26 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
     document.dispatchEvent(new CustomEvent('vibe:close-chat'));
   });
 
+  document.getElementById('chat-video-call')?.addEventListener('click', () => enregistrerAppel('video', recipientName));
+  document.getElementById('chat-audio-call')?.addEventListener('click', () => enregistrerAppel('audio', recipientName));
+  document.getElementById('emoji-btn')?.addEventListener('click', () => {
+    if (input) input.value += '🙂';
+    input?.focus();
+  });
+  document.getElementById('attach-btn')?.addEventListener('click', () => {
+    const toast = document.getElementById('toast');
+    if (toast) {
+      toast.value = 'Les pièces jointes seront ajoutées dans le prochain module.';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2400);
+    }
+  });
+
   form?.addEventListener('submit', async event => {
     event.preventDefault();
     const text = input?.value.trim();
     const user = auth?.currentUser;
-    if (!text || !user || !db || !activeChatId) return;
+    if (!text || !user || !activeChatId) return;
     try {
       await addDoc(collection(db, 'chats', activeChatId, 'messages'), {uid:user.uid, text, timestamp:serverTimestamp()});
       await setDoc(doc(db, 'chats', activeChatId), {name:recipientName, lastMessage:text, lastUpdated:serverTimestamp()}, {merge:true});
@@ -58,9 +91,6 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onCl
   });
 
   stopMessages?.();
-  stopMessages = null;
-  if (!db) return;
-
   stopMessages = onSnapshot(collection(db, 'chats', activeChatId, 'messages'), snapshot => {
     const container = document.getElementById('chat-messages');
     if (!container) return;
