@@ -6,5 +6,5 @@ export const VIBE_MEDIA_CONFIG = Object.freeze({
   uploadPreset: 'vibe-media',
   maxImageBytes: 10 * 1024 * 1024,
   maxVideoBytes: 100 * 1024 * 1024,
-  maxDocumentBytes: 450 * 1024
+  maxDocumentBytes: 10 * 1024 * 1024
 });
