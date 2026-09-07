@@ -1,4 +1,4 @@
-import { auth, db, collection, doc, addDoc, setDoc, getDoc, getDocs, query, where, serverTimestamp } from './firebase-client.js';
+import { auth, db, collection, doc, setDoc, getDoc, getDocs, query, where, serverTimestamp } from './firebase-client.js';
 
 const toast = message => {
   const el = document.getElementById('toast');
@@ -13,6 +13,13 @@ const userId = () => auth?.currentUser?.uid || null;
 
 function makeVibeId(uid) {
   return uid ? `vibe-${uid.slice(-8).toLowerCase()}` : '';
+}
+
+// Un identifiant déterministe garantit qu'A et B ouvrent toujours
+// exactement le même document Firestore, même s'ils démarrent la
+// discussion presque au même moment.
+function makeDirectChatId(uidA, uidB) {
+  return `private_${[String(uidA), String(uidB)].sort().join('_')}`;
 }
 
 export async function ensureVibeProfile() {
@@ -72,40 +79,39 @@ export async function createDirectChat() {
       return null;
     }
 
-    const existing = await getDocs(query(collection(db, 'chats'), where('participantIds', 'array-contains', uid)));
-    let found = null;
-    existing.forEach(item => {
-      const data = item.data();
-      if (!found && data.type === 'private' && Array.isArray(data.participantIds) && data.participantIds.length === 2 && data.participantIds.includes(target.uid)) {
-        found = { id: item.id, ...data };
-      }
-    });
+    const chatId = makeDirectChatId(uid, target.uid);
+    const chatRef = doc(db, 'chats', chatId);
+    const existingChat = await getDoc(chatRef);
+    const name = target.displayName || target.vibeId || 'Discussion';
 
-    if (found) {
+    if (!existingChat.exists()) {
+      await setDoc(chatRef, {
+        name,
+        ownerId: uid,
+        participantIds: [uid, target.uid],
+        participantNames: {
+          [uid]: auth.currentUser?.displayName || 'Utilisateur',
+          [target.uid]: name
+        },
+        createdAt: serverTimestamp(),
+        lastUpdated: serverTimestamp(),
+        type: 'private'
+      });
+      toast('Discussion créée.');
+    } else {
       toast('Cette discussion existe déjà.');
-      document.dispatchEvent(new CustomEvent('vibe:open-chat', { detail: { chat: found } }));
-      return found;
     }
 
-    const name = target.displayName || target.vibeId || 'Discussion';
-    const ref = await addDoc(collection(db, 'chats'), {
-      name,
-      ownerId: uid,
-      participantIds: [uid, target.uid],
-      createdAt: serverTimestamp(),
-      lastUpdated: serverTimestamp(),
-      type: 'private'
-    });
-
+    const chatData = existingChat.exists() ? existingChat.data() : {};
     const chat = {
-      id: ref.id,
-      name,
-      ownerId: uid,
-      participantIds: [uid, target.uid],
+      id: chatId,
+      ...chatData,
+      name: chatData.name || name,
+      ownerId: chatData.ownerId || uid,
+      participantIds: Array.isArray(chatData.participantIds) ? chatData.participantIds : [uid, target.uid],
       type: 'private'
     };
 
-    toast('Discussion créée.');
     document.dispatchEvent(new CustomEvent('vibe:open-chat', { detail: { chat } }));
     return chat;
   } catch (error) {
