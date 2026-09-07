@@ -1,5 +1,5 @@
 import { afficherFenetreRechercheUtilisateurs } from './vibe-contacts.js';
-import { auth, onAuthStateChanged } from './firebase-client.js';
+import { auth, db, doc, getDoc, onAuthStateChanged } from './firebase-client.js';
 
 function setActive(button){
   document.querySelectorAll('.vibe-mobile-nav button').forEach(item => item.classList.remove('active'));
@@ -27,7 +27,29 @@ function openCalls(){
   document.getElementById('btn-calls')?.click();
 }
 
-function installGoogleAvatar(user = auth?.currentUser){
+async function getBestProfile(user){
+  const profile = {
+    name: String(user?.displayName || '').trim(),
+    photoURL: String(user?.photoURL || '').trim()
+  };
+  if (profile.photoURL || !db || !user?.uid) return profile;
+
+  try {
+    const [profileSnapshot, userSnapshot] = await Promise.all([
+      getDoc(doc(db, 'profiles', user.uid)),
+      getDoc(doc(db, 'users', user.uid))
+    ]);
+    const savedProfile = profileSnapshot.exists() ? profileSnapshot.data() : {};
+    const savedUser = userSnapshot.exists() ? userSnapshot.data() : {};
+    profile.photoURL = String(savedProfile.photoURL || savedUser.photoURL || '').trim();
+    profile.name = String(profile.name || savedProfile.name || savedProfile.displayName || savedUser.name || savedUser.displayName || '').trim();
+  } catch (error) {
+    console.warn('[Vibe] Photo profil mobile:', error);
+  }
+  return profile;
+}
+
+async function installGoogleAvatar(user = auth?.currentUser){
   const header=document.querySelector('.sidebar-header');
   const actions=header?.querySelector('.sidebar-actions');
   if(!header||!actions)return;
@@ -40,16 +62,24 @@ function installGoogleAvatar(user = auth?.currentUser){
     avatar.title='Compte Google';
     actions.insertAdjacentElement('afterend',avatar);
   }
-  const photoURL=String(user?.photoURL||'').trim();
+
+  const profile = await getBestProfile(user);
+  const photoURL=profile.photoURL;
+  const fallback=String(profile.name || 'V').slice(0,1).toUpperCase();
   avatar.innerHTML='';
-  if(!photoURL){avatar.style.display='none';return}
+  avatar.style.display='flex';
+  avatar.textContent=fallback;
+
+  if(!photoURL)return;
   const image=document.createElement('img');
   image.src=photoURL;
   image.alt='';
   image.referrerPolicy='no-referrer';
-  image.addEventListener('error',()=>{avatar.style.display='none'}, {once:true});
+  image.addEventListener('error',()=>{
+    image.remove();
+    avatar.textContent=fallback;
+  }, {once:true});
   avatar.appendChild(image);
-  avatar.style.display='flex';
 }
 
 function install(){
