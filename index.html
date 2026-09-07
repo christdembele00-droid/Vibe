@@ -35,11 +35,77 @@
         <p>Une messagerie en temps réel propulsée par Firestore.</p>
         <small>Connectez votre compte Google pour commencer.</small>
         <button id="google-login-button" type="button" style="margin-top:18px;padding:12px 22px;border:0;border-radius:10px;background:#00a884;color:#fff;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12);">Continuer avec Google</button>
+
+        <div id="vibe-download-card" style="margin:22px auto 0;max-width:430px;width:calc(100% - 30px);padding:18px;border-radius:14px;background:rgba(255,255,255,.92);box-shadow:0 4px 18px rgba(0,0,0,.08);text-align:left;">
+          <div style="font-size:17px;font-weight:700;color:#111b21;margin-bottom:5px;">📱 Télécharger Vibe sur mobile</div>
+          <div style="font-size:13px;line-height:1.45;color:#667781;margin-bottom:12px;">Envoyez le lien Vibe à votre téléphone ou à un proche par SMS ou e-mail.</div>
+          <input id="vibe-download-contact" type="text" inputmode="email" autocomplete="email" placeholder="Numéro de téléphone ou e-mail" style="box-sizing:border-box;width:100%;padding:11px 12px;border:1px solid #dfe5e7;border-radius:9px;outline:none;font-size:14px;margin-bottom:9px;background:#fff;color:#111b21;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button id="vibe-send-sms" type="button" style="border:0;border-radius:9px;padding:10px;background:#00a884;color:#fff;font-weight:600;cursor:pointer;">💬 SMS</button>
+            <button id="vibe-send-email" type="button" style="border:0;border-radius:9px;padding:10px;background:#54656f;color:#fff;font-weight:600;cursor:pointer;">✉️ E-mail</button>
+          </div>
+          <button id="vibe-share-link" type="button" style="width:100%;margin-top:8px;border:1px solid #dfe5e7;border-radius:9px;padding:9px;background:#fff;color:#111b21;font-weight:600;cursor:pointer;">↗️ Partager le lien</button>
+          <div id="vibe-download-feedback" role="status" aria-live="polite" style="display:none;margin-top:9px;font-size:12px;color:#00a884;"></div>
+        </div>
       </section>
     </main>
   </div>
   <input id="toast" class="toast" aria-live="assertive" readonly>
   <script type="module" src="./vibe-app.js?v=4"></script>
   <script type="module" src="./vibe-theme.js?v=1"></script>
+  <script>
+    (() => {
+      const contact = document.getElementById('vibe-download-contact');
+      const feedback = document.getElementById('vibe-download-feedback');
+      const sms = document.getElementById('vibe-send-sms');
+      const email = document.getElementById('vibe-send-email');
+      const share = document.getElementById('vibe-share-link');
+      if (!contact || !feedback || !sms || !email || !share) return;
+
+      const appLink = window.location.href.split('#')[0];
+      const message = `Télécharge et ouvre Vibe : ${appLink}`;
+      const showFeedback = (text, error = false) => {
+        feedback.textContent = text;
+        feedback.style.color = error ? '#d93025' : '#00a884';
+        feedback.style.display = 'block';
+        window.clearTimeout(showFeedback.timer);
+        showFeedback.timer = window.setTimeout(() => { feedback.style.display = 'none'; }, 4500);
+      };
+
+      const getContact = () => contact.value.trim();
+
+      sms.addEventListener('click', () => {
+        const target = getContact();
+        if (!target) return showFeedback('Entrez un numéro de téléphone.', true);
+        const phone = target.replace(/[^0-9+]/g, '');
+        if (!phone) return showFeedback('Numéro de téléphone invalide.', true);
+        window.location.href = `sms:${encodeURIComponent(phone)}?body=${encodeURIComponent(message)}`;
+        showFeedback('Votre application SMS va s’ouvrir avec le lien Vibe.');
+      });
+
+      email.addEventListener('click', () => {
+        const target = getContact();
+        if (!target || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target)) return showFeedback('Entrez une adresse e-mail valide.', true);
+        window.location.href = `mailto:${encodeURIComponent(target)}?subject=${encodeURIComponent('Télécharger Vibe')}&body=${encodeURIComponent(message)}`;
+        showFeedback('Votre application e-mail va s’ouvrir avec le lien Vibe.');
+      });
+
+      share.addEventListener('click', async () => {
+        try {
+          if (navigator.share) {
+            await navigator.share({ title: 'Vibe', text: 'Rejoins-moi sur Vibe', url: appLink });
+            showFeedback('Lien Vibe partagé.');
+          } else if (navigator.clipboard) {
+            await navigator.clipboard.writeText(appLink);
+            showFeedback('Lien Vibe copié. Vous pouvez maintenant le coller dans SMS ou e-mail.');
+          } else {
+            window.prompt('Copiez ce lien Vibe :', appLink);
+          }
+        } catch (error) {
+          if (error?.name !== 'AbortError') showFeedback('Impossible de partager automatiquement le lien.', true);
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
