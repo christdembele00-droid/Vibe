@@ -13,13 +13,8 @@ import {
 } from './firebase-client.js';
 import { ouvrirDiscussion } from './vibe-chat.js';
 
-const fallbackChats = [
-  { id: 'general', name: 'Discussion générale', lastMessage: 'Bienvenue sur Vibe' }
-];
-
-const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, char => ({
-  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-}[char]));
+const fallbackChats = [{ id: 'general', name: 'Discussion générale', lastMessage: 'Bienvenue sur Vibe' }];
+const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 const list = document.getElementById('chats-list-container');
 const search = document.getElementById('search-chat');
@@ -29,6 +24,7 @@ const toastElement = document.getElementById('toast');
 
 let allChats = [...fallbackChats];
 let currentUser = null;
+let stopChats = null;
 let toastTimer = null;
 
 function showToast(message) {
@@ -39,62 +35,59 @@ function showToast(message) {
   toastTimer = setTimeout(() => toastElement.classList.remove('show'), 2400);
 }
 
-function chatTime(value) {
-  return value?.toMillis?.() ?? 0;
-}
-
 function sortChats(items) {
-  return [...items].sort((a, b) => chatTime(b.lastUpdated) - chatTime(a.lastUpdated));
+  return [...items].sort((a, b) => (b.lastUpdated?.toMillis?.() ?? 0) - (a.lastUpdated?.toMillis?.() ?? 0));
 }
 
 function render(items = allChats) {
   if (!list) return;
   list.innerHTML = '';
-
   if (!items.length) {
     list.innerHTML = '<div class="empty-state">Aucune conversation.</div>';
     return;
   }
-
   for (const item of items) {
     const name = item.name || 'Discussion Vibe';
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'chat-item';
     button.dataset.chatId = item.id;
-    button.innerHTML = `
-      <div class="chat-avatar">${escapeHtml(name.slice(0, 1).toUpperCase())}</div>
-      <div class="chat-meta">
-        <strong>${escapeHtml(name)}</strong>
-        <p>${escapeHtml(item.lastMessage || 'Appuyez pour commencer...')}</p>
-      </div>`;
-
+    button.innerHTML = `<div class="chat-avatar">${escapeHtml(name.slice(0,1).toUpperCase())}</div><div class="chat-meta"><strong>${escapeHtml(name)}</strong><p>${escapeHtml(item.lastMessage || 'Appuyez pour commencer...')}</p></div>`;
     button.addEventListener('click', () => {
-      document.querySelectorAll('.chat-item.active').forEach(item => item.classList.remove('active'));
+      document.querySelectorAll('.chat-item.active').forEach(el => el.classList.remove('active'));
       button.classList.add('active');
       shell?.classList.add('chat-open');
       ouvrirDiscussion(item.id, name, () => shell?.classList.remove('chat-open'));
     });
-
     list.appendChild(button);
   }
 }
 
 async function ensureGeneralChat() {
   if (!db || !currentUser) return;
-  try {
-    const reference = doc(db, 'chats', 'general');
-    const snapshot = await getDoc(reference);
-    if (!snapshot.exists()) {
-      await setDoc(reference, {
-        name: 'Discussion générale',
-        lastMessage: 'Bienvenue sur Vibe',
-        lastUpdated: serverTimestamp()
-      });
-    }
-  } catch (error) {
-    console.error('[Vibe] Initialisation conversation:', error);
+  const reference = doc(db, 'chats', 'general');
+  const snapshot = await getDoc(reference);
+  if (!snapshot.exists()) {
+    await setDoc(reference, {
+      name: 'Discussion générale',
+      lastMessage: 'Bienvenue sur Vibe',
+      lastUpdated: serverTimestamp()
+    });
   }
+}
+
+function startChatsListener() {
+  if (!db || !currentUser) return;
+  stopChats?.();
+  stopChats = onSnapshot(collection(db, 'chats'), snapshot => {
+    const remoteChats = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    allChats = remoteChats.length ? sortChats(remoteChats) : [...fallbackChats];
+    render(allChats);
+  }, error => {
+    console.error('[Vibe] Conversations:', error);
+    allChats = [...fallbackChats];
+    render(allChats);
+  });
 }
 
 render();
@@ -104,23 +97,28 @@ if (!firebaseConfigured || !auth || !db) {
 } else {
   onAuthStateChanged(auth, async user => {
     currentUser = user;
-    if (status) status.textContent = user ? 'connecté' : 'connexion...';
-    if (user) await ensureGeneralChat();
+    stopChats?.();
+    stopChats = null;
+
+    if (!user) {
+      if (status) status.textContent = 'connexion...';
+      return;
+    }
+
+    if (status) status.textContent = 'connecté';
+    try {
+      await ensureGeneralChat();
+      startChatsListener();
+    } catch (error) {
+      console.error('[Vibe] Firestore après authentification:', error);
+      if (status) status.textContent = 'Firestore refusé';
+    }
   });
 
   ensureAnonymousAuth().catch(error => {
     console.error('[Vibe] Authentification:', error);
-    if (status) status.textContent = 'Erreur de connexion';
-  });
-
-  onSnapshot(collection(db, 'chats'), snapshot => {
-    const remoteChats = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-    allChats = remoteChats.length ? sortChats(remoteChats) : [...fallbackChats];
-    render(allChats);
-  }, error => {
-    console.error('[Vibe] Conversations:', error);
-    allChats = [...fallbackChats];
-    render(allChats);
+    if (status) status.textContent = 'Authentification refusée';
+    showToast('Vérifiez que la connexion anonyme Firebase est activée.');
   });
 }
 
@@ -134,5 +132,4 @@ search?.addEventListener('input', event => {
 document.getElementById('btn-status')?.addEventListener('click', () => showToast('Les statuts Vibe arrivent dans le module suivant.'));
 document.getElementById('btn-calls')?.addEventListener('click', () => showToast('Les appels seront ajoutés après la messagerie.'));
 document.getElementById('btn-settings')?.addEventListener('click', () => showToast('Paramètres Vibe : module en préparation.'));
-
 document.addEventListener('vibe:close-chat', () => shell?.classList.remove('chat-open'));
