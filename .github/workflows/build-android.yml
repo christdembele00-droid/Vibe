@@ -1,4 +1,4 @@
-name: Build Vibe Android APK
+name: Build Vibe Android
 
 on:
   push:
@@ -44,25 +44,77 @@ jobs:
       - name: Create Android project
         run: npx cap add android
 
+      - name: Configure Play-compatible Android build
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle')
+          s = p.read_text()
+          s = s.replace('versionCode 1', f'versionCode {__import__("os").environ["VERSION_CODE"]}', 1)
+          s = s.replace('versionName "1.0"', 'versionName "1.0.0"', 1)
+          p.write_text(s)
+          PY
+
       - name: Sync Vibe into Android
         run: npx cap sync android
 
-      - name: Build debug APK
+      - name: Prepare signing configuration
+        if: ${{ secrets.VIBE_KEYSTORE_BASE64 != '' }}
+        env:
+          VIBE_KEYSTORE_BASE64: ${{ secrets.VIBE_KEYSTORE_BASE64 }}
+          VIBE_KEYSTORE_PASSWORD: ${{ secrets.VIBE_KEYSTORE_PASSWORD }}
+          VIBE_KEY_ALIAS: ${{ secrets.VIBE_KEY_ALIAS }}
+          VIBE_KEY_PASSWORD: ${{ secrets.VIBE_KEY_PASSWORD }}
+        run: |
+          echo "$VIBE_KEYSTORE_BASE64" | base64 --decode > android/vibe-upload.jks
+          cat >> android/gradle.properties <<EOF
+          VIBE_KEYSTORE_PATH=$GITHUB_WORKSPACE/vibe-upload.jks
+          VIBE_KEYSTORE_PASSWORD=$VIBE_KEYSTORE_PASSWORD
+          VIBE_KEY_ALIAS=$VIBE_KEY_ALIAS
+          VIBE_KEY_PASSWORD=$VIBE_KEY_PASSWORD
+          EOF
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle')
+          s = p.read_text()
+          marker = 'android {'
+          signing = '''android {\n    signingConfigs {\n        release {\n            storeFile file(project.findProperty("VIBE_KEYSTORE_PATH"))\n            storePassword project.findProperty("VIBE_KEYSTORE_PASSWORD")\n            keyAlias project.findProperty("VIBE_KEY_ALIAS")\n            keyPassword project.findProperty("VIBE_KEY_PASSWORD")\n        }\n    }'''
+          if 'signingConfigs {' not in s:
+              s = s.replace(marker, signing, 1)
+          s = s.replace('buildTypes {', 'buildTypes {', 1)
+          s = s.replace('release {', 'release {\n            signingConfig signingConfigs.release', 1)
+          p.write_text(s)
+          PY
+
+      - name: Build release Android App Bundle
+        working-directory: android
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: Upload Play Store bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vibe-Android-AAB
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Upload APK for direct testing
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
-
-      - name: Publish APK release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          TAG="android-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" android/app/build/outputs/apk/debug/app-debug.apk \
-            --title "Vibe Android ${GITHUB_RUN_NUMBER}" \
-            --notes "APK Android de Vibe généré automatiquement depuis la branche main." \
-            --prerelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Vibe-Android-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publish signed bundle release
+        if: ${{ secrets.VIBE_KEYSTORE_BASE64 != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="android-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" android/app/build/outputs/bundle/release/app-release.aab android/app/build/outputs/apk/debug/app-debug.apk \
+            --title "Vibe Android ${GITHUB_RUN_NUMBER}" \
+            --notes "Version Android Vibe : App Bundle release pour Google Play et APK de test." \
+            --prerelease
