@@ -1,8 +1,9 @@
 // Verrouillage du nom et de la photo de profil dans les paramètres Vibe.
 // Le nom et la photo restent ceux fournis par le compte Google.
+import { auth } from './firebase-client.js';
 
 function getGoogleUser() {
-  return window.firebase?.auth?.currentUser || null;
+  return auth?.currentUser || null;
 }
 
 function getGoogleProfile() {
@@ -72,8 +73,6 @@ function lockProfileEditing() {
     element.removeAttribute('role');
     element.removeAttribute('tabindex');
     element.removeAttribute('onclick');
-
-    // Dans les paramètres, toujours afficher la photo Google actuelle.
     if (element.id === 'settings-profile-avatar' || element.closest('.profile-card')) {
       renderGooglePhoto(element, googleName, googlePhoto);
     }
