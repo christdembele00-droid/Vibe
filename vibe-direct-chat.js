@@ -16,17 +16,22 @@ function makeVibeId(uid) {
 }
 
 export async function ensureVibeProfile() {
-  const uid = userId();
+  const user = auth?.currentUser;
+  const uid = user?.uid || null;
   if (!uid || !db) return null;
 
   const profileRef = doc(db, 'profiles', uid);
   const snapshot = await getDoc(profileRef);
   const current = snapshot.exists() ? snapshot.data() : {};
   const vibeId = current.vibeId || makeVibeId(uid);
-  const name = current.name || 'Vibe';
+  const name = user.displayName || current.name || 'Utilisateur';
+  const photoURL = user.photoURL || current.photoURL || '';
 
   await setDoc(profileRef, {
     name,
+    displayName: name,
+    photoURL,
+    email: user.email || current.email || '',
     about: current.about || 'Disponible sur Vibe',
     vibeId,
     updatedAt: serverTimestamp()
@@ -36,10 +41,11 @@ export async function ensureVibeProfile() {
     uid,
     vibeId,
     displayName: name,
+    photoURL,
     updatedAt: serverTimestamp()
   }, { merge: true });
 
-  return { uid, vibeId, name };
+  return { uid, vibeId, name, displayName: name, photoURL, email: user.email || '' };
 }
 
 export async function createDirectChat() {
