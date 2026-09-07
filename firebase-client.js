@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import {
   getFirestore,
   collection,
@@ -44,7 +44,8 @@ export {
   onSnapshot,
   serverTimestamp,
   onAuthStateChanged,
-  signInAnonymously,
+  GoogleAuthProvider,
+  signInWithPopup,
   setPersistence,
   browserLocalPersistence
 };
@@ -61,10 +62,12 @@ async function prepareAuthPersistence() {
   await persistenceReady;
 }
 
-export async function ensureAnonymousAuth() {
+export async function signInWithGoogle() {
   if (!auth) return null;
   await prepareAuthPersistence();
   if (auth.currentUser) return auth.currentUser;
-  const result = await signInAnonymously(auth);
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  const result = await signInWithPopup(auth, provider);
   return result.user;
 }
