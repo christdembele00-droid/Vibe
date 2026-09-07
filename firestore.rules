@@ -5,7 +5,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function validChat() {
+    function validChatData() {
       return request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 120
@@ -15,26 +15,29 @@ service cloud.firestore {
 
     match /chats/{chatId} {
       allow read: if signedIn();
-      allow create, update: if signedIn() && validChat();
+      allow create: if signedIn() && validChatData();
+      allow update: if signedIn()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.lastMessage is string
+        && request.resource.data.lastMessage.size() <= 2000;
       allow delete: if false;
 
       match /messages/{messageId} {
         allow read: if signedIn();
-
         allow create: if signedIn()
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 2000
-          && request.resource.data.timestamp == request.time;
-
+          && request.resource.data.timestamp is timestamp;
         allow update: if signedIn()
           && resource.data.uid == request.auth.uid
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 2000;
-
         allow delete: if signedIn() && resource.data.uid == request.auth.uid;
       }
     }
