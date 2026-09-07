@@ -4,6 +4,7 @@ import {
 } from './firebase-client.js';
 import { ouvrirDiscussion } from './vibe-chat.js';
 import { initWhatsAppNavigation } from './whatsapp-extra-features.js';
+import { ensureVibeProfile } from './vibe-direct-chat.js';
 
 const fallbackChats = [{ id: 'general', name: 'Discussion générale', lastMessage: 'Bienvenue sur Vibe', type: 'general' }];
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
@@ -170,8 +171,7 @@ function startChatsListener() {
 async function loadCurrentProfile(user) {
   if (!db || !user) return;
   try {
-    const snapshot = await getDoc(doc(db, 'profiles', user.uid));
-    const profile = snapshot.exists() ? snapshot.data() : null;
+    const profile = await ensureVibeProfile();
     const name = profile?.name || 'Vibe';
     const avatar = document.getElementById('current-user-avatar');
     const userName = document.getElementById('current-user-name');
