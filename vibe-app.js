@@ -6,7 +6,7 @@ import { ouvrirDiscussion } from './vibe-chat.js';
 import { initWhatsAppNavigation } from './whatsapp-extra-features.js';
 import { ensureVibeProfile } from './vibe-direct-chat.js';
 import { afficherFenetreRechercheUtilisateurs } from './vibe-contacts.js';
-import { creerAvatarPersonnalise } from './vibe-avatar.js';
+import { creerAvatarPersonnalise, creerAvatarDepuisProfil } from './vibe-avatar.js';
 
 const fallbackChats = [{ id: 'general', name: 'Discussion générale', lastMessage: 'Bienvenue sur Vibe', type: 'general' }];
 const escapeHtml = (value = '') => String(value).replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
@@ -69,7 +69,7 @@ function render(items=allChats){
   list.innerHTML='';
   if(!items.length){list.innerHTML='<div class="empty-state">Aucune conversation.</div>';return}
   for(const item of sortChats(items)){
-    const name=item.name||'Discussion Vibe';
+    const name=item.name||'Discussion';
     const favorite=isFavorite(item.id);
     const button=document.createElement('button');
     button.type='button';
@@ -112,24 +112,29 @@ async function ensureGeneralChat(){
 async function enregistrerUtilisateurActif(user,profile=null){
   if(!user||!db)return;
   const data=profile||{};
-  const name=data.name||user.displayName||`Utilisateur_${user.uid.substring(0,5)}`;
+  const name=user.displayName||data.name||'Utilisateur';
+  const photoURL=user.photoURL||data.photoURL||'';
   const vibeId=data.vibeId||`vibe-${user.uid.slice(-8).toLowerCase()}`;
   try{
     await setDoc(doc(db,'users',user.uid),{
       uid:user.uid,
       name,
+      displayName:name,
+      photoURL,
       vibeId,
-      email:user.email||'Anonyme',
+      email:user.email||data.email||'',
       lastSeen:serverTimestamp(),
       online:true
     },{merge:true});
     const currentAvatar=document.getElementById('current-user-avatar');
     if(currentAvatar){
-      const avatar=creerAvatarPersonnalise(name,{className:'user-avatar'});
+      const avatar=creerAvatarDepuisProfil({name,displayName:name,photoURL},{className:'user-avatar'});
       avatar.id='current-user-avatar';
       avatar.style.width='40px';avatar.style.height='40px';avatar.style.minWidth='40px';
       currentAvatar.replaceWith(avatar);
     }
+    const userName=document.getElementById('current-user-name');
+    if(userName)userName.textContent=name;
   }catch(error){console.error('[Vibe] Présence utilisateur:',error)}
 }
 
@@ -187,18 +192,19 @@ async function loadCurrentProfile(user){
   if(!db||!user)return null;
   try{
     const profile=await ensureVibeProfile();
-    const name=profile?.name||'Vibe';
+    const name=user.displayName||profile?.name||'Utilisateur';
+    const photoURL=user.photoURL||profile?.photoURL||'';
     const currentAvatar=document.getElementById('current-user-avatar');
     const userName=document.getElementById('current-user-name');
     if(currentAvatar){
-      const avatar=creerAvatarPersonnalise(name,{className:'user-avatar'});
+      const avatar=creerAvatarDepuisProfil({name,displayName:name,photoURL},{className:'user-avatar'});
       avatar.id='current-user-avatar';
       avatar.style.width='40px';avatar.style.height='40px';avatar.style.minWidth='40px';
       currentAvatar.replaceWith(avatar);
     }
     if(userName)userName.textContent=name;
-    return profile;
-  }catch(error){console.error('[Vibe] Profil initial:',error);return null}
+    return {...profile,name,displayName:name,photoURL};
+  }catch(error){console.error('[Vibe] Profil initial:',error);return {name:user.displayName||'Utilisateur',displayName:user.displayName||'Utilisateur',photoURL:user.photoURL||''};}
 }
 
 function installNewDiscussionButton(){
@@ -228,8 +234,8 @@ if(!firebaseConfigured||!auth||!db){
   onAuthStateChanged(auth,async user=>{
     currentUser=user;
     stopChats?.();stopChats=null;stopPresenceHeartbeat();
-    if(!user){if(status)status.textContent='connexion...';return}
-    if(status)status.textContent='connecté';
+    if(!user){if(status)status.textContent='Connexion Google requise';return}
+    if(status)status.textContent='Connecté avec Google';
     initWhatsAppNavigation();
     const profile=await loadCurrentProfile(user);
     await enregistrerUtilisateurActif(user,profile);
@@ -248,7 +254,7 @@ if(!firebaseConfigured||!auth||!db){
   ensureAnonymousAuth().catch(error=>{
     console.error('[Vibe] Authentification:',error);
     if(status)status.textContent='Authentification refusée';
-    showToast('Vérifiez que la connexion anonyme Firebase est activée.');
+    showToast('Vérifiez que la connexion Google Firebase est activée.');
   });
 }
 
