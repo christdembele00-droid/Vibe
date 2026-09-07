@@ -1,7 +1,7 @@
 {
   "appId": "com.vibe.app",
   "appName": "Vibe",
-  "webDir": ".",
+  "webDir": "www",
   "server": {
     "androidScheme": "https"
   }
