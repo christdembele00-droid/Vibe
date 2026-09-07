@@ -6,7 +6,6 @@ import {
   setDoc,
   addDoc,
   query,
-  orderBy,
   onSnapshot,
   serverTimestamp
 } from './firebase-client.js';
@@ -25,7 +24,17 @@ function formatTime(value) {
     : '';
 }
 
-export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe') {
+function sortMessages(snapshot) {
+  return snapshot.docs
+    .map(item => ({ id: item.id, ...item.data() }))
+    .sort((a, b) => {
+      const ta = a.timestamp?.toMillis?.() ?? 0;
+      const tb = b.timestamp?.toMillis?.() ?? 0;
+      return ta - tb;
+    });
+}
+
+export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe', onClose = null) {
   activeChatId = chatId;
   const panel = document.getElementById('main-chat-panel');
   if (!panel) return;
@@ -33,10 +42,11 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe') {
   panel.innerHTML = `
     <section class="chat-view">
       <header class="chat-header">
+        <button class="chat-back" id="chat-back" type="button" title="Retour" aria-label="Retour">‹</button>
         <div class="chat-avatar">${escapeHtml(recipientName.slice(0, 1).toUpperCase())}</div>
         <div class="chat-title-wrap">
           <strong>${escapeHtml(recipientName)}</strong>
-          <small>Discussion Vibe</small>
+          <small id="chat-presence">Discussion Vibe</small>
         </div>
       </header>
       <div class="messages" id="chat-messages" aria-live="polite"></div>
@@ -48,6 +58,13 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe') {
 
   const form = document.getElementById('chat-form');
   const input = document.getElementById('chat-input');
+  const back = document.getElementById('chat-back');
+
+  back?.addEventListener('click', () => {
+    fermerDiscussion();
+    onClose?.();
+    document.dispatchEvent(new CustomEvent('vibe:close-chat'));
+  });
 
   form?.addEventListener('submit', async event => {
     event.preventDefault();
@@ -69,6 +86,7 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe') {
       }, { merge: true });
 
       input.value = '';
+      input.removeAttribute('aria-invalid');
     } catch (error) {
       console.error('[Vibe] Envoi:', error);
       input?.setAttribute('aria-invalid', 'true');
@@ -80,28 +98,25 @@ export function ouvrirDiscussion(chatId, recipientName = 'Discussion Vibe') {
 
   if (!db) return;
 
-  const messagesQuery = query(
-    collection(db, 'chats', activeChatId, 'messages'),
-    orderBy('timestamp', 'asc')
-  );
+  const messagesRef = collection(db, 'chats', activeChatId, 'messages');
 
-  stopMessages = onSnapshot(messagesQuery, snapshot => {
+  stopMessages = onSnapshot(messagesRef, snapshot => {
     const container = document.getElementById('chat-messages');
     if (!container) return;
 
-    if (snapshot.empty) {
+    const messages = sortMessages(snapshot);
+    if (!messages.length) {
       container.innerHTML = '<div class="empty-state">Aucun message. Écrivez le premier.</div>';
       return;
     }
 
     container.innerHTML = '';
-    snapshot.forEach(messageDoc => {
-      const data = messageDoc.data();
+    for (const data of messages) {
       const bubble = document.createElement('div');
       bubble.className = `message${data.uid === auth?.currentUser?.uid ? ' mine' : ''}`;
       bubble.innerHTML = `<span>${escapeHtml(data.text || '')}</span><time>${formatTime(data.timestamp)}</time>`;
       container.appendChild(bubble);
-    });
+    }
     container.scrollTop = container.scrollHeight;
   }, error => {
     console.error('[Vibe] Messages:', error);
