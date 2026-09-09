@@ -1,5 +1,5 @@
 import { afficherFenetreRechercheUtilisateurs } from './vibe-contacts.js';
-import { auth, db, doc, getDoc, onAuthStateChanged } from './firebase-client.js';
+import { auth, db, doc, getDoc, onAuthStateChanged, signInWithGoogle, firebaseConfigured } from './firebase-client.js';
 
 function setActive(button){
   document.querySelectorAll('.vibe-mobile-nav button').forEach(item => item.classList.remove('active'));
@@ -49,10 +49,41 @@ async function getBestProfile(user){
   return profile;
 }
 
+async function handleMobileLogin(){
+  if(!firebaseConfigured || !auth){
+    alert('Firebase n’est pas configuré.');
+    return;
+  }
+  const button=document.getElementById('vibe-mobile-google-login');
+  if(button){button.disabled=true;button.textContent='Connexion…';}
+  try{
+    await signInWithGoogle();
+  }catch(error){
+    console.error('[Vibe] Connexion Google mobile:',error);
+    if(button){button.disabled=false;button.textContent='Se connecter';}
+    const message=error?.code==='auth/popup-closed-by-user'?'Connexion annulée.':'Connexion Google impossible.';
+    alert(message);
+  }
+}
+
 async function installGoogleAvatar(user = auth?.currentUser){
   const header=document.querySelector('.sidebar-header');
   const actions=header?.querySelector('.sidebar-actions');
   if(!header||!actions)return;
+
+  let loginButton=document.getElementById('vibe-mobile-google-login');
+  if(!loginButton){
+    loginButton=document.createElement('button');
+    loginButton.id='vibe-mobile-google-login';
+    loginButton.type='button';
+    loginButton.className='vibe-mobile-google-login';
+    loginButton.textContent='Se connecter';
+    loginButton.setAttribute('aria-label','Se connecter avec Google');
+    loginButton.title='Se connecter avec Google';
+    loginButton.addEventListener('click',handleMobileLogin);
+    actions.insertAdjacentElement('afterend',loginButton);
+  }
+
   let avatar=document.getElementById('vibe-mobile-google-avatar');
   if(!avatar){
     avatar=document.createElement('div');
@@ -63,6 +94,15 @@ async function installGoogleAvatar(user = auth?.currentUser){
     actions.insertAdjacentElement('afterend',avatar);
   }
 
+  if(!user){
+    avatar.style.display='none';
+    loginButton.style.display='inline-flex';
+    loginButton.disabled=false;
+    loginButton.textContent='Se connecter';
+    return;
+  }
+
+  loginButton.style.display='none';
   const profile = await getBestProfile(user);
   const photoURL=profile.photoURL;
   const fallback=String(profile.name || 'V').slice(0,1).toUpperCase();
