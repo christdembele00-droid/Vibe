@@ -55,11 +55,13 @@ export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
 
-  // Dans l'APK Capacitor, le popup OAuth peut être bloqué par le WebView.
-  // Le flux redirect ouvre alors l'authentification Google dans le navigateur système.
+  // Ne pas utiliser signInWithRedirect() dans l'APK Capacitor :
+  // le retour OAuth peut être envoyé vers https://localhost dans le navigateur
+  // système, où aucun serveur HTTP n'écoute, ce qui produit ERR_CONNECTION_REFUSED.
+  // Le flux popup reste dans le contexte de l'application WebView.
   if (isCapacitorMobile()) {
-    await signInWithRedirect(auth, provider);
-    return null;
+    const result = await signInWithPopup(auth, provider);
+    return result.user;
   }
 
   const result = await signInWithPopup(auth, provider);
