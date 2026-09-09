@@ -129,21 +129,34 @@ function decorateStickerMessages(snapshot) {
   latestSnapshot = snapshot || latestSnapshot;
   const container = document.getElementById('chat-messages');
   if (!container || !latestSnapshot) return;
+
   const docs = sortDocs(latestSnapshot);
   docs.forEach((item,index) => {
     const sticker = item.data()?.sticker;
     if (!sticker) return;
+
     const bubble = container.children[index];
     if (!bubble) return;
+
     const url = stickerUrl(sticker.id);
     if (!url) return;
-    bubble.querySelectorAll('.message-text,.message-attachment,.sticker-message').forEach(node => node.remove());
+
+    // Important: do not remove/reinsert the image on every MutationObserver pass.
+    // The previous implementation caused an endless DOM mutation loop and could
+    // make the whole Vibe interface freeze or become unresponsive.
+    const existing = bubble.querySelector('.sticker-message');
+    if (existing) {
+      if (existing.src !== url) existing.src = url;
+      existing.alt = sticker.label || 'Sticker';
+      return;
+    }
+
     const image = document.createElement('img');
     image.className = 'sticker-message';
     image.src = url;
     image.alt = sticker.label || 'Sticker';
     image.loading = 'lazy';
-    if (!bubble.querySelector('.sticker-message')) bubble.prepend(image);
+    bubble.prepend(image);
   });
 }
 
