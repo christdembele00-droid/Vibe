@@ -23,6 +23,7 @@ const STICKERS = [
 let currentStop = null;
 let currentChatId = null;
 let currentRecipient = '';
+let latestSnapshot = null;
 let observer = null;
 
 function escapeHtml(value='') {
@@ -95,7 +96,8 @@ async function sendSticker(stickerId) {
   if (!sticker) return;
   const chatId = currentChatId || await resolveChatId();
   if (!chatId) {
-    document.getElementById('toast')?.setAttribute('value','Impossible de trouver cette discussion.');
+    const toast=document.getElementById('toast');
+    if(toast){toast.value='Impossible de trouver cette discussion.';toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2500);}
     return;
   }
   currentChatId = chatId;
@@ -124,9 +126,10 @@ function sortDocs(snapshot) {
 }
 
 function decorateStickerMessages(snapshot) {
+  latestSnapshot = snapshot || latestSnapshot;
   const container = document.getElementById('chat-messages');
-  if (!container) return;
-  const docs = sortDocs(snapshot);
+  if (!container || !latestSnapshot) return;
+  const docs = sortDocs(latestSnapshot);
   docs.forEach((item,index) => {
     const sticker = item.data()?.sticker;
     if (!sticker) return;
@@ -134,21 +137,20 @@ function decorateStickerMessages(snapshot) {
     if (!bubble) return;
     const url = stickerUrl(sticker.id);
     if (!url) return;
-    const time = bubble.querySelector('time')?.outerHTML || '';
     bubble.querySelectorAll('.message-text,.message-attachment,.sticker-message').forEach(node => node.remove());
     const image = document.createElement('img');
     image.className = 'sticker-message';
     image.src = url;
     image.alt = sticker.label || 'Sticker';
     image.loading = 'lazy';
-    bubble.prepend(image);
-    if (!bubble.querySelector('time') && time) bubble.insertAdjacentHTML('beforeend',time);
+    if (!bubble.querySelector('.sticker-message')) bubble.prepend(image);
   });
 }
 
 async function watchCurrentChat() {
   currentStop?.();
   currentStop = null;
+  latestSnapshot = null;
   currentChatId = await resolveChatId();
   if (!currentChatId || !db) return;
   currentStop = onSnapshot(collection(db,'chats',currentChatId,'messages'), snapshot => decorateStickerMessages(snapshot));
@@ -159,7 +161,7 @@ function install() {
   observer = new MutationObserver(() => {
     const chat = document.querySelector('.chat-view');
     if (!chat) {
-      currentStop?.(); currentStop = null; currentChatId = null;
+      currentStop?.(); currentStop = null; currentChatId = null; latestSnapshot = null;
       return;
     }
     injectComposer();
@@ -168,6 +170,7 @@ function install() {
       currentRecipient = title;
       watchCurrentChat();
     }
+    if (latestSnapshot) decorateStickerMessages(latestSnapshot);
   });
   observer.observe(document.body,{childList:true,subtree:true});
   injectComposer();
