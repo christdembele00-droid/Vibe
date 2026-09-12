@@ -5,7 +5,6 @@ import {
   GithubAuthProvider,
   RecaptchaVerifier,
   signInWithPopup,
-  signInWithRedirect,
   getRedirectResult,
   signInWithCredential,
   signInWithEmailAndPassword,
@@ -47,7 +46,7 @@ export {
   collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, deleteField,
   query, where, orderBy, onSnapshot, serverTimestamp, onAuthStateChanged,
   GoogleAuthProvider, GithubAuthProvider, RecaptchaVerifier,
-  signInWithPopup, signInWithRedirect, getRedirectResult, signInWithCredential,
+  signInWithPopup, getRedirectResult, signInWithCredential,
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signInAnonymously, signInWithPhoneNumber, signOut,
   setPersistence, browserLocalPersistence
@@ -56,6 +55,8 @@ export {
 let persistenceReady = null;
 let phoneConfirmation = null;
 let phoneRecaptcha = null;
+let nativePhoneVerificationId = null;
+let nativePhoneListeners = [];
 
 async function prepareAuthPersistence() {
   if (!auth) return;
@@ -100,9 +101,7 @@ export function getAuthErrorMessage(error) {
 
 async function signInWithNativeGoogle() {
   const nativeAuth = getNativeFirebaseAuthentication();
-  if (!nativeAuth?.signInWithGoogle) {
-    throw new Error('Le module Firebase Authentication natif n’est pas disponible dans cette APK.');
-  }
+  if (!nativeAuth?.signInWithGoogle) throw new Error('Le module Firebase Authentication natif n’est pas disponible dans cette APK.');
   const result = await nativeAuth.signInWithGoogle({ useCredentialManager: true });
   if (!result?.user) return null;
   const idToken = result?.credential?.idToken;
@@ -112,15 +111,67 @@ async function signInWithNativeGoogle() {
   return webResult.user;
 }
 
+async function signInWithNativeEmail(email, password, create = false) {
+  const nativeAuth = getNativeFirebaseAuthentication();
+  if (!nativeAuth) throw new Error('Firebase Authentication natif indisponible dans cette APK.');
+  const method = create ? nativeAuth.createUserWithEmailAndPassword : nativeAuth.signInWithEmailAndPassword;
+  if (typeof method !== 'function') throw new Error('La version Firebase native de cette APK ne fournit pas la connexion e-mail.');
+  const result = await method({ email: String(email).trim(), password });
+  return result?.user || null;
+}
+
+async function signInWithNativeAnonymous() {
+  const nativeAuth = getNativeFirebaseAuthentication();
+  if (!nativeAuth?.signInAnonymously) throw new Error('La connexion anonyme native est indisponible dans cette APK.');
+  const result = await nativeAuth.signInAnonymously();
+  return result?.user || null;
+}
+
+async function signInWithNativeGithub() {
+  const nativeAuth = getNativeFirebaseAuthentication();
+  if (!nativeAuth?.signInWithGithub) throw new Error('La connexion GitHub native est indisponible dans cette APK.');
+  const result = await nativeAuth.signInWithGithub();
+  return result?.user || null;
+}
+
+async function clearNativePhoneListeners() {
+  for (const listener of nativePhoneListeners) {
+    try { await listener.remove(); } catch (_) {}
+  }
+  nativePhoneListeners = [];
+}
+
+async function startNativePhoneSignIn(phoneNumber) {
+  const nativeAuth = getNativeFirebaseAuthentication();
+  if (!nativeAuth?.signInWithPhoneNumber || !nativeAuth?.addListener) throw new Error('La connexion téléphone native est indisponible dans cette APK.');
+  await clearNativePhoneListeners();
+  nativePhoneVerificationId = null;
+  nativePhoneListeners.push(await nativeAuth.addListener('phoneCodeSent', event => {
+    nativePhoneVerificationId = event?.verificationId || null;
+  }));
+  nativePhoneListeners.push(await nativeAuth.addListener('phoneVerificationCompleted', () => {}));
+  await nativeAuth.signInWithPhoneNumber({ phoneNumber: String(phoneNumber).trim() });
+  return true;
+}
+
+async function confirmNativePhoneSignIn(code) {
+  const nativeAuth = getNativeFirebaseAuthentication();
+  if (!nativeAuth?.confirmVerificationCode || !nativePhoneVerificationId) throw new Error('Aucun code SMS en attente. Demandez un nouveau code.');
+  const result = await nativeAuth.confirmVerificationCode({ verificationId: nativePhoneVerificationId, verificationCode: String(code).trim() });
+  nativePhoneVerificationId = null;
+  await clearNativePhoneListeners();
+  return result?.user || null;
+}
+
 export async function signInWithGoogle() {
   if (!auth) return null;
   await prepareAuthPersistence();
   const currentUser = auth.currentUser;
   const hasGoogleProvider = Boolean(currentUser?.providerData?.some(provider => provider?.providerId === 'google.com'));
   if (currentUser && hasGoogleProvider) return currentUser;
+  if (isCapacitorMobile()) return signInWithNativeGoogle();
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
-  if (isCapacitorMobile()) return signInWithNativeGoogle();
   const result = await signInWithPopup(auth, provider);
   return result.user;
 }
@@ -128,6 +179,7 @@ export async function signInWithGoogle() {
 export async function signInWithEmail(email, password) {
   if (!auth) return null;
   await prepareAuthPersistence();
+  if (isCapacitorMobile()) return signInWithNativeEmail(email, password, false);
   const result = await signInWithEmailAndPassword(auth, String(email).trim(), password);
   return result.user;
 }
@@ -135,6 +187,7 @@ export async function signInWithEmail(email, password) {
 export async function createEmailAccount(email, password) {
   if (!auth) return null;
   await prepareAuthPersistence();
+  if (isCapacitorMobile()) return signInWithNativeEmail(email, password, true);
   const result = await createUserWithEmailAndPassword(auth, String(email).trim(), password);
   return result.user;
 }
@@ -142,6 +195,7 @@ export async function createEmailAccount(email, password) {
 export async function signInAsAnonymous() {
   if (!auth) return null;
   await prepareAuthPersistence();
+  if (isCapacitorMobile()) return signInWithNativeAnonymous();
   const result = await signInAnonymously(auth);
   return result.user;
 }
@@ -158,12 +212,14 @@ function ensurePhoneRecaptcha(containerId = 'vibe-phone-recaptcha') {
 export async function startPhoneSignIn(phoneNumber, recaptchaContainerId = 'vibe-phone-recaptcha') {
   if (!auth) return null;
   await prepareAuthPersistence();
+  if (isCapacitorMobile()) return startNativePhoneSignIn(phoneNumber);
   const verifier = ensurePhoneRecaptcha(recaptchaContainerId);
   phoneConfirmation = await signInWithPhoneNumber(auth, String(phoneNumber).trim(), verifier);
   return true;
 }
 
 export async function confirmPhoneSignIn(code) {
+  if (isCapacitorMobile()) return confirmNativePhoneSignIn(code);
   if (!phoneConfirmation) throw new Error('Aucune vérification de téléphone en attente.');
   const result = await phoneConfirmation.confirm(String(code).trim());
   phoneConfirmation = null;
@@ -177,6 +233,7 @@ export async function confirmPhoneSignIn(code) {
 export async function signInWithGithub() {
   if (!auth) return null;
   await prepareAuthPersistence();
+  if (isCapacitorMobile()) return signInWithNativeGithub();
   const provider = new GithubAuthProvider();
   provider.setCustomParameters({ allow_signup: 'true' });
   const result = await signInWithPopup(auth, provider);
@@ -197,5 +254,9 @@ export async function completeGoogleRedirect() {
 
 export async function logout() {
   if (!auth) return;
+  const nativeAuth = getNativeFirebaseAuthentication();
+  if (isCapacitorMobile() && nativeAuth?.signOut) {
+    try { await nativeAuth.signOut(); } catch (_) {}
+  }
   await signOut(auth);
 }
