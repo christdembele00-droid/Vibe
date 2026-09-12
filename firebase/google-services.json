@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "17097166235",
+    "firebase_url": "https://vibe-749e5-default-rtdb.firebaseio.com",
+    "project_id": "vibe-749e5",
+    "storage_bucket": "vibe-749e5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:17097166235:android:03be12803a6f56ef1ee53e",
+        "android_client_info": {
+          "package_name": "com.vibe.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "17097166235-gklrko3rkl5eom1bahn6ttbidv255kl0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNkXsDuwMlkoqgw2meVauKHbfC93hQMps"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "17097166235-gklrko3rkl5eom1bahn6ttbidv255kl0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
