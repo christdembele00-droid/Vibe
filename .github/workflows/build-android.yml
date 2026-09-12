@@ -48,6 +48,16 @@ jobs:
       - name: Create Android project
         run: npx cap add android
 
+      - name: Report Android debug certificate fingerprints
+        run: |
+          set -e
+          keytool -list -v \
+            -alias androiddebugkey \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -keypass android \
+            | grep -E 'SHA1:|SHA256:' || true
+
       - name: Configure Firebase Android
         run: |
           set -e
@@ -100,6 +110,17 @@ jobs:
           else
             echo "VIBE_SIGNING_ENABLED=false" >> "$GITHUB_ENV"
           fi
+
+      - name: Report release signing fingerprints
+        if: env.VIBE_SIGNING_ENABLED == 'true'
+        working-directory: android
+        run: |
+          set -e
+          keytool -list -v \
+            -keystore vibe-upload.jks \
+            -storepass "$VIBE_KEYSTORE_PASSWORD" \
+            -alias "$VIBE_KEY_ALIAS" \
+            | grep -E 'SHA1:|SHA256:' || true
 
       - name: Verify Android project
         working-directory: android
