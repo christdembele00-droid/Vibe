@@ -17,39 +17,23 @@ import {
   browserLocalPersistence
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import {
-  getFirestore,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  deleteField,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  serverTimestamp
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
+  deleteField, query, where, orderBy, onSnapshot, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const configured = Boolean(firebaseConfig?.apiKey && firebaseConfig?.authDomain && firebaseConfig?.projectId && firebaseConfig?.appId);
 const app = getApps().length ? getApp() : (configured ? initializeApp(firebaseConfig) : null);
-
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
 export const firebaseConfigured = configured;
-
 export {
   collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, deleteField,
   query, where, orderBy, onSnapshot, serverTimestamp, onAuthStateChanged,
-  GoogleAuthProvider, GithubAuthProvider, RecaptchaVerifier,
-  signInWithPopup, getRedirectResult, signInWithCredential,
-  signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signInAnonymously, signInWithPhoneNumber, signOut,
-  setPersistence, browserLocalPersistence
+  GoogleAuthProvider, GithubAuthProvider, RecaptchaVerifier, signInWithPopup,
+  getRedirectResult, signInWithCredential, signInWithEmailAndPassword,
+  createUserWithEmailAndPassword, signInAnonymously, signInWithPhoneNumber,
+  signOut, setPersistence, browserLocalPersistence
 };
 
 let persistenceReady = null;
@@ -67,34 +51,40 @@ async function prepareAuthPersistence() {
 function isCapacitorMobile() {
   return Boolean(window?.Capacitor?.isNativePlatform?.() || window?.Capacitor?.getPlatform?.() === 'android' || window?.Capacitor?.getPlatform?.() === 'ios');
 }
-
 function getNativeFirebaseAuthentication() {
   return window?.Capacitor?.Plugins?.FirebaseAuthentication || null;
+}
+
+async function bridgeNativeUserToWebAuth(result, provider = 'firebase') {
+  if (!auth || !result?.user) return result?.user || null;
+  const credentialData = result?.credential || {};
+  const idToken = credentialData?.idToken || result?.credential?.idToken || result?.user?.idToken;
+  if (!idToken) {
+    throw new Error('Firebase natif a authentifié le compte, mais aucun ID token n’a été retourné à l’application.');
+  }
+  let credential = null;
+  if (provider === 'google') credential = GoogleAuthProvider.credential(idToken, credentialData?.accessToken || undefined);
+  else if (provider === 'github') credential = GithubAuthProvider.credential(credentialData?.accessToken || idToken);
+  else credential = signInWithCredential ? signInWithCredential : null;
+  if (provider === 'google' || provider === 'github') {
+    return (await signInWithCredential(auth, credential)).user;
+  }
+  // For email/anonymous/phone, Firebase ID tokens are accepted by the REST-backed
+  // custom-token path only when minted as custom tokens, so keep the native session
+  // and synchronize app state through a lightweight native-user adapter below.
+  return result.user;
 }
 
 export function getAuthErrorMessage(error) {
   const code = String(error?.code || '').replace(/^auth\//, '');
   const messages = {
-    'invalid-credential': 'Les identifiants sont invalides.',
-    'invalid-email': 'Adresse e-mail invalide.',
-    'missing-password': 'Mot de passe requis.',
-    'weak-password': 'Le mot de passe est trop faible.',
-    'email-already-in-use': 'Cette adresse e-mail est déjà utilisée.',
-    'user-not-found': 'Aucun compte ne correspond à cette adresse.',
-    'wrong-password': 'Mot de passe incorrect.',
-    'user-disabled': 'Ce compte a été désactivé.',
-    'too-many-requests': 'Trop de tentatives. Réessayez plus tard.',
-    'popup-closed-by-user': 'Connexion annulée.',
-    'popup-blocked': 'La fenêtre de connexion a été bloquée.',
-    'account-exists-with-different-credential': 'Ce compte existe déjà avec une autre méthode de connexion.',
-    'operation-not-allowed': 'Cette méthode de connexion n’est pas activée dans Firebase.',
-    'provider-already-linked': 'Cette méthode est déjà liée au compte.',
-    'invalid-phone-number': 'Numéro de téléphone invalide.',
-    'missing-phone-number': 'Numéro de téléphone requis.',
-    'invalid-verification-code': 'Code de vérification incorrect.',
-    'code-expired': 'Le code de vérification a expiré.',
-    'captcha-check-failed': 'La vérification anti-robot a échoué.',
-    'quota-exceeded': 'Le quota de connexion a été dépassé. Réessayez plus tard.'
+    'invalid-credential':'Les identifiants sont invalides.','invalid-email':'Adresse e-mail invalide.','missing-password':'Mot de passe requis.',
+    'weak-password':'Le mot de passe est trop faible.','email-already-in-use':'Cette adresse e-mail est déjà utilisée.','user-not-found':'Aucun compte ne correspond à cette adresse.',
+    'wrong-password':'Mot de passe incorrect.','user-disabled':'Ce compte a été désactivé.','too-many-requests':'Trop de tentatives. Réessayez plus tard.',
+    'popup-closed-by-user':'Connexion annulée.','popup-blocked':'La fenêtre de connexion a été bloquée.',
+    'account-exists-with-different-credential':'Ce compte existe déjà avec une autre méthode de connexion.','operation-not-allowed':'Cette méthode de connexion n’est pas activée dans Firebase.',
+    'provider-already-linked':'Cette méthode est déjà liée au compte.','invalid-phone-number':'Numéro de téléphone invalide.','missing-phone-number':'Numéro de téléphone requis.',
+    'invalid-verification-code':'Code de vérification incorrect.','code-expired':'Le code de vérification a expiré.','captcha-check-failed':'La vérification anti-robot a échoué.','quota-exceeded':'Le quota de connexion a été dépassé. Réessayez plus tard.'
   };
   return messages[code] || error?.message || 'Connexion impossible.';
 }
@@ -107,8 +97,7 @@ async function signInWithNativeGoogle() {
   const idToken = result?.credential?.idToken;
   if (!idToken) throw new Error('Google a authentifié le compte, mais aucun ID token Firebase n’a été retourné.');
   const credential = GoogleAuthProvider.credential(idToken, result?.credential?.accessToken || undefined);
-  const webResult = await signInWithCredential(auth, credential);
-  return webResult.user;
+  return (await signInWithCredential(auth, credential)).user;
 }
 
 async function signInWithNativeEmail(email, password, create = false) {
@@ -117,7 +106,8 @@ async function signInWithNativeEmail(email, password, create = false) {
   const method = create ? nativeAuth.createUserWithEmailAndPassword : nativeAuth.signInWithEmailAndPassword;
   if (typeof method !== 'function') throw new Error('La version Firebase native de cette APK ne fournit pas la connexion e-mail.');
   const result = await method({ email: String(email).trim(), password });
-  return result?.user || null;
+  if (!result?.user) return null;
+  return result.user;
 }
 
 async function signInWithNativeAnonymous() {
@@ -131,132 +121,72 @@ async function signInWithNativeGithub() {
   const nativeAuth = getNativeFirebaseAuthentication();
   if (!nativeAuth?.signInWithGithub) throw new Error('La connexion GitHub native est indisponible dans cette APK.');
   const result = await nativeAuth.signInWithGithub();
-  return result?.user || null;
+  if (!result?.user) return null;
+  const accessToken = result?.credential?.accessToken;
+  if (accessToken) return (await signInWithCredential(auth, GithubAuthProvider.credential(accessToken))).user;
+  return result.user;
 }
 
-async function clearNativePhoneListeners() {
-  for (const listener of nativePhoneListeners) {
-    try { await listener.remove(); } catch (_) {}
-  }
-  nativePhoneListeners = [];
-}
-
+async function clearNativePhoneListeners() { for (const listener of nativePhoneListeners) { try { await listener.remove(); } catch (_) {} } nativePhoneListeners = []; }
 async function startNativePhoneSignIn(phoneNumber) {
   const nativeAuth = getNativeFirebaseAuthentication();
   if (!nativeAuth?.signInWithPhoneNumber || !nativeAuth?.addListener) throw new Error('La connexion téléphone native est indisponible dans cette APK.');
-  await clearNativePhoneListeners();
-  nativePhoneVerificationId = null;
-  nativePhoneListeners.push(await nativeAuth.addListener('phoneCodeSent', event => {
-    nativePhoneVerificationId = event?.verificationId || null;
-  }));
+  await clearNativePhoneListeners(); nativePhoneVerificationId = null;
+  nativePhoneListeners.push(await nativeAuth.addListener('phoneCodeSent', event => { nativePhoneVerificationId = event?.verificationId || null; }));
   nativePhoneListeners.push(await nativeAuth.addListener('phoneVerificationCompleted', () => {}));
   await nativeAuth.signInWithPhoneNumber({ phoneNumber: String(phoneNumber).trim() });
   return true;
 }
-
 async function confirmNativePhoneSignIn(code) {
   const nativeAuth = getNativeFirebaseAuthentication();
   if (!nativeAuth?.confirmVerificationCode || !nativePhoneVerificationId) throw new Error('Aucun code SMS en attente. Demandez un nouveau code.');
   const result = await nativeAuth.confirmVerificationCode({ verificationId: nativePhoneVerificationId, verificationCode: String(code).trim() });
-  nativePhoneVerificationId = null;
-  await clearNativePhoneListeners();
-  return result?.user || null;
+  nativePhoneVerificationId = null; await clearNativePhoneListeners(); return result?.user || null;
 }
 
 export async function signInWithGoogle() {
-  if (!auth) return null;
-  await prepareAuthPersistence();
-  const currentUser = auth.currentUser;
-  const hasGoogleProvider = Boolean(currentUser?.providerData?.some(provider => provider?.providerId === 'google.com'));
-  if (currentUser && hasGoogleProvider) return currentUser;
+  if (!auth) return null; await prepareAuthPersistence();
   if (isCapacitorMobile()) return signInWithNativeGoogle();
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
-  const result = await signInWithPopup(auth, provider);
-  return result.user;
+  const provider = new GoogleAuthProvider(); provider.setCustomParameters({ prompt:'select_account' });
+  return (await signInWithPopup(auth, provider)).user;
 }
-
 export async function signInWithEmail(email, password) {
-  if (!auth) return null;
-  await prepareAuthPersistence();
+  if (!auth) return null; await prepareAuthPersistence();
   if (isCapacitorMobile()) return signInWithNativeEmail(email, password, false);
-  const result = await signInWithEmailAndPassword(auth, String(email).trim(), password);
-  return result.user;
+  return (await signInWithEmailAndPassword(auth, String(email).trim(), password)).user;
 }
-
 export async function createEmailAccount(email, password) {
-  if (!auth) return null;
-  await prepareAuthPersistence();
+  if (!auth) return null; await prepareAuthPersistence();
   if (isCapacitorMobile()) return signInWithNativeEmail(email, password, true);
-  const result = await createUserWithEmailAndPassword(auth, String(email).trim(), password);
-  return result.user;
+  return (await createUserWithEmailAndPassword(auth, String(email).trim(), password)).user;
 }
-
 export async function signInAsAnonymous() {
-  if (!auth) return null;
-  await prepareAuthPersistence();
+  if (!auth) return null; await prepareAuthPersistence();
   if (isCapacitorMobile()) return signInWithNativeAnonymous();
-  const result = await signInAnonymously(auth);
-  return result.user;
+  return (await signInAnonymously(auth)).user;
 }
-
-function ensurePhoneRecaptcha(containerId = 'vibe-phone-recaptcha') {
+function ensurePhoneRecaptcha(containerId='vibe-phone-recaptcha') {
   if (!auth) throw new Error('Firebase Authentication n’est pas configuré.');
-  if (phoneRecaptcha) return phoneRecaptcha;
-  const container = document.getElementById(containerId);
-  if (!container) throw new Error('Conteneur reCAPTCHA introuvable.');
-  phoneRecaptcha = new RecaptchaVerifier(auth, container, { size: 'invisible' });
-  return phoneRecaptcha;
+  if (phoneRecaptcha) return phoneRecaptcha; const container=document.getElementById(containerId); if(!container)throw new Error('Conteneur reCAPTCHA introuvable.');
+  phoneRecaptcha=new RecaptchaVerifier(auth,container,{size:'invisible'}); return phoneRecaptcha;
 }
-
-export async function startPhoneSignIn(phoneNumber, recaptchaContainerId = 'vibe-phone-recaptcha') {
-  if (!auth) return null;
-  await prepareAuthPersistence();
+export async function startPhoneSignIn(phoneNumber, recaptchaContainerId='vibe-phone-recaptcha') {
+  if (!auth) return null; await prepareAuthPersistence();
   if (isCapacitorMobile()) return startNativePhoneSignIn(phoneNumber);
-  const verifier = ensurePhoneRecaptcha(recaptchaContainerId);
-  phoneConfirmation = await signInWithPhoneNumber(auth, String(phoneNumber).trim(), verifier);
-  return true;
+  phoneConfirmation=await signInWithPhoneNumber(auth,String(phoneNumber).trim(),ensurePhoneRecaptcha(recaptchaContainerId)); return true;
 }
-
 export async function confirmPhoneSignIn(code) {
   if (isCapacitorMobile()) return confirmNativePhoneSignIn(code);
-  if (!phoneConfirmation) throw new Error('Aucune vérification de téléphone en attente.');
-  const result = await phoneConfirmation.confirm(String(code).trim());
-  phoneConfirmation = null;
-  if (phoneRecaptcha) {
-    try { phoneRecaptcha.clear(); } catch (_) {}
-    phoneRecaptcha = null;
-  }
-  return result.user;
+  if (!phoneConfirmation) throw new Error('Aucune vérification de téléphone en attente.'); const result=await phoneConfirmation.confirm(String(code).trim()); phoneConfirmation=null;
+  if(phoneRecaptcha){try{phoneRecaptcha.clear();}catch(_){} phoneRecaptcha=null;} return result.user;
 }
-
 export async function signInWithGithub() {
-  if (!auth) return null;
-  await prepareAuthPersistence();
+  if (!auth) return null; await prepareAuthPersistence();
   if (isCapacitorMobile()) return signInWithNativeGithub();
-  const provider = new GithubAuthProvider();
-  provider.setCustomParameters({ allow_signup: 'true' });
-  const result = await signInWithPopup(auth, provider);
-  return result.user;
+  const provider=new GithubAuthProvider(); provider.setCustomParameters({allow_signup:'true'}); return (await signInWithPopup(auth,provider)).user;
 }
-
-export async function completeGoogleRedirect() {
-  if (!auth) return null;
-  await prepareAuthPersistence();
-  try {
-    const result = await getRedirectResult(auth);
-    return result?.user || null;
-  } catch (error) {
-    console.error('[Vibe] Retour connexion Google:', error);
-    throw error;
-  }
-}
-
-export async function logout() {
-  if (!auth) return;
-  const nativeAuth = getNativeFirebaseAuthentication();
-  if (isCapacitorMobile() && nativeAuth?.signOut) {
-    try { await nativeAuth.signOut(); } catch (_) {}
-  }
+export async function completeGoogleRedirect() { if(!auth)return null; await prepareAuthPersistence(); try{return (await getRedirectResult(auth))?.user||null;}catch(error){console.error('[Vibe] Retour connexion Google:',error);throw error;} }
+export async function logout(){
+  if(!auth)return; const nativeAuth=getNativeFirebaseAuthentication(); if(isCapacitorMobile()&&nativeAuth?.signOut){try{await nativeAuth.signOut();}catch(_){}}
   await signOut(auth);
 }
