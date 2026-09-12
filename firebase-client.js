@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, setPersistence, browserLocalPersistence, signInWithCredential } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import {
   getFirestore,
   collection,
@@ -44,6 +44,32 @@ function isCapacitorMobile() {
   return Boolean(window?.Capacitor?.isNativePlatform?.() || window?.Capacitor?.getPlatform?.() === 'android' || window?.Capacitor?.getPlatform?.() === 'ios');
 }
 
+function getNativeFirebaseAuthentication() {
+  return window?.Capacitor?.Plugins?.FirebaseAuthentication || null;
+}
+
+async function signInWithNativeGoogle() {
+  const nativeAuth = getNativeFirebaseAuthentication();
+  if (!nativeAuth?.signInWithGoogle) {
+    throw new Error('Le module Firebase Authentication natif n’est pas disponible dans cette APK.');
+  }
+
+  // Google Sign-In natif Android : le plugin utilise le SDK Google/Credential Manager,
+  // puis on réinjecte la credential Google dans Firebase JS afin que Firestore et
+  // onAuthStateChanged utilisent exactement la même session que le reste de Vibe.
+  const result = await nativeAuth.signInWithGoogle({ useCredentialManager: true });
+  if (!result?.user) return null;
+
+  const idToken = result?.credential?.idToken;
+  if (!idToken) {
+    throw new Error('Google a authentifié le compte, mais aucun ID token Firebase n’a été retourné.');
+  }
+
+  const credential = GoogleAuthProvider.credential(idToken, result?.credential?.accessToken || undefined);
+  const webResult = await signInWithCredential(auth, credential);
+  return webResult.user;
+}
+
 export async function signInWithGoogle() {
   if (!auth) return null;
   await prepareAuthPersistence();
@@ -55,13 +81,8 @@ export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
 
-  // Ne pas utiliser signInWithRedirect() dans l'APK Capacitor :
-  // le retour OAuth peut être envoyé vers https://localhost dans le navigateur
-  // système, où aucun serveur HTTP n'écoute, ce qui produit ERR_CONNECTION_REFUSED.
-  // Le flux popup reste dans le contexte de l'application WebView.
   if (isCapacitorMobile()) {
-    const result = await signInWithPopup(auth, provider);
-    return result.user;
+    return signInWithNativeGoogle();
   }
 
   const result = await signInWithPopup(auth, provider);
