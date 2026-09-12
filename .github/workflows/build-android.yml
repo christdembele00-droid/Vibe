@@ -1,5 +1,7 @@
 name: Build Vibe Android
 
+# Android build validation trigger: run from the corrected main workflow.
+
 on:
   push:
     branches:
