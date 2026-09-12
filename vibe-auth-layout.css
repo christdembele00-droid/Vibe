@@ -1,0 +1,33 @@
+/* Authentication layout fix: the welcome panel used to clip everything below Google. */
+.welcome-screen{
+  justify-content:flex-start;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:clamp(28px,7vh,72px) 24px 44px;
+  scrollbar-gutter:stable;
+}
+#vibe-auth-panel{
+  width:min(440px,92vw)!important;
+  flex:0 0 auto;
+  max-height:none!important;
+  overflow:visible!important;
+  margin:18px auto 0!important;
+  padding:0 4px 12px!important;
+}
+#vibe-auth-panel input,
+#vibe-auth-panel button{
+  min-height:44px;
+}
+#vibe-auth-panel button:hover{
+  filter:brightness(.97);
+}
+@media(max-width:700px){
+  .welcome-screen{
+    align-items:stretch;
+    text-align:center;
+    padding:24px 14px 36px;
+  }
+  .welcome-screen>*{flex-shrink:0}
+  #google-login-button{align-self:center;width:min(440px,92vw)}
+  #vibe-auth-panel{width:min(440px,96vw)!important}
+}
