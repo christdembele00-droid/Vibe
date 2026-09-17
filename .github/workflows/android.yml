@@ -39,10 +39,10 @@ jobs:
           FIREBASE_GOOGLE_SERVICES_JSON_B64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_B64 }}
         run: |
           set -euo pipefail
-          test -n "$FIREBASE_GOOGLE_SERVICES_JSON_B64" || {
-            echo "Missing GitHub secret FIREBASE_GOOGLE_SERVICES_JSON_B64."
-            exit 1
-          }
+          if [ -z "$FIREBASE_GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "Firebase secret absent: building without Google native configuration."
+            exit 0
+          fi
           printf '%s' "$FIREBASE_GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
           python - <<'PY'
           from pathlib import Path
@@ -58,6 +58,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ -z "$FIREBASE_GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "Firebase secret absent: skipping Google services plugin."
+            exit 0
+          fi
           python - <<'PY'
           from pathlib import Path
           p=Path("android/build.gradle")
