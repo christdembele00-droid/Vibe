@@ -147,15 +147,14 @@ LEGACY_FIRESTORE_COLLECTIONS = (
 
 def _purge_legacy_firestore():
     db = firebase_firestore.client()
-    deleted = 0
+    cleared_collections = 0
     for collection_name in LEGACY_FIRESTORE_COLLECTIONS:
         collection_ref = db.collection(collection_name)
-        documents = list(collection_ref.list_documents())
-        if not documents:
+        if not list(collection_ref.limit(1).stream()):
             continue
         db.recursive_delete(collection_ref)
-        deleted += len(documents)
-    return deleted
+        cleared_collections += 1
+    return cleared_collections
 
 
 def _purge_all_firebase_users():
