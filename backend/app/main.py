@@ -2,9 +2,10 @@ import time
 
 import cloudinary
 import cloudinary.utils
-from fastapi import FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.auth.dependencies import get_current_user
 from app.auth.firebase import verify_bearer_token
 from app.config.settings import get_settings
 from app.users import router as users_router
@@ -57,14 +58,12 @@ def health() -> dict[str, str]:
 
 
 @app.get(f"{settings.api_prefix}/auth/me")
-def auth_me(authorization: str | None = Header(default=None)) -> dict[str, str]:
-    decoded = verify_bearer_token(authorization)
-    return {"firebase_uid": str(decoded["uid"])}
+def auth_me(current_user: dict = Depends(get_current_user)) -> dict[str, str]:
+    return {"firebase_uid": str(current_user["firebase_uid"])}
 
 
 @app.post(f"{settings.api_prefix}/media/upload-signature")
-def media_upload_signature(authorization: str | None = Header(default=None)) -> dict[str, str | int]:
-    verify_bearer_token(authorization)
+def media_upload_signature(current_user: dict = Depends(get_current_user)) -> dict[str, str | int]:
     if not all(
         [
             settings.cloudinary_cloud_name,
