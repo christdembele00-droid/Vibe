@@ -5,6 +5,7 @@ from app.database import get_engine
 from app.auth.firebase import _initialize
 from firebase_admin import auth as firebase_auth
 import cloudinary.uploader
+from firebase_admin import firestore as firebase_firestore
 
 
 def cleanup_expired_statuses():
@@ -131,6 +132,32 @@ def _purge_recorded_media():
     return cleaned
 
 
+LEGACY_FIRESTORE_COLLECTIONS = (
+    "users",
+    "profiles",
+    "userSearch",
+    "chats",
+    "userFavorites",
+    "channels",
+    "channelFollowers",
+    "statuses",
+    "calls",
+)
+
+
+def _purge_legacy_firestore():
+    db = firebase_firestore.client()
+    deleted = 0
+    for collection_name in LEGACY_FIRESTORE_COLLECTIONS:
+        collection_ref = db.collection(collection_name)
+        documents = list(collection_ref.list_documents())
+        if not documents:
+            continue
+        db.recursive_delete(collection_ref)
+        deleted += len(documents)
+    return deleted
+
+
 def _purge_all_firebase_users():
     _initialize()
     deleted = 0
@@ -181,10 +208,12 @@ def purge_all_test_users():
             )
 
     firebase_deleted = _purge_all_firebase_users()
+    firestore_deleted = _purge_legacy_firestore()
     media_deleted = _purge_recorded_media()
 
     return {
         "postgres_users": len(users),
         "firebase_users": firebase_deleted,
+        "firestore_documents": firestore_deleted,
         "cloudinary_media": media_deleted,
     }
