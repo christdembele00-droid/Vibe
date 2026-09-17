@@ -19,6 +19,10 @@ def unblock_user(user_id:UUID,current_user=Depends(get_current_user)):
  return {"blocked":False,"changed":result.rowcount>0}
 @router.post("/reports")
 def report(body:Report,current_user=Depends(get_current_user)):
+ if body.target_id==current_user["id"]:
+  raise HTTPException(400,"Signalement de soi-même invalide")
+ if body.target_type not in ("user","message","conversation","group","channel"):
+  raise HTTPException(400,"Type de cible invalide")
  with get_engine().begin() as c:
   row=c.execute(text("INSERT INTO reports(reporter_id,target_type,target_id,reason) VALUES(:r,:t,:id,:reason) RETURNING id,status,created_at"),{"r":current_user["id"],"t":body.target_type,"id":body.target_id,"reason":body.reason}).mappings().one()
  return {"report":dict(row)}
