@@ -10,7 +10,7 @@ def cleanup_expired_statuses():
 
 def cleanup_orphan_media():
     with get_engine().begin() as c:
-        return c.execute(text("""UPDATE media SET status='deleted' WHERE status='active' AND created_at < now() - interval '24 hours' AND id NOT IN (SELECT media_id FROM message_attachments) AND id NOT IN (SELECT media_id FROM statuses WHERE media_id IS NOT NULL)""")).rowcount
+        return c.execute(text("""UPDATE media SET status='deleted' WHERE status='active' AND created_at < now() - interval '24 hours' AND public_id IS NOT NULL AND id NOT IN (SELECT media_id FROM message_attachments) AND id NOT IN (SELECT media_id FROM statuses WHERE media_id IS NOT NULL)""")).rowcount
 
 def process_pending_account_deletions(limit=10):
     _initialize(); processed=0
