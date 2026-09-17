@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from fastapi import HTTPException, status
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
@@ -32,11 +33,27 @@ def upsert_user_from_firebase(decoded: dict) -> dict:
             display_name = EXCLUDED.display_name,
             email = EXCLUDED.email,
             photo_url = EXCLUDED.photo_url,
-            updated_at = now(),
-            deleted_at = NULL
+            updated_at = now()
+        WHERE users.deleted_at IS NULL
         RETURNING id, firebase_uid, username, display_name, email, photo_url, about, role, created_at, updated_at, deleted_at
     """)
     with get_engine().begin() as connection:
-        row = connection.execute(sql, {"firebase_uid": uid, "display_name": display_name, "email": email, "photo_url": photo_url}).mappings().one()
-        connection.execute(text("INSERT INTO user_settings (user_id) VALUES (:user_id) ON CONFLICT (user_id) DO NOTHING"), {"user_id": row["id"]})
+        row = connection.execute(
+            sql,
+            {
+                "firebase_uid": uid,
+                "display_name": display_name,
+                "email": email,
+                "photo_url": photo_url,
+            },
+        ).mappings().first()
+        if not row:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Compte VIBE supprimé",
+            )
+        connection.execute(
+            text("INSERT INTO user_settings (user_id) VALUES (:user_id) ON CONFLICT (user_id) DO NOTHING"),
+            {"user_id": row["id"]},
+        )
     return dict(row)
