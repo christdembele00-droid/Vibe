@@ -23,8 +23,9 @@ def process_pending_account_deletions(limit=10):
                 media=c.execute(text("SELECT public_id,resource_type FROM media WHERE created_by=:u AND public_id IS NOT NULL AND status<>'deleted'"),{"u":job["user_id"]}).mappings().all()
                 c.execute(text("DELETE FROM devices WHERE user_id=:u"),{"u":job["user_id"]})
             for item in media:
-                try: cloudinary.uploader.destroy(item["public_id"],resource_type=item["resource_type"],invalidate=True)
-                except Exception: pass
+                result = cloudinary.uploader.destroy(item["public_id"], resource_type=item["resource_type"], invalidate=True)
+                if result.get("result") not in ("ok", "not found"):
+                    raise RuntimeError("Cloudinary deletion failed: " + str(result))
             try: firebase_auth.delete_user(job["firebase_uid"])
             except firebase_auth.UserNotFoundError: pass
             with get_engine().begin() as c:
