@@ -11,7 +11,6 @@ class ConnectionManager:
         self.connections: dict[str, set[WebSocket]] = {}
 
     async def connect(self, key: str, ws: WebSocket):
-        await ws.accept()
         self.connections.setdefault(key, set()).add(ws)
 
     def disconnect(self, key: str, ws: WebSocket):
