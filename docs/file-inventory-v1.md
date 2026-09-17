@@ -3,7 +3,7 @@
 **Branche auditée :** `architecture-foundation-v1`  
 **HEAD audité :** `2564981dede914d99f3c2d4761b34b42b53e4a1a`  
 **Date :** 17 septembre 2026  
-**Nombre de fichiers suivis :** 108
+**Nombre de fichiers suivis :** 110
 
 ## Règle de classement
 
@@ -19,7 +19,7 @@
 |---|---:|
 | À CONSERVER TEMPORAIREMENT | 40 |
 | DOUBLON | 0 |
-| NÉCESSAIRE | 33 |
+| NÉCESSAIRE | 35 |
 | UTILISÉ | 35 |
 
 **Conclusion du passage actuel :** aucun fichier n’est classé **OBSOLÈTE** avec un niveau de preuve suffisant. Le pipeline Android est maintenant séparé proprement en deux rôles : `android.yml` pour la validation debug des PR et `build-android.yml` pour le release sur `main`/manuel. Le frontend historique reste volontairement dans **À CONSERVER TEMPORAIREMENT** tant que Next.js n’a pas la parité fonctionnelle. Le workflow de purge destructive a, lui, été retiré ; l’outil de maintenance Python reste disponible.
@@ -146,3 +146,5 @@
 | 108 | `whatsapp-extra-features.js` | 24554 | À CONSERVER TEMPORAIREMENT | Composant actuellement conservé pendant la migration vers l’architecture Next.js/PostgreSQL. |
 
 | 108 | `docs/file-inventory-v1.md` | 0 | NÉCESSAIRE | Rapport d’audit maintenu dans le dépôt pour contrôler le nettoyage fichier par fichier. |
+| 109 | `frontend/next.config.ts` | — | NÉCESSAIRE | Configure le build Next.js en export statique pour GitHub Pages avec `/Vibe` comme base path. |
+| 110 | `.github/workflows/pages.yml` | — | NÉCESSAIRE | Construit et déploie le frontend Next.js vers GitHub Pages. |
