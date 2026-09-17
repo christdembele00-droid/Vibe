@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from app.auth.dependencies import get_current_user
 from app.database import get_engine
+from app.realtime import manager
 
 router = APIRouter(prefix="/conversations/{conversation_id}/messages", tags=["messages"])
 
@@ -34,7 +35,7 @@ def list_messages(conversation_id: UUID, before: UUID | None = None, limit: int 
     return {"messages":[dict(row) for row in reversed(rows)]}
 
 @router.post("")
-def send_message(conversation_id: UUID, request: SendMessageRequest, current_user: dict = Depends(get_current_user)) -> dict:
+async def send_message(conversation_id: UUID, request: SendMessageRequest, current_user: dict = Depends(get_current_user)) -> dict:
     if request.type == "text" and not (request.text or "").strip(): raise HTTPException(status_code=400, detail="Message texte vide")
     with get_engine().begin() as conn:
         if not _member(conn, conversation_id, current_user["id"]): raise HTTPException(status_code=403, detail="Accès refusé")
@@ -47,24 +48,28 @@ def send_message(conversation_id: UUID, request: SendMessageRequest, current_use
             RETURNING id,conversation_id,sender_id,type,text,reply_to_id,client_message_id,created_at,updated_at,deleted_at,metadata
         """), {"c":conversation_id,"u":current_user["id"],"type":request.type,"text":request.text,"reply":request.reply_to_id,"cid":request.client_message_id,"metadata":__import__("json").dumps(request.metadata)}).mappings().one()
         conn.execute(text("UPDATE conversations SET updated_at=now() WHERE id=:c"), {"c":conversation_id})
+    payload={"type":"message.created","message":dict(row)}
+    await manager.broadcast(str(conversation_id), payload)
     return {"message":dict(row),"deduplicated":False}
 
 @router.patch("/{message_id}")
-def edit_message(conversation_id: UUID, message_id: UUID, request: SendMessageRequest, current_user: dict = Depends(get_current_user)) -> dict:
+async def edit_message(conversation_id: UUID, message_id: UUID, request: SendMessageRequest, current_user: dict = Depends(get_current_user)) -> dict:
     with get_engine().begin() as conn:
         if not _member(conn, conversation_id, current_user["id"]): raise HTTPException(status_code=403, detail="Accès refusé")
         existing=_message(conn,conversation_id,message_id)
         if not existing: raise HTTPException(status_code=404, detail="Message introuvable")
         if str(existing["sender_id"]) != str(current_user["id"]): raise HTTPException(status_code=403, detail="Modification non autorisée")
         row=conn.execute(text("UPDATE messages SET text=:text,updated_at=now() WHERE id=:m RETURNING id,conversation_id,sender_id,type,text,reply_to_id,client_message_id,created_at,updated_at,deleted_at,metadata"), {"text":request.text,"m":message_id}).mappings().one()
+    await manager.broadcast(str(conversation_id), {"type":"message.updated","message":dict(row)})
     return {"message":dict(row)}
 
 @router.delete("/{message_id}")
-def delete_message(conversation_id: UUID, message_id: UUID, current_user: dict = Depends(get_current_user)) -> dict:
+async def delete_message(conversation_id: UUID, message_id: UUID, current_user: dict = Depends(get_current_user)) -> dict:
     with get_engine().begin() as conn:
         if not _member(conn, conversation_id, current_user["id"]): raise HTTPException(status_code=403, detail="Accès refusé")
         existing=_message(conn,conversation_id,message_id)
         if not existing: raise HTTPException(status_code=404, detail="Message introuvable")
         if str(existing["sender_id"]) != str(current_user["id"]): raise HTTPException(status_code=403, detail="Suppression non autorisée")
         conn.execute(text("UPDATE messages SET deleted_at=now(),updated_at=now(),text=NULL WHERE id=:m"), {"m":message_id})
+    await manager.broadcast(str(conversation_id), {"type":"message.deleted","message_id":str(message_id)})
     return {"deleted":True,"message_id":str(message_id)}
