@@ -17,6 +17,9 @@ from app.groups import router as groups_router
 from app.channels import router as channels_router
 from app.statuses import router as statuses_router
 from app.media import router as media_router
+from app.security import router as security_router
+from app.search import router as search_router
+from app.account import router as account_router
 
 
 settings = get_settings()
@@ -31,6 +34,9 @@ app.include_router(groups_router, prefix=settings.api_prefix)
 app.include_router(channels_router, prefix=settings.api_prefix)
 app.include_router(statuses_router, prefix=settings.api_prefix)
 app.include_router(media_router, prefix=settings.api_prefix)
+app.include_router(security_router, prefix=settings.api_prefix)
+app.include_router(search_router, prefix=settings.api_prefix)
+app.include_router(account_router, prefix=settings.api_prefix)
 
 app.add_middleware(
     CORSMiddleware,
