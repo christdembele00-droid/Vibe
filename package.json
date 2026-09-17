@@ -11,6 +11,7 @@
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
     "@capacitor-firebase/authentication": "7.5.0",
-    "firebase": "11.10.0"
+    "firebase": "11.10.0",
+    "@capacitor-firebase/messaging": "7.5.0"
   }
 }
