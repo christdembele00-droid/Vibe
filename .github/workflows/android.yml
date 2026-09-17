@@ -1,10 +1,9 @@
 name: Vibe Android Debug Build
 
 on:
-  push:
-    branches: [architecture-foundation-v1]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   android:
