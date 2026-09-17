@@ -2,7 +2,7 @@ name: Vibe Foundation CI
 
 on:
   push:
-    branches: [main, architecture-foundation-v1]
+    branches: [main]
   pull_request:
     branches: [main]
 
