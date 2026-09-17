@@ -244,17 +244,113 @@ async function openSettings() {
   stopStatuses?.(); stopStatuses = null; stopCalls?.(); stopCalls = null; stopChannels?.(); stopChannels = null;
   const profile = await loadProfile();
   const uid = auth?.currentUser?.uid || 'Non connecté';
+  const safeName = escapeHtml(profile.name || 'Utilisateur Vibe');
+  const safeEmail = escapeHtml(profile.email || 'Compte Google');
+  const safeAbout = escapeHtml(profile.about || '');
   const photoMarkup = profile.photoURL
     ? `<img class="settings-profile-photo" src="${escapeHtml(profile.photoURL)}" alt="Photo de profil" referrerpolicy="no-referrer">`
     : `<div class="settings-profile-fallback">${escapeHtml((profile.name || 'V').slice(0, 1).toUpperCase())}</div>`;
 
-  showPanel(panelShell('Paramètres', 'Personnalisez votre profil et vos préférences Vibe.', `<div class="feature-card profile-card"><div id="settings-profile-avatar" class="profile-avatar" aria-label="Photo de profil">${photoMarkup}</div><div class="profile-fields"><label>Nom<input id="profile-name" maxlength="60" value="${escapeHtml(profile.name || 'Utilisateur Vibe')}" readonly aria-readonly="true"></label><label>À propos<textarea id="profile-about" maxlength="160" placeholder="À propos de vous...">${escapeHtml(profile.about || '')}</textarea></label><button class="primary-btn" id="save-profile-btn" type="button">Enregistrer</button></div></div><div class="feature-card"><div class="setting-row"><span>Identifiant Vibe</span><code>${escapeHtml(profile.vibeId || uid)}</code></div><div class="setting-row"><span>Compte Google</span><strong>${escapeHtml(profile.email || 'Connecté')}</strong></div><div class="setting-row"><span>Synchronisation</span><strong>Temps réel</strong></div></div><div class="feature-card security-card"><h3>Confidentialité et sécurité</h3><p>Votre nom et votre photo sont liés au compte Google. Seule la section « À propos » est personnalisable depuis Vibe.</p></div>`));
+  showPanel(panelShell('Paramètres', 'Votre identité est gérée par Google. Personnalisez ce qui appartient à votre espace Vibe.', `
+    <div class="settings-bento">
+      <section class="settings-tile settings-identity-tile">
+        <div class="settings-eyebrow">Identité</div>
+        <div class="settings-identity">
+          <div class="settings-avatar-wrap">
+            <div id="settings-profile-avatar" class="profile-avatar" aria-label="Photo de profil">${photoMarkup}</div>
+            <button class="settings-camera" id="settings-camera-btn" type="button" aria-label="Photo de profil gérée par Google" title="Votre photo est gérée par Google.">⌁</button>
+          </div>
+          <div class="settings-identity-copy">
+            <h3>${safeName}</h3>
+            <p>${safeEmail}</p>
+            <span class="settings-managed"><span></span> Compte Google synchronisé</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-tile settings-about-tile">
+        <div class="settings-tile-head">
+          <div>
+            <div class="settings-eyebrow">Expression</div>
+            <h3>À propos</h3>
+          </div>
+          <span class="settings-save-state" id="profile-save-state" aria-live="polite"></span>
+        </div>
+        <textarea id="profile-about" maxlength="160" placeholder="Quelques mots sur vous...">${safeAbout}</textarea>
+        <div class="settings-about-footer">
+          <span><b id="about-count">${String(profile.about || '').length}</b>/160</span>
+          <button class="primary-btn settings-save-btn" id="save-profile-btn" type="button">Enregistrer</button>
+        </div>
+      </section>
+
+      <section class="settings-tile settings-appearance-tile">
+        <div class="settings-tile-head">
+          <div>
+            <div class="settings-eyebrow">Préférence</div>
+            <h3>Apparence</h3>
+          </div>
+          <span class="appearance-icon" aria-hidden="true">☼</span>
+        </div>
+        <div class="appearance-control" role="group" aria-label="Choisir l'apparence">
+          <button class="appearance-option active" data-theme-value="light" type="button"><span>☼</span><span>Clair</span></button>
+          <button class="appearance-option" data-theme-value="dark" type="button"><span>◐</span><span>Sombre</span></button>
+          <button class="appearance-option" data-theme-value="system" type="button"><span>◌</span><span>Système</span></button>
+          <span class="appearance-thumb" aria-hidden="true"></span>
+        </div>
+      </section>
+
+      <section class="settings-tile settings-account-tile">
+        <div class="settings-eyebrow">Compte</div>
+        <div class="settings-facts">
+          <div><span>Identifiant Vibe</span><code>${escapeHtml(profile.vibeId || uid)}</code></div>
+          <div><span>Synchronisation</span><strong>Temps réel</strong></div>
+        </div>
+      </section>
+
+      <section class="settings-tile settings-security-tile">
+        <div class="settings-security-icon">✓</div>
+        <div>
+          <div class="settings-eyebrow">Confidentialité</div>
+          <h3>Votre identité reste synchronisée</h3>
+          <p>Le nom et la photo proviennent de votre compte Google. La bio reste modifiable depuis Vibe.</p>
+        </div>
+      </section>
+    </div>`));
 
   const photo = document.querySelector('.settings-profile-photo');
   photo?.addEventListener('error', () => {
-    const fallback = document.createElement('div'); fallback.className = 'settings-profile-fallback'; fallback.textContent = (profile.name || 'V').slice(0, 1).toUpperCase(); photo.replaceWith(fallback);
+    const fallback = document.createElement('div');
+    fallback.className = 'settings-profile-fallback';
+    fallback.textContent = (profile.name || 'V').slice(0, 1).toUpperCase();
+    photo.replaceWith(fallback);
   }, { once: true });
-  document.getElementById('save-profile-btn')?.addEventListener('click', saveProfile);
+
+  document.getElementById('settings-camera-btn')?.addEventListener('click', () => showToast('La photo de profil est gérée par votre compte Google.'));
+  const about = document.getElementById('profile-about');
+  const count = document.getElementById('about-count');
+  const saveState = document.getElementById('profile-save-state');
+  about?.addEventListener('input', () => {
+    if (count) count.textContent = String(about.value.length);
+    if (saveState) saveState.textContent = 'Modification en cours';
+  });
+
+  document.getElementById('save-profile-btn')?.addEventListener('click', async () => {
+    const button = document.getElementById('save-profile-btn');
+    if (button) button.disabled = true;
+    await saveProfile();
+    if (saveState) saveState.textContent = '✓ Enregistré';
+    if (button) button.disabled = false;
+  });
+
+  const currentTheme = localStorage.getItem('vibe_theme') || 'light';
+  const options = [...document.querySelectorAll('.appearance-option')];
+  const applyAppearance = value => {
+    options.forEach(option => option.classList.toggle('active', option.dataset.themeValue === value));
+    document.body.classList.toggle('dark-theme', value === 'dark');
+    try { localStorage.setItem('vibe_theme', value); } catch {}
+  };
+  options.forEach(option => option.addEventListener('click', () => applyAppearance(option.dataset.themeValue || 'light')));
+  applyAppearance(currentTheme);
 }
 
 export function initWhatsAppNavigation() {
