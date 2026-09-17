@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS devices (
 
 CREATE TABLE IF NOT EXISTS conversations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    type TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('direct', 'group', 'channel')),
     direct_key TEXT UNIQUE,
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE TABLE IF NOT EXISTS conversation_members (
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role TEXT NOT NULL DEFAULT 'member',
+    role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'admin', 'owner')),
     joined_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     left_at TIMESTAMPTZ,
     PRIMARY KEY (conversation_id, user_id)
@@ -103,13 +103,13 @@ CREATE TABLE IF NOT EXISTS media (
     provider TEXT NOT NULL DEFAULT 'cloudinary',
     public_id TEXT,
     url TEXT NOT NULL,
-    resource_type TEXT NOT NULL,
+    resource_type TEXT NOT NULL CHECK (resource_type IN ('image', 'video', 'raw')),
     mime_type TEXT,
     size_bytes BIGINT,
     width INTEGER,
     height INTEGER,
     duration_seconds NUMERIC,
-    status TEXT NOT NULL DEFAULT 'active',
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('pending', 'active', 'deleted', 'failed')),
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     sender_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    type TEXT NOT NULL DEFAULT 'text',
+    type TEXT NOT NULL DEFAULT 'text' CHECK (type IN ('text', 'image', 'video', 'audio', 'file', 'system')),
     text TEXT,
     reply_to_id UUID REFERENCES messages(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -155,7 +155,8 @@ CREATE TABLE IF NOT EXISTS statuses (
     text TEXT,
     media_id UUID REFERENCES media(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    expires_at TIMESTAMPTZ NOT NULL
+    expires_at TIMESTAMPTZ NOT NULL,
+    CHECK (expires_at > created_at)
 );
 
 CREATE TABLE IF NOT EXISTS status_views (
