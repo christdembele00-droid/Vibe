@@ -1,14 +1,14 @@
-import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
+import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {
   getAuth, GoogleAuthProvider, GithubAuthProvider, RecaptchaVerifier, signInWithPopup,
   getRedirectResult, signInWithCredential, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, signInAnonymously, signInWithPhoneNumber,
   onAuthStateChanged, signOut, setPersistence, browserLocalPersistence
-} from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import {
   getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
   deleteField, query, where, orderBy, onSnapshot, serverTimestamp
-} from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 const configured = Boolean(firebaseConfig?.apiKey && firebaseConfig?.authDomain && firebaseConfig?.projectId && firebaseConfig?.appId);

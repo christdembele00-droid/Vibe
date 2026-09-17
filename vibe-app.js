@@ -123,9 +123,32 @@ function installAuthUI(){
   phoneConfirm.addEventListener('click',()=>busy(phoneConfirm,async()=>{await confirmPhoneSignIn(phoneCode.value)}));
 }
 
+async function verifierSessionVibeBackend(user){
+  if(!user)return false;
+  try{
+    const token=await user.getIdToken();
+    const baseUrl=window.VIBE_API_URL||'http://localhost:8000/api/v1';
+    const response=await fetch(baseUrl+'/users/me/sync',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+token}
+    });
+    if(response.ok)return true;
+    if(response.status===401){
+      try{await logout()}catch(_){}
+      try{localStorage.clear();sessionStorage.clear()}catch(_){}
+      try{if('caches' in window){const names=await caches.keys();await Promise.all(names.map(name=>caches.delete(name)))}}catch(_){}
+      try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(reg=>reg.unregister()))}}catch(_){}
+      return false;
+    }
+  }catch(error){
+    console.warn('[Vibe] Synchronisation backend indisponible:',error);
+  }
+  return true;
+}
+
 function installGoogleLoginButton(){const button=document.getElementById('google-login-button');if(!button)return null;button.addEventListener('click',async()=>{if(!firebaseConfigured||!auth){showToast('Firebase n’est pas configuré.');return}button.disabled=true;button.textContent='Connexion Google…';try{await signInWithGoogle()}catch(error){console.error('[Vibe] Connexion Google:',error);showToast(getAuthErrorMessage(error));button.disabled=false;button.textContent='Continuer avec Google'}});return button}
 if(search){search.value=getSearchTerm();search.addEventListener('input',event=>{saveSearchTerm(event.target.value);applySearch(event.target.value)})}
 render();installNewDiscussionButton();startPresenceLifecycle();installGoogleLoginButton();installAuthUI();
-if(!firebaseConfigured||!auth||!db){if(status)status.textContent='Firebase non configuré'}else{onAuthStateChanged(auth,async user=>{currentUser=user;stopChats?.();stopChats=null;stopPresenceHeartbeat();const loginButton=document.getElementById('google-login-button');const authPanel=document.getElementById('vibe-auth-panel');if(!user){if(status)status.textContent='Connexion requise';if(loginButton){loginButton.disabled=false;loginButton.textContent='Continuer avec Google';loginButton.style.display=''}if(authPanel)authPanel.style.display='';const userName=document.getElementById('current-user-name');if(userName)userName.textContent='Compte non connecté';render([]);return}if(status)status.textContent=user.isAnonymous?'Compte anonyme connecté':'Compte connecté';if(loginButton)loginButton.style.display='none';if(authPanel)authPanel.style.display='none';initWhatsAppNavigation();const profile=await loadCurrentProfile(user);await enregistrerUtilisateurActif(user,profile);startPresenceHeartbeat(user,profile);await loadFavorites(user);await supprimerDiscussionGeneraleExistante();render(allChats);installNewDiscussionButton();try{startChatsListener()}catch(error){console.error('[Vibe] Firestore après authentification:',error);if(status)status.textContent='Firestore refusé'}})}
+if(!firebaseConfigured||!auth||!db){if(status)status.textContent='Firebase non configuré'}else{onAuthStateChanged(auth,async user=>{currentUser=user;stopChats?.();stopChats=null;stopPresenceHeartbeat();const loginButton=document.getElementById('google-login-button');const authPanel=document.getElementById('vibe-auth-panel');if(!user){if(status)status.textContent='Connexion requise';if(loginButton){loginButton.disabled=false;loginButton.textContent='Continuer avec Google';loginButton.style.display=''}if(authPanel)authPanel.style.display='';const userName=document.getElementById('current-user-name');if(userName)userName.textContent='Compte non connecté';render([]);return}if(status)status.textContent=user.isAnonymous?'Compte anonyme connecté':'Compte connecté';if(loginButton)loginButton.style.display='none';if(authPanel)authPanel.style.display='none';if(!await verifierSessionVibeBackend(user))return;initWhatsAppNavigation();const profile=await loadCurrentProfile(user);await enregistrerUtilisateurActif(user,profile);startPresenceHeartbeat(user,profile);await loadFavorites(user);await supprimerDiscussionGeneraleExistante();render(allChats);installNewDiscussionButton();try{startChatsListener()}catch(error){console.error('[Vibe] Firestore après authentification:',error);if(status)status.textContent='Firestore refusé'}})}
 document.addEventListener('vibe:logout',async()=>{try{await logout()}catch(error){console.error('[Vibe] Déconnexion:',error);showToast(getAuthErrorMessage(error))}});
 document.addEventListener('vibe:close-chat',()=>shell?.classList.remove('chat-open'));

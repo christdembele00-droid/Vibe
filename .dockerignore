@@ -1,0 +1,11 @@
+.git
+.github
+node_modules
+www
+android
+.env
+.env.*
+!.env.example
+backend/.pytest_cache
+backend/__pycache__
+backend/.venv
