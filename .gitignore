@@ -1,0 +1,17 @@
+node_modules/
+www/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.DS_Store
+.idea/
+.vscode/
+android/.gradle/
+android/build/
+android/app/build/
+google-services.json
+firebase/google-services.json
