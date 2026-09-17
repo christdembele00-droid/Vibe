@@ -41,6 +41,10 @@ jobs:
           DATABASE_URL: postgresql+psycopg://vibe:vibe@127.0.0.1:5432/vibe
         run: python -m app.migrate
 
+      - name: Compile backend
+        working-directory: backend
+        run: python -m compileall -q app
+
       - name: Run backend tests
         working-directory: backend
         env:
@@ -68,6 +72,14 @@ jobs:
           find . -maxdepth 1 -type f -name '*.js' -print0 | while IFS= read -r -d '' file; do
             node --check "$file"
           done
+
+      - name: Install Next.js dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Next.js frontend
+        working-directory: frontend
+        run: npm run build
 
       - name: Validate Docker Compose
         run: docker compose config --quiet
