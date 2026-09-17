@@ -74,6 +74,7 @@ async def send_message(conversation_id: UUID, request: SendMessageRequest, curre
     with get_engine().begin() as conn:
         if not _member(conn,conversation_id,current_user["id"]): raise HTTPException(403,"Accès refusé")
         if not _can_post(conn,conversation_id,current_user["id"]): raise HTTPException(403,"Droit de publication requis")
+        if request.reply_to_id and not _message(conn,conversation_id,request.reply_to_id): raise HTTPException(400,"Message de réponse introuvable dans cette conversation")
         if _blocked_direct(conn,conversation_id,current_user["id"]): raise HTTPException(403,"Conversation indisponible")
         if request.client_message_id:
             existing=conn.execute(text("SELECT id,conversation_id,sender_id,type,text,reply_to_id,client_message_id,created_at,updated_at,deleted_at,metadata FROM messages WHERE sender_id=:u AND client_message_id=:cid"),{"u":current_user["id"],"cid":request.client_message_id}).mappings().first()
@@ -100,7 +101,9 @@ async def send_message(conversation_id: UUID, request: SendMessageRequest, curre
 async def mark_delivered(conversation_id: UUID, body: MessageStateRequest, current_user: dict = Depends(get_current_user)) -> dict:
     with get_engine().begin() as conn:
         if not _member(conn,conversation_id,current_user["id"]): raise HTTPException(403,"Accès refusé")
-        if not _message(conn,conversation_id,body.message_id): raise HTTPException(404,"Message introuvable")
+        message=_message(conn,conversation_id,body.message_id)
+        if not message: raise HTTPException(404,"Message introuvable")
+        if str(message["sender_id"])==str(current_user["id"]): raise HTTPException(400,"Le destinataire confirme la livraison")
         conn.execute(text("INSERT INTO message_deliveries(message_id,user_id) VALUES(:m,:u) ON CONFLICT(message_id,user_id) DO UPDATE SET delivered_at=EXCLUDED.delivered_at"),{"m":body.message_id,"u":current_user["id"]})
     await manager.broadcast(str(conversation_id),{"type":"message.delivered","message_id":str(body.message_id),"user_id":str(current_user["id"])})
     return {"delivered":True}
@@ -109,7 +112,9 @@ async def mark_delivered(conversation_id: UUID, body: MessageStateRequest, curre
 async def mark_read(conversation_id: UUID, body: MessageStateRequest, current_user: dict = Depends(get_current_user)) -> dict:
     with get_engine().begin() as conn:
         if not _member(conn,conversation_id,current_user["id"]): raise HTTPException(403,"Accès refusé")
-        if not _message(conn,conversation_id,body.message_id): raise HTTPException(404,"Message introuvable")
+        message=_message(conn,conversation_id,body.message_id)
+        if not message: raise HTTPException(404,"Message introuvable")
+        if str(message["sender_id"])==str(current_user["id"]): raise HTTPException(400,"Le destinataire confirme la lecture")
         conn.execute(text("INSERT INTO message_reads(message_id,user_id) VALUES(:m,:u) ON CONFLICT(message_id,user_id) DO UPDATE SET read_at=EXCLUDED.read_at"),{"m":body.message_id,"u":current_user["id"]})
     await manager.broadcast(str(conversation_id),{"type":"message.read","message_id":str(body.message_id),"user_id":str(current_user["id"])})
     return {"read":True}
