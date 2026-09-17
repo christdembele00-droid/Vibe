@@ -7,6 +7,7 @@ from sqlalchemy import text
 from app.auth.dependencies import get_current_user
 from app.database import get_engine
 from app.realtime import manager
+from app.notifications import send_push_to_user
 
 router = APIRouter(prefix="/conversations/{conversation_id}/messages", tags=["messages"])
 
@@ -85,6 +86,14 @@ async def send_message(conversation_id: UUID, request: SendMessageRequest, curre
         conn.execute(text("UPDATE conversations SET updated_at=now() WHERE id=:c"),{"c":conversation_id})
     payload=jsonable_encoder({"type":"message.created","message":dict(row)})
     await manager.broadcast(str(conversation_id),payload)
+    with get_engine().connect() as conn:
+        recipients=conn.execute(text("SELECT user_id FROM conversation_members WHERE conversation_id=:c AND user_id<>:u AND left_at IS NULL"),{"c":conversation_id,"u":current_user["id"]}).scalars().all()
+    preview=(request.text or "").strip() or f"VIBE {request.type}"
+    for recipient_id in recipients:
+        try:
+            send_push_to_user(recipient_id,"Nouveau message",preview[:160],{"conversation_id":str(conversation_id),"message_id":str(row["id"])})
+        except Exception:
+            pass
     return {"message":dict(row),"deduplicated":False}
 
 @router.post("/delivered")
