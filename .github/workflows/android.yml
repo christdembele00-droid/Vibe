@@ -2,7 +2,7 @@ name: Vibe Android Debug Build
 
 on:
   push:
-    branches: [main, architecture-foundation-v1]
+    branches: [architecture-foundation-v1]
   pull_request:
     branches: [main]
 
