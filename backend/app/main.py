@@ -20,6 +20,7 @@ from app.media import router as media_router
 from app.security import router as security_router
 from app.search import router as search_router
 from app.account import router as account_router
+from app.notifications import router as notifications_router
 
 
 settings = get_settings()
@@ -37,6 +38,7 @@ app.include_router(media_router, prefix=settings.api_prefix)
 app.include_router(security_router, prefix=settings.api_prefix)
 app.include_router(search_router, prefix=settings.api_prefix)
 app.include_router(account_router, prefix=settings.api_prefix)
+app.include_router(notifications_router, prefix=settings.api_prefix)
 
 app.add_middleware(
     CORSMiddleware,
