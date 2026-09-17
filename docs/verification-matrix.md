@@ -15,17 +15,17 @@ Aucun ancien flux n'est supprimé tant que son remplacement n'a pas été exécu
 | Android build | PIPELINE AJOUTÉ | CI génère Android depuis Capacitor. Le secret FIREBASE_GOOGLE_SERVICES_JSON_B64 est une précondition externe. |
 | Frontend | LEGACY CONSERVÉ | L'interface actuelle reste intacte. Le passage vers Next.js n'est pas encore appliqué. |
 | Backend | FONDATION APPLIQUÉE | FastAPI, auth Firebase, configuration, endpoint média et tests de base présents. |
-| WebSocket | NON IMPLÉMENTÉ | Décision technique à appliquer après migration du premier domaine de messagerie. |
-| FCM | NON IMPLÉMENTÉ | Le plugin et le flux device-token/backend restent à construire. |
+| WebSocket | FONDATION APPLIQUÉE | Authentification au handshake applicatif, contrôle d’appartenance et événements message created/updated/deleted. Test multi-client/reconnexion encore requis. |
+| FCM | FONDATION PARTIELLE | Dépendance Capacitor Messaging et stockage devices préparés. Envoi réel, permissions et invalid-token cleanup restent à valider. |
 | Sécurité | FONDATION PARTIELLE | Vérification ID token backend, séparation des secrets et autorisation backend posées. Rate limiting, App Check, audit métier et politiques fines restent à appliquer. |
 | Migrations DB | RENFORCÉ | Runner SQL transactionnel + table schema_migrations + migration exécutée avant le backend en Compose/CI. |
 | Gestion des erreurs | PARTIELLE | Erreurs auth/API de base couvertes. Contrat d'erreur global et états UI restent à uniformiser. |
 | Offline/reconnexion | NON IMPLÉMENTÉ | Synchronisation WebSocket + reprise depuis PostgreSQL à appliquer avec la messagerie. |
-| Groupes | SCHÉMA PRÉSENT | Règles métier, droits et tests end-to-end restent à implémenter. |
-| Chaînes | SCHÉMA PRÉSENT | Abonnement, publication, droits et modération restent à implémenter. |
-| Statuts | SCHÉMA PRÉSENT | Expiration, visibilité, vues et nettoyage restent à implémenter. |
+| Groupes | FONDATION APPLIQUÉE | Création, membres, rôles admin/owner et transfert propriétaire présents; tests end-to-end encore requis. |
+| Chaînes | FONDATION APPLIQUÉE | Création, abonnement/désabonnement et contrôle de publication préparés; tests end-to-end encore requis. |
+| Statuts | FONDATION APPLIQUÉE | Publication, expiration 24 h et suppression présents; visibilité/vues/cleanup runtime restent à valider. |
 | Médias | FONDATION PARTIELLE | Cloudinary reste fonctionnel côté legacy; nouveau backend de signature prêt; persistance PostgreSQL à brancher ensuite. |
-| Suppression de compte | NON IMPLÉMENTÉE | Doit coordonner Firebase Auth, PostgreSQL, devices et médias. |
+| Suppression de compte | FONDATION PARTIELLE | Demande/tombstone PostgreSQL et audit présents; worker Firebase/devices/media à implémenter et tester. |
 | Render/Vercel | NON VALIDÉ | Aucun déploiement de production ne doit être considéré comme validé depuis cette branche. |
 | GitHub Actions | RENFORCÉ | CI backend + migration PostgreSQL + syntaxe frontend + validation Compose + pipeline Android ajoutés. |
 
