@@ -34,5 +34,5 @@ def process_pending_account_deletions(limit=10):
                 c.execute(text("UPDATE account_deletion_requests SET status='completed',processed_at=now() WHERE id=:id"),{"id":job["id"]})
             processed+=1
         except Exception as exc:
-            with get_engine().begin() as c: c.execute(text("UPDATE account_deletion_requests SET status='failed',error_message=:e WHERE id=:id"),{"e":str(exc)[:1000],"id":job["id"]})
+            with get_engine().begin() as c: c.execute(text("UPDATE account_deletion_requests SET status='pending',error_message=:e WHERE id=:id"),{"e":str(exc)[:1000],"id":job["id"]})
     return processed
