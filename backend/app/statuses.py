@@ -11,6 +11,15 @@ class StatusCreate(BaseModel):
     text:str|None=None
     media_id:UUID|None=None
 
+def _can_view(conn, viewer_id, owner_id, visibility):
+    if str(viewer_id) == str(owner_id):
+        return True
+    if visibility == "everyone":
+        return True
+    if visibility == "contacts":
+        return _is_contact(conn, viewer_id, owner_id)
+    return False
+
 def _is_contact(conn,user_id,other_id):
     return conn.execute(text("SELECT 1 FROM contacts WHERE user_id=:u AND contact_user_id=:o"),{"u":user_id,"o":other_id}).first() is not None
 
@@ -31,7 +40,7 @@ def list_statuses(current_user=Depends(get_current_user)):
             FROM statuses s
             JOIN user_settings us ON us.user_id=s.user_id
             WHERE s.expires_at>now()
-              AND (s.user_id=:u OR (us.status_visibility='contacts' AND EXISTS(
+              AND (s.user_id=:u OR us.status_visibility='everyone' OR (us.status_visibility='contacts' AND EXISTS(
                     SELECT 1 FROM contacts x WHERE x.user_id=:u AND x.contact_user_id=s.user_id
               )))
             ORDER BY s.created_at DESC
@@ -41,10 +50,11 @@ def list_statuses(current_user=Depends(get_current_user)):
 @router.post("/{status_id}/view")
 def view_status(status_id:UUID,current_user=Depends(get_current_user)):
     with get_engine().begin() as c:
-        row=c.execute(text("SELECT user_id FROM statuses WHERE id=:s AND expires_at>now()"),{"s":status_id}).first()
+        row=c.execute(text("SELECT s.user_id,us.status_visibility FROM statuses s JOIN user_settings us ON us.user_id=s.user_id WHERE s.id=:s AND s.expires_at>now()"),{"s":status_id}).first()
         if not row: raise HTTPException(404,"Statut introuvable ou expiré")
         owner_id=row[0]
-        if str(owner_id)!=str(current_user["id"]) and not _is_contact(c,current_user["id"],owner_id):
+        visibility=row[1]
+        if not _can_view(c,current_user["id"],owner_id,visibility):
             raise HTTPException(403,"Statut non accessible")
         c.execute(text("INSERT INTO status_views(status_id,user_id) VALUES(:s,:u) ON CONFLICT(status_id,user_id) DO UPDATE SET viewed_at=now()"),{"s":status_id,"u":current_user["id"]})
     return {"viewed":True}
