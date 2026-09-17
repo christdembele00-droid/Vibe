@@ -16,6 +16,12 @@ def _role(c,conversation_id,user_id):
 def _group(c,conversation_id):
     return c.execute(text("SELECT conversation_id FROM groups WHERE conversation_id=:c"),{"c":conversation_id}).scalar()
 
+@router.get("")
+def list_groups(current_user=Depends(get_current_user)):
+    with get_engine().connect() as c:
+        rows=c.execute(text("SELECT g.conversation_id,g.name,g.description,g.owner_id,g.photo_url FROM groups g JOIN conversation_members cm ON cm.conversation_id=g.conversation_id WHERE cm.user_id=:u AND cm.left_at IS NULL ORDER BY g.name"),{"u":current_user["id"]}).mappings().all()
+    return {"groups":[dict(x) for x in rows]}
+
 @router.post("")
 def create_group(body:GroupCreate,current_user=Depends(get_current_user)):
     with get_engine().begin() as c:
