@@ -346,6 +346,8 @@ async function openSettings() {
   const options = [...document.querySelectorAll('.appearance-option')];
   const applyAppearance = value => {
     options.forEach(option => option.classList.toggle('active', option.dataset.themeValue === value));
+    const control = document.querySelector('.appearance-control');
+    if (control) control.dataset.value = value;
     document.body.classList.toggle('dark-theme', value === 'dark');
     try { localStorage.setItem('vibe_theme', value); } catch {}
   };
