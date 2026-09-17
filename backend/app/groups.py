@@ -70,6 +70,7 @@ def leave_group(conversation_id:UUID,current_user=Depends(get_current_user)):
 @router.patch("/{conversation_id}/members/{user_id}/role")
 def change_role(conversation_id:UUID,user_id:UUID,role:str,current_user=Depends(get_current_user)):
     if role not in ("member","admin"): raise HTTPException(400,"Rôle invalide")
+    if user_id==current_user["id"]: raise HTTPException(400,"Un propriétaire ne peut pas modifier son propre rôle")
     with get_engine().begin() as c:
         if _role(c,conversation_id,current_user["id"])!="owner": raise HTTPException(403,"Propriétaire requis")
         if not _role(c,conversation_id,user_id): raise HTTPException(404,"Membre introuvable")
