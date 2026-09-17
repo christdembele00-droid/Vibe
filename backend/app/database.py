@@ -11,12 +11,20 @@ def get_engine() -> Engine:
     return create_engine(get_settings().database_url, pool_pre_ping=True)
 
 
+def get_local_user_by_firebase_uid(firebase_uid: str) -> dict | None:
+    with get_engine().connect() as connection:
+        row = connection.execute(
+            text("SELECT id, firebase_uid, username, display_name, email, photo_url, about, role, created_at, updated_at, deleted_at FROM users WHERE firebase_uid = :uid"),
+            {"uid": firebase_uid},
+        ).mappings().first()
+    return dict(row) if row else None
+
+
 def upsert_user_from_firebase(decoded: dict) -> dict:
     uid = str(decoded["uid"])
     email = decoded.get("email")
     display_name = decoded.get("name") or (email.split("@", 1)[0] if email else "Vibe user")
     photo_url = decoded.get("picture")
-
     sql = text("""
         INSERT INTO users (firebase_uid, display_name, email, photo_url)
         VALUES (:firebase_uid, :display_name, :email, :photo_url)
@@ -24,18 +32,11 @@ def upsert_user_from_firebase(decoded: dict) -> dict:
             display_name = EXCLUDED.display_name,
             email = EXCLUDED.email,
             photo_url = EXCLUDED.photo_url,
-            updated_at = now()
+            updated_at = now(),
+            deleted_at = NULL
         RETURNING id, firebase_uid, username, display_name, email, photo_url, about, role, created_at, updated_at, deleted_at
     """)
     with get_engine().begin() as connection:
-        row = connection.execute(sql, {
-            "firebase_uid": uid,
-            "display_name": display_name,
-            "email": email,
-            "photo_url": photo_url,
-        }).mappings().one()
-        connection.execute(
-            text("INSERT INTO user_settings (user_id) VALUES (:user_id) ON CONFLICT (user_id) DO NOTHING"),
-            {"user_id": row["id"]},
-        )
+        row = connection.execute(sql, {"firebase_uid": uid, "display_name": display_name, "email": email, "photo_url": photo_url}).mappings().one()
+        connection.execute(text("INSERT INTO user_settings (user_id) VALUES (:user_id) ON CONFLICT (user_id) DO NOTHING"), {"user_id": row["id"]})
     return dict(row)
