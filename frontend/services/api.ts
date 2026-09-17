@@ -3,9 +3,35 @@ export type ApiOptions = RequestInit & { token?: string };
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 let resetInProgress = false;
 
+async function signOutFirebaseClient(): Promise<void> {
+  try {
+    const [{ getApps, initializeApp }, { getAuth, signOut }] = await Promise.all([
+      import("firebase/app"),
+      import("firebase/auth"),
+    ]);
+
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+    const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+
+    const existingApps = getApps();
+    const app =
+      existingApps.find(existing => existing.options.projectId === projectId) ??
+      (existingApps[0] ??
+        (apiKey && authDomain && projectId && appId
+          ? initializeApp({ apiKey, authDomain, projectId, appId })
+          : null));
+
+    if (app) await signOut(getAuth(app));
+  } catch {}
+}
+
 async function hardResetClientSession(): Promise<void> {
   if (resetInProgress || typeof window === "undefined") return;
   resetInProgress = true;
+
+  await signOutFirebaseClient();
 
   try {
     localStorage.clear();
