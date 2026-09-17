@@ -82,17 +82,17 @@ def test_deleted_accounts_cannot_be_resurrected():
 
 
 def test_client_hard_reset_signs_out_firebase():
-    api_source = open("../../frontend/services/api.ts", encoding="utf-8").read()
+    api_source = open("../frontend/services/api.ts", encoding="utf-8").read()
     assert 'response.status === 401' in api_source
-    assert "import("firebase/app")" in api_source
-    assert "import("firebase/auth")" in api_source
+    assert 'import("firebase/app")' in api_source
+    assert 'import("firebase/auth")' in api_source
     assert "signOut(getAuth(app))" in api_source
     assert "localStorage.clear()" in api_source
     assert "sessionStorage.clear()" in api_source
 
 
 def test_entity_ids_use_uuid():
-    migration = open("../../database/migrations/0001_initial.sql", encoding="utf-8").read()
+    migration = open("../database/migrations/0001_initial.sql", encoding="utf-8").read()
     assert "id UUID PRIMARY KEY DEFAULT gen_random_uuid()" in migration
     assert "conversation_id UUID NOT NULL" in migration
     assert "message_id UUID NOT NULL" in migration
