@@ -11,6 +11,12 @@ from app.users import router as users_router
 from app.conversations import router as conversations_router
 from app.messages import router as messages_router
 from app.realtime import router as realtime_router
+from app.contacts import router as contacts_router
+from app.devices import router as devices_router
+from app.groups import router as groups_router
+from app.channels import router as channels_router
+from app.statuses import router as statuses_router
+from app.media import router as media_router
 
 
 settings = get_settings()
@@ -19,6 +25,12 @@ app.include_router(users_router, prefix=settings.api_prefix)
 app.include_router(conversations_router, prefix=settings.api_prefix)
 app.include_router(messages_router, prefix=settings.api_prefix)
 app.include_router(realtime_router, prefix=settings.api_prefix)
+app.include_router(contacts_router, prefix=settings.api_prefix)
+app.include_router(devices_router, prefix=settings.api_prefix)
+app.include_router(groups_router, prefix=settings.api_prefix)
+app.include_router(channels_router, prefix=settings.api_prefix)
+app.include_router(statuses_router, prefix=settings.api_prefix)
+app.include_router(media_router, prefix=settings.api_prefix)
 
 app.add_middleware(
     CORSMiddleware,
