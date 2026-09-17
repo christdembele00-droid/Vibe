@@ -19,6 +19,26 @@ def request_contact(body:ContactRequest,current_user=Depends(get_current_user)):
   if c.execute(text("SELECT 1 FROM blocked_users WHERE (blocker_id=:a AND blocked_id=:b) OR (blocker_id=:b AND blocked_id=:a)"),{"a":current_user["id"],"b":body.user_id}).first(): raise HTTPException(403,"Contact indisponible")
   row=c.execute(text("INSERT INTO contact_requests(sender_id,receiver_id) VALUES(:a,:b) ON CONFLICT DO NOTHING RETURNING id,sender_id,receiver_id,status,created_at"),{"a":current_user["id"],"b":body.user_id}).mappings().first()
  return {"request":dict(row) if row else {"status":"pending"}}
+@router.get("/requests")
+def list_contact_requests(current_user=Depends(get_current_user)):
+ with get_engine().connect() as c:
+  rows=c.execute(text("SELECT id,sender_id,receiver_id,status,created_at,updated_at FROM contact_requests WHERE sender_id=:u OR receiver_id=:u ORDER BY created_at DESC"),{"u":current_user["id"]}).mappings().all()
+ return {"requests":[dict(x) for x in rows]}
+
+@router.post("/requests/{request_id}/reject")
+def reject_contact_request(request_id:UUID,current_user=Depends(get_current_user)):
+ with get_engine().begin() as c:
+  r=c.execute(text("UPDATE contact_requests SET status='rejected',updated_at=now() WHERE id=:id AND receiver_id=:u AND status='pending' RETURNING id"),{"id":request_id,"u":current_user["id"]}).first()
+  if not r: raise HTTPException(404,"Demande introuvable")
+ return {"rejected":True}
+
+@router.post("/requests/{request_id}/cancel")
+def cancel_contact_request(request_id:UUID,current_user=Depends(get_current_user)):
+ with get_engine().begin() as c:
+  r=c.execute(text("UPDATE contact_requests SET status='cancelled',updated_at=now() WHERE id=:id AND sender_id=:u AND status='pending' RETURNING id"),{"id":request_id,"u":current_user["id"]}).first()
+  if not r: raise HTTPException(404,"Demande introuvable")
+ return {"cancelled":True}
+
 @router.post("/{user_id}")
 def add_contact(user_id:UUID,current_user=Depends(get_current_user)):
  with get_engine().begin() as c:
