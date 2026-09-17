@@ -1,3 +1,4 @@
 import type { Metadata } from "next";
-export const metadata: Metadata = { title: "Vibe", description: "Vibe messaging" };
-export default function RootLayout({ children }: Readonly<{children: React.ReactNode}>) { return <html lang="fr"><body>{children}</body></html>; }
+import "./globals.css";
+export const metadata: Metadata={title:"VIBE",description:"VIBE — messagerie spatiale, fluide et temps réel"};
+export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="fr"><body>{children}</body></html>}
