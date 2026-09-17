@@ -54,6 +54,24 @@ jobs:
           p.write_text(text, encoding="utf-8")
           PY
 
+      - name: Configure Google services Gradle plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("android/build.gradle")
+          s=p.read_text()
+          if "com.google.gms:google-services:4.4.2" not in s:
+              s=s.replace("dependencies {", 'dependencies {\n        classpath \'com.google.gms:google-services:4.4.2\'', 1)
+          p.write_text(s)
+          p=Path("android/app/build.gradle")
+          s=p.read_text()
+          if "com.google.gms.google-services" not in s:
+              s="apply plugin: 'com.google.gms.google-services'\n"+s
+          p.write_text(s)
+          PY
+
       - name: Sync Capacitor
         run: npx cap sync android
 
