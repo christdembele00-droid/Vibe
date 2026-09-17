@@ -9,8 +9,24 @@ def cleanup_expired_statuses():
         return c.execute(text("DELETE FROM statuses WHERE expires_at <= now()")).rowcount
 
 def cleanup_orphan_media():
-    with get_engine().begin() as c:
-        return c.execute(text("""UPDATE media SET status='deleted' WHERE status='active' AND created_at < now() - interval '24 hours' AND public_id IS NOT NULL AND id NOT IN (SELECT media_id FROM message_attachments) AND id NOT IN (SELECT media_id FROM statuses WHERE media_id IS NOT NULL)""")).rowcount
+    with get_engine().connect() as c:
+        rows=c.execute(text("""SELECT id,public_id,resource_type FROM media
+            WHERE status='active'
+              AND created_at < now() - interval '24 hours'
+              AND public_id IS NOT NULL
+              AND id NOT IN (SELECT media_id FROM message_attachments)
+              AND id NOT IN (SELECT media_id FROM statuses WHERE media_id IS NOT NULL)""")).mappings().all()
+    cleaned=0
+    for row in rows:
+        try:
+            result=cloudinary.uploader.destroy(row["public_id"],resource_type=row["resource_type"],invalidate=True)
+            if result.get("result") not in ("ok","not found"):
+                continue
+            with get_engine().begin() as c:
+                cleaned += c.execute(text("UPDATE media SET status='deleted' WHERE id=:m AND status='active'"),{"m":row["id"]}).rowcount
+        except Exception:
+            continue
+    return cleaned
 
 def process_pending_account_deletions(limit=10):
     _initialize(); processed=0
