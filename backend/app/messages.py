@@ -37,13 +37,14 @@ def _can_post(conn, conversation_id: UUID, user_id) -> bool:
     if row["type"] != "channel": return True
     return row["role"] in ("owner","admin")
 
-def _blocked(conn, conversation_id: UUID, user_id) -> bool:
+def _blocked_direct(conn, conversation_id: UUID, user_id) -> bool:
     return conn.execute(text("""
         SELECT 1
         FROM conversations c
         JOIN conversation_members cm ON cm.conversation_id=c.id
-        JOIN blocked_users b ON (b.blocker_id=:u AND b.blocked_id=cm.user_id) OR (b.blocker_id=cm.user_id AND b.blocked_id=:u)
-        WHERE c.id=:c AND cm.user_id<>:u AND cm.left_at IS NULL
+        JOIN blocked_users b ON (b.blocker_id=:u AND b.blocked_id=cm.user_id)
+          OR (b.blocker_id=cm.user_id AND b.blocked_id=:u)
+        WHERE c.id=:c AND c.type='direct' AND cm.user_id<>:u AND cm.left_at IS NULL
         LIMIT 1
     """), {"c":conversation_id,"u":user_id}).first() is not None
 
@@ -72,7 +73,7 @@ async def send_message(conversation_id: UUID, request: SendMessageRequest, curre
     with get_engine().begin() as conn:
         if not _member(conn,conversation_id,current_user["id"]): raise HTTPException(403,"Accès refusé")
         if not _can_post(conn,conversation_id,current_user["id"]): raise HTTPException(403,"Droit de publication requis")
-        if _blocked(conn,conversation_id,current_user["id"]): raise HTTPException(403,"Conversation indisponible")
+        if _blocked_direct(conn,conversation_id,current_user["id"]): raise HTTPException(403,"Conversation indisponible")
         if request.client_message_id:
             existing=conn.execute(text("SELECT id,conversation_id,sender_id,type,text,reply_to_id,client_message_id,created_at,updated_at,deleted_at,metadata FROM messages WHERE sender_id=:u AND client_message_id=:cid"),{"u":current_user["id"],"cid":request.client_message_id}).mappings().first()
             if existing: return {"message":dict(existing),"deduplicated":True}
