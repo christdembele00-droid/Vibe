@@ -1,31 +1,32 @@
-# VIBE — Target architecture acceptance checklist
+# VIBE — Re-audit architecture 1 → 7
 
-## Implemented foundation
-- FastAPI API boundary with Firebase ID-token verification.
-- PostgreSQL migrations and durable domain schema.
-- User/profile/settings boundaries.
-- Contacts and blocking boundaries.
-- Direct/group/channel conversation model.
-- Message persistence, edit/delete, idempotency key and delivery schema.
-- WebSocket authentication and conversation transport.
-- Cloudinary signature + media persistence boundary.
-- Status expiration model.
-- Device/FCM token storage boundary.
-- Security reports, audit log and account-deletion request lifecycle.
-- Next.js frontend skeleton kept separate from legacy UI.
-- Render/Vercel deployment configuration foundation.
+## 1. Architecture
+Target remains: Next.js → FastAPI → PostgreSQL; Firebase Auth/FCM; Cloudinary; WebSocket; Capacitor.
+Legacy frontend remains until measured feature parity.
 
-## Still requires runtime acceptance before migration is declared complete
-- Real Firebase Google Android sign-in with debug and release/Play SHA-1.
-- Successful GitHub Actions Android build with the real Firebase secret.
-- PostgreSQL user migration from the legacy Firestore path.
-- Real Web and Android message/reconnect/offline tests.
-- Cloudinary upload/delete/orphan tests with real credentials.
-- FCM delivery tests with multiple devices and invalid-token cleanup.
-- Group/channel/status end-to-end tests.
-- Production Render/Vercel/HTTPS/CORS/WebSocket validation.
-- Account deletion worker executing Firebase + PostgreSQL + media cleanup.
-- Next.js feature parity before legacy UI removal.
-- E2EE, calls and offline sophistication remain explicit product decisions.
+## 2. Problems found
+- WebSocket disconnect cleanup was incomplete.
+- Status visibility was enforced inconsistently between listing and viewing.
+- Media deletion only changed PostgreSQL state and did not remove the Cloudinary asset.
+- Account deletion needs an explicit retry path for failed jobs.
+- FCM is implemented as a side effect but real credentials/device delivery remain runtime acceptance items.
+- Offline queue exists but must be integrated into all mutations before declaring offline acceptance.
+- Real Android SHA-1, CI execution, deployment, migration and E2E cannot be verified from repository code alone.
 
-A green code foundation is not a green product domain. Each domain must pass the migration contract before legacy removal.
+## 3. Responsibilities
+Firebase = identity/push; PostgreSQL = durable application state; FastAPI = authorization/business rules; Cloudinary = binary media; WebSocket = transport; frontend = presentation/state; Capacitor = Android shell.
+
+## 4. Flows
+Authentication, messaging, delivery/read state, realtime auth, media completion, status expiry, group/channel permissions and account deletion are represented in backend flows. External side effects remain after durable state changes.
+
+## 5. Database
+Core entities and lifecycle tables exist. Message idempotency/delivery migration exists. Foreign keys and unique constraints cover the main ownership relationships. Runtime migration execution still required.
+
+## 6. Technical verification
+Static repository review found concrete lifecycle issues and they are being corrected. CI currently has no recorded workflow result for the latest branch state, so no green-build claim is made.
+
+## 7. Implementation/tests
+Foundation tests exist for health and authentication boundaries. Runtime multi-client, Android, Cloudinary, FCM, migration and E2E tests remain required.
+
+## Stabilization rule
+Repeat 1 → 7 after every corrective batch. A domain is only considered migrated when its runtime acceptance test passes. No legacy feature is removed before replacement parity is demonstrated.
