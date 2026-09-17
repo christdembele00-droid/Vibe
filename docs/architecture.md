@@ -14,7 +14,7 @@ Build VIBE as a maintainable WhatsApp-like messaging application for Web/PWA and
 - Real-time transport: WebSocket
 - Edge/DNS/TLS/CDN: Cloudflare
 - Frontend hosting: Vercel
-- Backend hosting: Render
+- Backend hosting: provider-neutral Docker; Railway is the documented target, while the application remains deployable to any compatible Python/Docker host.
 - Source control/CI: GitHub + GitHub Actions
 - Monitoring: Sentry, introduced when production is stable
 - Web search: provider behind a SearchService abstraction
