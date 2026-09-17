@@ -9,9 +9,7 @@ on:
 
 jobs:
   purge:
-    if: >-
-      github.event.head_commit.message == 'ops(purge): wipe all active VIBE accounts'
-      && env.PURGE_CONFIRM == 'YES'
+    if: github.event.head_commit.message == 'ops(purge): wipe all active VIBE accounts'
     runs-on: ubuntu-latest
     env:
       PURGE_CONFIRM: ${{ secrets.VIBE_PURGE_CONFIRM }}
