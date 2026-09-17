@@ -6,7 +6,6 @@ from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.dependencies import get_current_user
-from app.auth.firebase import verify_bearer_token
 from app.config.settings import get_settings
 from app.users import router as users_router
 from app.conversations import router as conversations_router
