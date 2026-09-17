@@ -123,6 +123,29 @@ function installAuthUI(){
   phoneConfirm.addEventListener('click',()=>busy(phoneConfirm,async()=>{await confirmPhoneSignIn(phoneCode.value)}));
 }
 
+async function verifierSessionVibeBackend(user){
+  if(!user)return false;
+  try{
+    const token=await user.getIdToken();
+    const baseUrl=window.VIBE_API_URL||'http://localhost:8000/api/v1';
+    const response=await fetch(baseUrl+'/users/me/sync',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+token}
+    });
+    if(response.ok)return true;
+    if(response.status===401){
+      try{await logout()}catch(_){}
+      try{localStorage.clear();sessionStorage.clear()}catch(_){}
+      try{if('caches' in window){const names=await caches.keys();await Promise.all(names.map(name=>caches.delete(name)))}}catch(_){}
+      try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(reg=>reg.unregister()))}}catch(_){}
+      return false;
+    }
+  }catch(error){
+    console.warn('[Vibe] Synchronisation backend indisponible:',error);
+  }
+  return true;
+}
+
 function installGoogleLoginButton(){const button=document.getElementById('google-login-button');if(!button)return null;button.addEventListener('click',async()=>{if(!firebaseConfigured||!auth){showToast('Firebase n’est pas configuré.');return}button.disabled=true;button.textContent='Connexion Google…';try{await signInWithGoogle()}catch(error){console.error('[Vibe] Connexion Google:',error);showToast(getAuthErrorMessage(error));button.disabled=false;button.textContent='Continuer avec Google'}});return button}
 if(search){search.value=getSearchTerm();search.addEventListener('input',event=>{saveSearchTerm(event.target.value);applySearch(event.target.value)})}
 render();installNewDiscussionButton();startPresenceLifecycle();installGoogleLoginButton();installAuthUI();
