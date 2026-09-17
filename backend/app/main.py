@@ -8,11 +8,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.auth.firebase import verify_bearer_token
 from app.config.settings import get_settings
 from app.users import router as users_router
+from app.conversations import router as conversations_router
+from app.messages import router as messages_router
+from app.realtime import router as realtime_router
 
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0")
 app.include_router(users_router, prefix=settings.api_prefix)
+app.include_router(conversations_router, prefix=settings.api_prefix)
+app.include_router(messages_router, prefix=settings.api_prefix)
+app.include_router(realtime_router, prefix=settings.api_prefix)
 
 app.add_middleware(
     CORSMiddleware,
