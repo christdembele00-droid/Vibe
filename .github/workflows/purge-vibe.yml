@@ -1,11 +1,7 @@
 name: VIBE destructive reset
 
 on:
-  push:
-    branches:
-      - architecture-foundation-v1
-    paths:
-      - ".github/workflows/purge-vibe.yml"
+  workflow_dispatch:
 
 jobs:
   purge:
