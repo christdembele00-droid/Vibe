@@ -9,7 +9,15 @@ class ContactRequest(BaseModel): user_id: UUID
 @router.get("")
 def list_contacts(current_user=Depends(get_current_user)):
  with get_engine().connect() as c:
-  rows=c.execute(text("SELECT u.id,u.username,u.display_name,u.email,u.photo_url FROM contacts x JOIN users u ON u.id=x.contact_user_id WHERE x.user_id=:u ORDER BY u.display_name"),{"u":current_user["id"]}).mappings().all()
+  rows=c.execute(text("""
+   SELECT u.id,u.username,u.display_name,u.email,u.photo_url
+   FROM contacts x
+   JOIN users u ON u.id=x.contact_user_id
+   WHERE x.user_id=:u
+     AND x.contact_user_id<>:u
+     AND u.deleted_at IS NULL
+   ORDER BY u.display_name
+  """),{"u":current_user["id"]}).mappings().all()
  return {"contacts":[dict(x) for x in rows]}
 @router.post("/requests")
 def request_contact(body:ContactRequest,current_user=Depends(get_current_user)):
