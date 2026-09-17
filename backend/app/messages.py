@@ -1,5 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from app.auth.dependencies import get_current_user
@@ -48,7 +49,7 @@ async def send_message(conversation_id: UUID, request: SendMessageRequest, curre
             RETURNING id,conversation_id,sender_id,type,text,reply_to_id,client_message_id,created_at,updated_at,deleted_at,metadata
         """), {"c":conversation_id,"u":current_user["id"],"type":request.type,"text":request.text,"reply":request.reply_to_id,"cid":request.client_message_id,"metadata":__import__("json").dumps(request.metadata)}).mappings().one()
         conn.execute(text("UPDATE conversations SET updated_at=now() WHERE id=:c"), {"c":conversation_id})
-    payload={"type":"message.created","message":dict(row)}
+    payload=jsonable_encoder({"type":"message.created","message":dict(row)})
     await manager.broadcast(str(conversation_id), payload)
     return {"message":dict(row),"deduplicated":False}
 
@@ -60,7 +61,7 @@ async def edit_message(conversation_id: UUID, message_id: UUID, request: SendMes
         if not existing: raise HTTPException(status_code=404, detail="Message introuvable")
         if str(existing["sender_id"]) != str(current_user["id"]): raise HTTPException(status_code=403, detail="Modification non autorisée")
         row=conn.execute(text("UPDATE messages SET text=:text,updated_at=now() WHERE id=:m RETURNING id,conversation_id,sender_id,type,text,reply_to_id,client_message_id,created_at,updated_at,deleted_at,metadata"), {"text":request.text,"m":message_id}).mappings().one()
-    await manager.broadcast(str(conversation_id), {"type":"message.updated","message":dict(row)})
+    await manager.broadcast(str(conversation_id), jsonable_encoder({"type":"message.updated","message":dict(row)}))
     return {"message":dict(row)}
 
 @router.delete("/{message_id}")
