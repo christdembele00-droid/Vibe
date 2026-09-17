@@ -26,6 +26,7 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: .
+    dockerCommand: python -m app.run_maintenance
     schedule: "*/10 * * * *"
     envVars:
       - key: DATABASE_URL
