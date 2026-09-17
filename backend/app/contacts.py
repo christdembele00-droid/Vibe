@@ -10,7 +10,7 @@ class ContactRequest(BaseModel): user_id: UUID
 def list_contacts(current_user=Depends(get_current_user)):
  with get_engine().connect() as c:
   rows=c.execute(text("""
-   SELECT u.id,u.username,u.display_name,u.email,u.photo_url
+   SELECT u.id,u.username,u.display_name,u.photo_url
    FROM contacts x
    JOIN users u ON u.id=x.contact_user_id
    WHERE x.user_id=:u
