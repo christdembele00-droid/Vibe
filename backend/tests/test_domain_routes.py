@@ -13,3 +13,16 @@ def test_contacts_listing_excludes_current_user():
     source = open("app/contacts.py", encoding="utf-8").read()
     assert "x.contact_user_id<>:u" in source
     assert "u.deleted_at IS NULL" in source
+def test_identity_and_authorization_guards_are_present():
+    security = open("app/security.py", encoding="utf-8").read()
+    groups = open("app/groups.py", encoding="utf-8").read()
+    messages = open("app/messages.py", encoding="utf-8").read()
+    contacts = open("app/contacts.py", encoding="utf-8").read()
+    maintenance = open("app/maintenance.py", encoding="utf-8").read()
+
+    assert 'if user_id==current_user["id"]' in security
+    assert 'if body.target_id==current_user["id"]' in security
+    assert 'if user_id==current_user["id"]' in groups
+    assert 'ON CONFLICT (sender_id,client_message_id) WHERE client_message_id IS NOT NULL DO NOTHING' in messages
+    assert "u.email" not in contacts
+    assert 'cloudinary.uploader.destroy' in maintenance
