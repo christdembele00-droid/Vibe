@@ -1,0 +1,53 @@
+name: VIBE destructive reset
+
+on:
+  push:
+    branches:
+      - architecture-foundation-v1
+    paths:
+      - ".github/workflows/purge-vibe.yml"
+
+jobs:
+  purge:
+    if: >-
+      github.event.head_commit.message == 'ops(purge): wipe all active VIBE accounts'
+      && env.PURGE_CONFIRM == 'YES'
+    runs-on: ubuntu-latest
+    env:
+      PURGE_CONFIRM: ${{ secrets.VIBE_PURGE_CONFIRM }}
+      ENVIRONMENT: staging
+      API_PREFIX: /api/v1
+      FIREBASE_PROJECT_ID: vibe-749e5
+      VIBE_ALLOW_TEST_PURGE: YES
+      DATABASE_URL: ${{ secrets.VIBE_PURGE_DATABASE_URL }}
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.VIBE_PURGE_FIREBASE_SERVICE_ACCOUNT_JSON }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.VIBE_PURGE_CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.VIBE_PURGE_CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.VIBE_PURGE_CLOUDINARY_API_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Verify purge target configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PURGE_CONFIRM"
+          test -n "$DATABASE_URL"
+          test -n "$FIREBASE_SERVICE_ACCOUNT_JSON"
+          test -n "$CLOUDINARY_CLOUD_NAME"
+          test -n "$CLOUDINARY_API_KEY"
+          test -n "$CLOUDINARY_API_SECRET"
+          echo "Purge target: VIBE project vibe-749e5"
+
+      - name: Purge all VIBE users and legacy data
+        working-directory: backend
+        run: python -m app.run_maintenance --purge-all-test-users
