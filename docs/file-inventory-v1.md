@@ -3,7 +3,7 @@
 **Branche auditée :** `architecture-foundation-v1`  
 **HEAD audité :** `2564981dede914d99f3c2d4761b34b42b53e4a1a`  
 **Date :** 17 septembre 2026  
-**Nombre de fichiers suivis :** 108
+**Nombre de fichiers suivis :** 109
 
 ## Règle de classement
 
@@ -18,11 +18,11 @@
 | Catégorie | Nombre |
 |---|---:|
 | À CONSERVER TEMPORAIREMENT | 41 |
-| DOUBLON | 1 |
-| NÉCESSAIRE | 32 |
-| UTILISÉ | 34 |
+| DOUBLON | 0 |
+| NÉCESSAIRE | 33 |
+| UTILISÉ | 35 |
 
-**Conclusion du premier passage :** aucun fichier n’est classé **OBSOLÈTE** avec un niveau de preuve suffisant. Le seul **DOUBLON** clairement identifié est le pipeline Android `.github/workflows/android.yml`, qui recoupe `build-android.yml` mais conserve actuellement des déclencheurs différents. Les fichiers du frontend historique restent volontairement dans **À CONSERVER TEMPORAIREMENT** tant que Next.js n’a pas la parité fonctionnelle.
+**Conclusion du passage actuel :** aucun fichier n’est classé **OBSOLÈTE** avec un niveau de preuve suffisant. Le pipeline Android est maintenant séparé proprement en deux rôles : `android.yml` pour la validation debug des PR et `build-android.yml` pour le release sur `main`/manuel. Les fichiers du frontend historique restent volontairement dans **À CONSERVER TEMPORAIREMENT** tant que Next.js n’a pas la parité fonctionnelle.
 
 ## Nettoyage contrôlé recommandé
 
@@ -30,7 +30,7 @@
 2. Ajouter les tests de parité correspondants.
 3. Après CI réussie, retirer les modules historiques par petits lots.
 4. Réévaluer ensuite les fichiers Firestore historiques et les workflows associés.
-5. Fusionner/supprimer le pipeline Android doublonné seulement après avoir conservé tous ses déclencheurs et vérifié la CI.
+5. Garder les deux workflows Android uniquement parce qu’ils ont maintenant des rôles distincts : debug PR d’un côté, release `main` de l’autre.
 
 ## Inventaire complet
 
@@ -144,3 +144,5 @@
 | 106 | `vibe-transitions.css` | 5576 | À CONSERVER TEMPORAIREMENT | Frontend historique encore utilisé par l’entrée HTML/Android ; à retirer seulement après parité Next.js et tests. |
 | 107 | `vibe-whatsapp-final.css` | 20825 | À CONSERVER TEMPORAIREMENT | Frontend historique encore utilisé par l’entrée HTML/Android ; à retirer seulement après parité Next.js et tests. |
 | 108 | `whatsapp-extra-features.js` | 24554 | À CONSERVER TEMPORAIREMENT | Composant actuellement conservé pendant la migration vers l’architecture Next.js/PostgreSQL. |
+
+| 109 | `docs/file-inventory-v1.md` | 0 | NÉCESSAIRE | Rapport d’audit maintenu dans le dépôt pour contrôler le nettoyage fichier par fichier. |
