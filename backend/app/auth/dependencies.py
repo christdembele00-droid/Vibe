@@ -11,5 +11,8 @@ def get_current_user(authorization: str | None = Header(default=None)) -> dict:
     decoded = verify_bearer_token(authorization)
     user = get_local_user_by_firebase_uid(str(decoded["uid"]))
     if not user or user.get("deleted_at") is not None:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Compte VIBE indisponible")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session VIBE invalide ou compte supprimé",
+        )
     return user
