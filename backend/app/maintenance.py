@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy import text
 from app.database import get_engine
 from app.auth.firebase import _initialize
@@ -105,9 +107,48 @@ def process_pending_account_deletions(limit=10):
     return processed
 
 
-def purge_all_test_users():
-    import os
+def _purge_recorded_media():
+    with get_engine().connect() as c:
+        rows = c.execute(
+            text("""SELECT id,public_id,resource_type
+                    FROM media
+                    WHERE public_id IS NOT NULL AND status <> 'deleted'
+                    ORDER BY created_at""")
+        ).mappings().all()
 
+    cleaned = 0
+    for row in rows:
+        result = cloudinary.uploader.destroy(
+            row["public_id"], resource_type=row["resource_type"], invalidate=True
+        )
+        if result.get("result") not in ("ok", "not found"):
+            raise RuntimeError("Cloudinary deletion failed during global purge: " + str(result))
+        with get_engine().begin() as c:
+            cleaned += c.execute(
+                text("UPDATE media SET status='deleted' WHERE id=:id AND status<>'deleted'"),
+                {"id": row["id"]},
+            ).rowcount
+    return cleaned
+
+
+def _purge_all_firebase_users():
+    _initialize()
+    deleted = 0
+    for user in firebase_auth.list_users().iterate_all():
+        try:
+            firebase_auth.delete_user(user.uid)
+            deleted += 1
+        except firebase_auth.UserNotFoundError:
+            continue
+    return deleted
+
+
+def _remaining_database_users():
+    with get_engine().connect() as c:
+        return int(c.execute(text("SELECT count(*) FROM users")).scalar_one())
+
+
+def purge_all_test_users():
     if os.getenv("ENVIRONMENT") not in {"development", "test", "staging"}:
         raise RuntimeError("Global purge disabled outside development/test/staging.")
     if os.getenv("VIBE_ALLOW_TEST_PURGE") != "YES":
@@ -115,7 +156,7 @@ def purge_all_test_users():
 
     with get_engine().begin() as c:
         users = c.execute(
-            text("SELECT id FROM users WHERE deleted_at IS NULL ORDER BY created_at")
+            text("SELECT id FROM users ORDER BY created_at")
         ).scalars().all()
         for user_id in users:
             c.execute(
@@ -131,4 +172,19 @@ def purge_all_test_users():
                 {"u": user_id},
             )
 
-    return process_pending_account_deletions(limit=50)
+    while _remaining_database_users():
+        processed = process_pending_account_deletions(limit=50)
+        if processed == 0:
+            remaining = _remaining_database_users()
+            raise RuntimeError(
+                f"Global purge blocked: {remaining} PostgreSQL user(s) could not be deleted."
+            )
+
+    firebase_deleted = _purge_all_firebase_users()
+    media_deleted = _purge_recorded_media()
+
+    return {
+        "postgres_users": len(users),
+        "firebase_users": firebase_deleted,
+        "cloudinary_media": media_deleted,
+    }
