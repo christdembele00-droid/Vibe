@@ -1,12 +1,12 @@
 "use client";
 
-import type { SVGProps } from "react";
+import type { ReactNode, SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement> & {
   size?: number;
 };
 
-function Icon({ size = 20, children, ...props }: IconProps & { children: React.ReactNode }) {
+function Icon({ size = 20, children, ...props }: IconProps & { children: ReactNode }) {
   return (
     <svg
       width={size}
