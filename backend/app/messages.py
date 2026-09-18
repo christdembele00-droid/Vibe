@@ -68,13 +68,14 @@ def list_messages(conversation_id: UUID, before: UUID | None = None, after: UUID
     result=[dict(x) for x in rows]
     if result:
         ids=[item["id"] for item in result]
-        attachment_rows=conn.execute(text("""
-            SELECT ma.message_id,m.id,m.url,m.resource_type,m.mime_type,m.size_bytes,m.width,m.height,m.duration_seconds
-            FROM message_attachments ma
-            JOIN media m ON m.id=ma.media_id
-            WHERE ma.message_id = ANY(:message_ids)
-            ORDER BY ma.message_id, ma.position
-        """),{"message_ids":ids}).mappings().all()
+        with get_engine().connect() as attachment_conn:
+            attachment_rows=attachment_conn.execute(text("""
+                SELECT ma.message_id,m.id,m.url,m.resource_type,m.mime_type,m.size_bytes,m.width,m.height,m.duration_seconds
+                FROM message_attachments ma
+                JOIN media m ON m.id=ma.media_id
+                WHERE ma.message_id = ANY(:message_ids)
+                ORDER BY ma.message_id, ma.position
+            """),{"message_ids":ids}).mappings().all()
         attachments_by_message={}
         for item in attachment_rows:
             payload=dict(item)
