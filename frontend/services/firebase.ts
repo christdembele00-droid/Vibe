@@ -8,6 +8,7 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
+  signInWithCredential,
   signOut,
   type User,
 } from "firebase/auth";
@@ -29,8 +30,34 @@ function ensurePersistence() {
   return persistencePromise;
 }
 
+function isCapacitorNative() {
+  return (
+    typeof window !== "undefined" &&
+    Boolean(window.Capacitor?.isNativePlatform?.())
+  );
+}
+
+async function signInWithNativeGoogle(): Promise<User> {
+  const { FirebaseAuthentication } = await import("@capacitor-firebase/authentication");
+  const result = await FirebaseAuthentication.signInWithGoogle({
+    useCredentialManager: true,
+  });
+  const idToken = result.credential?.idToken;
+  if (!idToken) {
+    throw new Error("Google a authentifié le compte, mais aucun ID token Firebase n’a été reçu.");
+  }
+  const credential = GoogleAuthProvider.credential(
+    idToken,
+    result.credential?.accessToken ?? undefined,
+  );
+  return (await signInWithCredential(auth, credential)).user;
+}
+
 export async function signInWithGoogle(): Promise<User | null> {
   await ensurePersistence();
+  if (isCapacitorNative()) {
+    return signInWithNativeGoogle();
+  }
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
   const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
