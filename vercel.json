@@ -1,1 +1,5 @@
-{"framework":"nextjs","buildCommand":"cd frontend && npm install --no-audit --no-fund && npm run build","outputDirectory":"frontend/.next"}
+{
+  "framework": "nextjs",
+  "buildCommand": "cd frontend && npm install --no-audit --no-fund && npm run build",
+  "outputDirectory": "frontend/.next"
+}
