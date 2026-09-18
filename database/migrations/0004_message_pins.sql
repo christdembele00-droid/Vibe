@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS message_pins (\n    message_id UUID PRIMARY KEY REFERENCES messages(id) ON DELETE CASCADE,\n    pinned_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n    pinned_at TIMESTAMPTZ NOT NULL DEFAULT now()\n);\n\nCREATE INDEX IF NOT EXISTS idx_message_pins_pinned_by ON message_pins(pinned_by);\n
