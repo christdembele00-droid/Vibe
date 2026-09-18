@@ -246,3 +246,21 @@ async def typing_event(conversation_id: UUID, body: TypingRequest, current_user:
         if not _member(conn, conversation_id, current_user["id"]): raise HTTPException(403, "Accès refusé")
     await manager.broadcast(str(conversation_id), {"type":"typing","user_id":str(current_user["id"]),"active":body.active})
     return {"active":body.active}
+
+
+@router.post("/{message_id}/pin")
+async def pin_message(conversation_id: UUID, message_id: UUID, current_user: dict = Depends(get_current_user)) -> dict:
+    with get_engine().begin() as conn:
+        if not _member(conn, conversation_id, current_user["id"]): raise HTTPException(403, "Accès refusé")
+        if not _message(conn, conversation_id, message_id): raise HTTPException(404, "Message introuvable")
+        conn.execute(text("INSERT INTO message_pins(message_id,pinned_by) VALUES(:m,:u) ON CONFLICT(message_id) DO UPDATE SET pinned_by=EXCLUDED.pinned_by,pinned_at=now()"), {"m":message_id,"u":current_user["id"]})
+    await manager.broadcast(str(conversation_id), {"type":"message.pinned","message_id":str(message_id),"user_id":str(current_user["id"])})
+    return {"pinned":True}
+
+@router.delete("/{message_id}/pin")
+async def unpin_message(conversation_id: UUID, message_id: UUID, current_user: dict = Depends(get_current_user)) -> dict:
+    with get_engine().begin() as conn:
+        if not _member(conn, conversation_id, current_user["id"]): raise HTTPException(403, "Accès refusé")
+        conn.execute(text("DELETE FROM message_pins WHERE message_id=:m"), {"m":message_id})
+    await manager.broadcast(str(conversation_id), {"type":"message.unpinned","message_id":str(message_id)})
+    return {"pinned":False}
