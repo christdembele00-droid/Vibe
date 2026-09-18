@@ -91,7 +91,7 @@ type Settings = {
 type ApiError = Error & { status?: number };
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\\/$/, "") ||
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
   (typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "http://localhost:8000/api/v1"
     : "");
