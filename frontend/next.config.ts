@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const isGitHubPages = process.env.GITHUB_ACTIONS === "true";
 
 const nextConfig: NextConfig = {
-  output: "export",
+  ...(isGitHubPages ? { output: "export" as const } : {}),
   trailingSlash: true,
   basePath: isGitHubPages ? "/Vibe" : "",
   images: {
