@@ -1,7 +1,9 @@
+import { Capacitor } from "@capacitor/core";
+import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { api } from "./api";
 
 export async function registerPushDevice(idToken: string, deviceName?: string) {
-  const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
+  if (!Capacitor.isNativePlatform()) return null;
   const permission = await FirebaseMessaging.requestPermissions();
   if (permission.receive !== "granted") throw new Error("Notifications non autorisées");
   const { token } = await FirebaseMessaging.getToken();
