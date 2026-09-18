@@ -205,6 +205,8 @@ export default function Home() {
   const [groupName, setGroupName] = useState("");
   const [channelName, setChannelName] = useState("");
   const [realtimeState, setRealtimeState] = useState<"connecting" | "connected" | "closed">("closed");
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
   const messageFileRef = useRef<HTMLInputElement | null>(null);
   const statusFileRef = useRef<HTMLInputElement | null>(null);
@@ -419,6 +421,44 @@ export default function Home() {
     }
   }
 
+  async function editMessage(message: Message) {
+    const value = messageText.trim();
+    if (!value || !selectedConversation) return;
+    setBusy(true);
+    try {
+      await runWithToken((token) =>
+        apiRequest("/conversations/" + selectedConversation + "/messages/" + message.id, token, {
+          method: "PATCH",
+          body: JSON.stringify({ type: "text", text: value }),
+        }),
+      );
+      setMessageText("");
+      setEditingMessageId(null);
+      await loadMessages(selectedConversation);
+    } catch (error) {
+      setBackendError(error instanceof Error ? error.message : "Message non modifié.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteMessage(message: Message) {
+    if (!selectedConversation || message.sender_id !== user?.uid) return;
+    setBusy(true);
+    try {
+      await runWithToken((token) =>
+        apiRequest("/conversations/" + selectedConversation + "/messages/" + message.id, token, {
+          method: "DELETE",
+        }),
+      );
+      setMessages((current) => current.filter((item) => item.id !== message.id));
+    } catch (error) {
+      setBackendError(error instanceof Error ? error.message : "Message non supprimé.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = messageText.trim();
@@ -431,11 +471,13 @@ export default function Home() {
           body: JSON.stringify({
             type: "text",
             text: value,
+            reply_to_id: replyingTo?.id ?? null,
             client_message_id: crypto.randomUUID(),
           }),
         }),
       );
       setMessageText("");
+      setReplyingTo(null);
       await loadMessages(selectedConversation);
     } catch (error) {
       setBackendError(error instanceof Error ? error.message : "Message non envoyé.");
@@ -717,13 +759,31 @@ export default function Home() {
                   messages.map((message) => (
                     <div className={"message-row" + (message.sender_id === user.uid ? " me" : "")} key={message.id}>
                       <div className="bubble">
+                        {message.reply_to_id && (
+                          <div className="reply-preview">
+                            <span>↩ Réponse</span>
+                            <small>Message cité</small>
+                          </div>
+                        )}
                         {message.attachments?.map((attachment) => (
                           <div className="message-attachment" key={attachment.id}>
                             {attachmentElement(attachment)}
                           </div>
                         ))}
                         {message.text && <div>{message.text}</div>}
-                        <div className="bubble-meta">{timeOf(message.created_at)}</div>
+                        <div className="bubble-meta">
+                          <span>{timeOf(message.created_at)}</span>
+                          <span className="message-actions">
+                            <button type="button" onClick={() => { setReplyingTo(message); setEditingMessageId(null); }} aria-label="Répondre">↩</button>
+                            {message.sender_id === user.uid && message.type === "text" && (
+                              <>
+                                <button type="button" onClick={() => { setEditingMessageId(message.id); setReplyingTo(null); setMessageText(message.text ?? ""); }} aria-label="Modifier">✎</button>
+                                <button type="button" onClick={() => void deleteMessage(message)} aria-label="Supprimer">×</button>
+                              </>
+                            )}
+                            <span className="message-check">✓✓</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -731,7 +791,24 @@ export default function Home() {
               </div>
 
               <div className="composer-wrap">
-                <form className="composer" onSubmit={sendMessage}>
+                {(replyingTo || editingMessageId) && (
+                  <div className="composer-context">
+                    <div>
+                      <strong>{editingMessageId ? "Modification du message" : "Réponse"}</strong>
+                      {!editingMessageId && <span>{replyingTo?.text || "Message média"}</span>}
+                    </div>
+                    <button type="button" className="icon-btn" onClick={() => { setReplyingTo(null); setEditingMessageId(null); setMessageText(""); }} aria-label="Annuler">×</button>
+                  </div>
+                )}
+                <form className="composer" onSubmit={(event) => {
+                  event.preventDefault();
+                  if (editingMessageId) {
+                    const message = messages.find((item) => item.id === editingMessageId);
+                    if (message) void editMessage(message);
+                  } else {
+                    void sendMessage(event);
+                  }
+                }}>
                   <button type="button" className="icon-btn" onClick={() => messageFileRef.current?.click()} aria-label="Joindre un média">＋</button>
                   <input
                     value={messageText}
