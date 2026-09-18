@@ -43,7 +43,7 @@ export async function uploadMedia(file: File, token: string): Promise<UploadedMe
     throw new Error(body.error?.message ?? "Upload Cloudinary impossible.");
   }
 
-  return api<UploadedMedia>("/media/complete", {
+  const result = await api<{ media: UploadedMedia }>("/media/complete", {
     method: "POST",
     token,
     body: JSON.stringify({
@@ -56,5 +56,6 @@ export async function uploadMedia(file: File, token: string): Promise<UploadedMe
       height: body.height ?? null,
       duration_seconds: body.duration ?? null,
     }),
-  }).then((result) => result);
+  });
+  return result.media;
 }
