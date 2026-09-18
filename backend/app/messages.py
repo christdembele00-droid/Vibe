@@ -66,6 +66,22 @@ def list_messages(conversation_id: UUID, before: UUID | None = None, after: UUID
         order="ASC" if after else "DESC"
         rows=conn.execute(text(f"SELECT id,conversation_id,sender_id,type,text,reply_to_id,client_message_id,created_at,updated_at,deleted_at,metadata FROM messages WHERE {where} ORDER BY created_at {order} LIMIT :limit"),params).mappings().all()
     result=[dict(x) for x in rows]
+    if result:
+        ids=[item["id"] for item in result]
+        attachment_rows=conn.execute(text("""
+            SELECT ma.message_id,m.id,m.url,m.resource_type,m.mime_type,m.size_bytes,m.width,m.height,m.duration_seconds
+            FROM message_attachments ma
+            JOIN media m ON m.id=ma.media_id
+            WHERE ma.message_id = ANY(:message_ids)
+            ORDER BY ma.message_id, ma.position
+        """),{"message_ids":ids}).mappings().all()
+        attachments_by_message={}
+        for item in attachment_rows:
+            payload=dict(item)
+            message_id=payload.pop("message_id")
+            attachments_by_message.setdefault(message_id,[]).append(payload)
+        for item in result:
+            item["attachments"]=attachments_by_message.get(item["id"],[])
     if not after: result.reverse()
     return {"messages":result}
 
