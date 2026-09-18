@@ -23,7 +23,7 @@ export class VibeRealtime {
     this.cleanupSocket();
     const url = new URL(this.apiUrl);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-    url.pathname = url.pathname.replace(//$/, "") + "/ws/conversations/" + this.conversationId;
+    url.pathname = url.pathname.replace(/\/$/, "") + "/ws/conversations/" + this.conversationId;
     this.onState?.("connecting");
     this.socket = new WebSocket(url.toString());
 
