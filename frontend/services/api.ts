@@ -1,6 +1,6 @@
 export type ApiOptions = RequestInit & { token?: string };
 
-const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 let resetInProgress = false;
 
 async function signOutFirebaseClient(): Promise<void> {
@@ -77,6 +77,8 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
   const headers = new Headers(options.headers);
   if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (options.token) headers.set("Authorization", "Bearer " + options.token);
+
+  if (!baseUrl) throw new Error("Serveur VIBE non configuré.");
 
   const response = await fetch(baseUrl + path, { ...options, headers, cache: "no-store" });
 
