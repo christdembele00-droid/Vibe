@@ -22,6 +22,12 @@ class SendMessageRequest(BaseModel):
 class MessageStateRequest(BaseModel):
     message_id: UUID
 
+class ReactionRequest(BaseModel):
+    reaction: str = Field(min_length=1, max_length=16)
+
+class TypingRequest(BaseModel):
+    active: bool
+
 def _member(conn, conversation_id: UUID, user_id) -> bool:
     return conn.execute(text("SELECT 1 FROM conversation_members WHERE conversation_id=:c AND user_id=:u AND left_at IS NULL"), {"c":conversation_id,"u":user_id}).first() is not None
 
@@ -215,3 +221,28 @@ async def delete_message(conversation_id: UUID,message_id: UUID,current_user: di
         conn.execute(text("UPDATE messages SET deleted_at=now(),updated_at=now(),text=NULL WHERE id=:m"),{"m":message_id})
     await manager.broadcast(str(conversation_id),{"type":"message.deleted","message_id":str(message_id)})
     return {"deleted":True,"message_id":str(message_id)}
+
+
+@router.post("/{message_id}/reactions")
+async def set_reaction(conversation_id: UUID, message_id: UUID, body: ReactionRequest, current_user: dict = Depends(get_current_user)) -> dict:
+    with get_engine().begin() as conn:
+        if not _member(conn, conversation_id, current_user["id"]): raise HTTPException(403, "Accès refusé")
+        if not _message(conn, conversation_id, message_id): raise HTTPException(404, "Message introuvable")
+        conn.execute(text("INSERT INTO message_reactions(message_id,user_id,reaction) VALUES(:m,:u,:r) ON CONFLICT(message_id,user_id) DO UPDATE SET reaction=EXCLUDED.reaction,created_at=now()"), {"m":message_id,"u":current_user["id"],"r":body.reaction})
+    await manager.broadcast(str(conversation_id), {"type":"message.reaction","message_id":str(message_id),"user_id":str(current_user["id"]),"reaction":body.reaction})
+    return {"reaction":body.reaction}
+
+@router.delete("/{message_id}/reactions")
+async def remove_reaction(conversation_id: UUID, message_id: UUID, current_user: dict = Depends(get_current_user)) -> dict:
+    with get_engine().begin() as conn:
+        if not _member(conn, conversation_id, current_user["id"]): raise HTTPException(403, "Accès refusé")
+        conn.execute(text("DELETE FROM message_reactions WHERE message_id=:m AND user_id=:u"), {"m":message_id,"u":current_user["id"]})
+    await manager.broadcast(str(conversation_id), {"type":"message.reaction.removed","message_id":str(message_id),"user_id":str(current_user["id"])})
+    return {"removed":True}
+
+@router.post("/typing")
+async def typing_event(conversation_id: UUID, body: TypingRequest, current_user: dict = Depends(get_current_user)) -> dict:
+    with get_engine().connect() as conn:
+        if not _member(conn, conversation_id, current_user["id"]): raise HTTPException(403, "Accès refusé")
+    await manager.broadcast(str(conversation_id), {"type":"typing","user_id":str(current_user["id"]),"active":body.active})
+    return {"active":body.active}
