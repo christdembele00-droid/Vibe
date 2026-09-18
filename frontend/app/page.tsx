@@ -15,6 +15,7 @@ import { syncFirebaseUser } from "../services/auth-sync";
 import { uploadMedia, type UploadedMedia } from "../services/cloudinary";
 import { VibeRealtime, type RealtimeEvent } from "../services/realtime";
 import { registerPushDevice } from "../services/push";
+import { AttachIcon, ChannelIcon, CheckDoubleIcon, CloseIcon, DeleteIcon, EditIcon, GroupsIcon, MenuIcon, PhoneIcon, ReplyIcon, SearchIcon, SendIcon, SettingsIcon, StatusIcon, VideoIcon, VibeLogo } from "../components/icons/VibeIcons";
 
 type Contact = {
   id: string;
@@ -176,7 +177,7 @@ function attachmentElement(attachment: Attachment) {
       target="_blank"
       rel="noreferrer"
     >
-      📎 Ouvrir le fichier
+      <AttachIcon size={16} /> Ouvrir le fichier
     </a>
   );
 }
@@ -665,7 +666,7 @@ export default function Home() {
           </div>
 
           <div className="search open">
-            <span aria-hidden="true">⌕</span>
+            <SearchIcon size={18} />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -739,7 +740,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                <div className="icon-row"><button className="icon-btn" onClick={() => setView("statuses")} aria-label="Statuts">◌</button><button className="icon-btn" onClick={() => setView("channels")} aria-label="Chaînes">#</button><button className="icon-btn" onClick={() => setView("settings")} aria-label="Paramètres">⚙</button></div>
+                <div className="icon-row"><button className="icon-btn" onClick={() => setView("statuses")} aria-label="Statuts"><StatusIcon size={19} /></button><button className="icon-btn" onClick={() => setView("channels")} aria-label="Chaînes"><ChannelIcon size={19} /></button><button className="icon-btn" onClick={() => setView("settings")} aria-label="Paramètres"><SettingsIcon size={19} /></button></div>
               </header>
 
               <div className="messages">
@@ -751,7 +752,7 @@ export default function Home() {
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="empty-state">
-                    <div className="empty-symbol">◌</div>
+                    <div className="empty-symbol"><StatusIcon size={28} /></div>
                     <h2>Conversation vide</h2>
                     <p>Envoie le premier message.</p>
                   </div>
@@ -774,14 +775,14 @@ export default function Home() {
                         <div className="bubble-meta">
                           <span>{timeOf(message.created_at)}</span>
                           <span className="message-actions">
-                            <button type="button" onClick={() => { setReplyingTo(message); setEditingMessageId(null); }} aria-label="Répondre">↩</button>
+                            <button type="button" onClick={() => { setReplyingTo(message); setEditingMessageId(null); }} aria-label="Répondre"><ReplyIcon size={14} /></button>
                             {message.sender_id === user.uid && message.type === "text" && (
                               <>
-                                <button type="button" onClick={() => { setEditingMessageId(message.id); setReplyingTo(null); setMessageText(message.text ?? ""); }} aria-label="Modifier">✎</button>
-                                <button type="button" onClick={() => void deleteMessage(message)} aria-label="Supprimer">×</button>
+                                <button type="button" onClick={() => { setEditingMessageId(message.id); setReplyingTo(null); setMessageText(message.text ?? ""); }} aria-label="Modifier"><EditIcon size={14} /></button>
+                                <button type="button" onClick={() => void deleteMessage(message)} aria-label="Supprimer"><DeleteIcon size={14} /></button>
                               </>
                             )}
-                            <span className="message-check">✓✓</span>
+                            <span className="message-check"><CheckDoubleIcon size={13} /></span>
                           </span>
                         </div>
                       </div>
@@ -797,7 +798,7 @@ export default function Home() {
                       <strong>{editingMessageId ? "Modification du message" : "Réponse"}</strong>
                       {!editingMessageId && <span>{replyingTo?.text || "Message média"}</span>}
                     </div>
-                    <button type="button" className="icon-btn" onClick={() => { setReplyingTo(null); setEditingMessageId(null); setMessageText(""); }} aria-label="Annuler">×</button>
+                    <button type="button" className="icon-btn" onClick={() => { setReplyingTo(null); setEditingMessageId(null); setMessageText(""); }} aria-label="Annuler"><CloseIcon size={17} /></button>
                   </div>
                 )}
                 <form className="composer" onSubmit={(event) => {
@@ -809,14 +810,14 @@ export default function Home() {
                     void sendMessage(event);
                   }
                 }}>
-                  <button type="button" className="icon-btn" onClick={() => messageFileRef.current?.click()} aria-label="Joindre un média">＋</button>
+                  <button type="button" className="icon-btn" onClick={() => messageFileRef.current?.click()} aria-label="Joindre un média"><AttachIcon size={20} /></button>
                   <input
                     value={messageText}
                     onChange={(event) => setMessageText(event.target.value)}
                     placeholder={selectedConversation ? "Écrire un message…" : "Ouvre une conversation"}
                     disabled={!selectedConversation || busy}
                   />
-                  <button className="send" disabled={!selectedConversation || !messageText.trim() || busy}>➤</button>
+                  <button className="send" disabled={!selectedConversation || !messageText.trim() || busy} aria-label={editingMessageId ? "Enregistrer la modification" : "Envoyer"}>{editingMessageId ? <CheckDoubleIcon size={19} /> : <SendIcon size={19} />}</button>
                 </form>
                 <input
                   ref={messageFileRef}
