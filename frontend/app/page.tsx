@@ -51,6 +51,7 @@ type Message = {
   created_at?: string;
   client_message_id?: string | null;
   attachments?: Attachment[];
+  reactions?: { message_id: string; user_id: string; reaction: string }[];
 };
 
 type Status = {
@@ -205,7 +206,7 @@ export default function Home() {
   const [statusText, setStatusText] = useState("");
   const [groupName, setGroupName] = useState("");
   const [channelName, setChannelName] = useState("");
-  const [realtimeState, setRealtimeState] = useState<"connecting" | "connected" | "closed">("closed");
+  const [typing, setTyping] = useState(false);\n  const [realtimeState, setRealtimeState] = useState<"connecting" | "connected" | "closed">("closed");
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
@@ -771,11 +772,11 @@ export default function Home() {
                             {attachmentElement(attachment)}
                           </div>
                         ))}
-                        {message.text && <div>{message.text}</div>}
+                        {message.text && <div>{message.text}</div>\n                        {message.reactions && message.reactions.length > 0 && <div className="message-reactions">{message.reactions.map((reaction, index) => <span key={reaction.user_id + reaction.reaction + index}>{reaction.reaction}</span>)}</div>}}
                         <div className="bubble-meta">
                           <span>{timeOf(message.created_at)}</span>
                           <span className="message-actions">
-                            <button type="button" onClick={() => { setReplyingTo(message); setEditingMessageId(null); }} aria-label="Répondre"><ReplyIcon size={14} /></button>
+                            <button type="button" onClick={() => { void runWithToken((token) => apiRequest("/conversations/" + selectedConversation + "/messages/" + message.id + "/reactions", token, { method: "POST", body: JSON.stringify({ reaction: "👍" }) })); setReplyingTo(message); setEditingMessageId(null); }} aria-label="Répondre"><ReplyIcon size={14} /></button>
                             {message.sender_id === user.uid && message.type === "text" && (
                               <>
                                 <button type="button" onClick={() => { setEditingMessageId(message.id); setReplyingTo(null); setMessageText(message.text ?? ""); }} aria-label="Modifier"><EditIcon size={14} /></button>
@@ -813,7 +814,7 @@ export default function Home() {
                   <button type="button" className="icon-btn" onClick={() => messageFileRef.current?.click()} aria-label="Joindre un média"><AttachIcon size={20} /></button>
                   <input
                     value={messageText}
-                    onChange={(event) => setMessageText(event.target.value)}
+                    onChange={(event) => { setMessageText(event.target.value); if (selectedConversation) void runWithToken((token) => apiRequest("/conversations/" + selectedConversation + "/messages/typing", token, { method: "POST", body: JSON.stringify({ active: true }) })); }}
                     placeholder={selectedConversation ? "Écrire un message…" : "Ouvre une conversation"}
                     disabled={!selectedConversation || busy}
                   />
