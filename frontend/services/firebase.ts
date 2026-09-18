@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { getApp, getApps, initializeApp } from "firebase/app";
 import {
   GoogleAuthProvider,
@@ -31,10 +32,7 @@ function ensurePersistence() {
 }
 
 function isCapacitorNative() {
-  return (
-    typeof window !== "undefined" &&
-    Boolean(window.Capacitor?.isNativePlatform?.())
-  );
+  return Capacitor.isNativePlatform();
 }
 
 async function signInWithNativeGoogle(): Promise<User> {
