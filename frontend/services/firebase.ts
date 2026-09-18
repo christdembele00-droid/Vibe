@@ -15,10 +15,10 @@ import {
 } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "AIzaSyC6g40Uc9hq9Ij5DU1nwbO-zwpHqk9L9aQ",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "vibe-749e5.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "vibe-749e5",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "1:17097166235:web:c39c5c082b3cf6a01ee53e",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyC6g40Uc9hq9Ij5DU1nwbO-zwpHqk9L9aQ",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "vibe-749e5.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "vibe-749e5",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:17097166235:web:c39c5c082b3cf6a01ee53e",
 };
 
 const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
