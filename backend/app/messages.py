@@ -16,6 +16,7 @@ class SendMessageRequest(BaseModel):
     text: str | None = None
     client_message_id: str | None = Field(default=None, max_length=128)
     reply_to_id: UUID | None = None
+    media_ids: list[UUID] = Field(default_factory=list, max_length=8)
     metadata: dict = Field(default_factory=dict)
 
 class MessageStateRequest(BaseModel):
@@ -79,6 +80,25 @@ async def send_message(conversation_id: UUID, request: SendMessageRequest, curre
         if request.client_message_id:
             existing=conn.execute(text("SELECT id,conversation_id,sender_id,type,text,reply_to_id,client_message_id,created_at,updated_at,deleted_at,metadata FROM messages WHERE sender_id=:u AND client_message_id=:cid"),{"u":current_user["id"],"cid":request.client_message_id}).mappings().first()
             if existing: return {"message":dict(existing),"deduplicated":True}
+        if request.media_ids:
+            owned = conn.execute(
+                text("""
+                    SELECT id
+                    FROM media
+                    WHERE id = ANY(:media_ids)
+                      AND created_by = :u
+                      AND status = 'active'
+                """),
+                {"media_ids": request.media_ids, "u": current_user["id"]},
+            ).scalars().all()
+            if len(owned) != len(set(request.media_ids)):
+                raise HTTPException(403, "Un des médias n’est pas autorisé")
+            if request.type == "text":
+                raise HTTPException(
+                    400,
+                    "Un message avec média doit utiliser image, video, audio ou file",
+                )
+
         insert_sql="""
             INSERT INTO messages(conversation_id,sender_id,type,text,reply_to_id,client_message_id,metadata)
             VALUES(:c,:u,:type,:text,:reply,:cid,CAST(:metadata AS jsonb))
@@ -94,8 +114,33 @@ async def send_message(conversation_id: UUID, request: SendMessageRequest, curre
             deduplicated=True
         else:
             deduplicated=False
+        if request.media_ids:
+            for position, media_id in enumerate(dict.fromkeys(request.media_ids)):
+                conn.execute(
+                    text("""
+                        INSERT INTO message_attachments(message_id,media_id,position)
+                        VALUES(:message_id,:media_id,:position)
+                        ON CONFLICT (message_id,media_id) DO NOTHING
+                    """),
+                    {
+                        "message_id": row["id"],
+                        "media_id": media_id,
+                        "position": position,
+                    },
+                )
         conn.execute(text("UPDATE conversations SET updated_at=now() WHERE id=:c"),{"c":conversation_id})
-    payload=jsonable_encoder({"type":"message.created","message":dict(row)})
+
+    with get_engine().connect() as conn:
+        attachment_rows = conn.execute(text("""
+            SELECT m.id,m.url,m.resource_type,m.mime_type,m.size_bytes,m.width,m.height,m.duration_seconds
+            FROM message_attachments ma
+            JOIN media m ON m.id=ma.media_id
+            WHERE ma.message_id=:m
+            ORDER BY ma.position
+        """), {"m": row["id"]}).mappings().all()
+    message_payload = dict(row)
+    message_payload["attachments"] = [dict(x) for x in attachment_rows]
+    payload=jsonable_encoder({"type":"message.created","message":message_payload})
     await manager.broadcast(str(conversation_id),payload)
     with get_engine().connect() as conn:
         recipients=conn.execute(text("SELECT user_id FROM conversation_members WHERE conversation_id=:c AND user_id<>:u AND left_at IS NULL"),{"c":conversation_id,"u":current_user["id"]}).scalars().all()
@@ -105,7 +150,7 @@ async def send_message(conversation_id: UUID, request: SendMessageRequest, curre
             send_push_to_user(recipient_id,"Nouveau message",preview[:160],{"conversation_id":str(conversation_id),"message_id":str(row["id"])})
         except Exception:
             pass
-    return {"message":dict(row),"deduplicated":deduplicated}
+    return {"message":message_payload,"deduplicated":deduplicated}
 
 @router.post("/delivered")
 async def mark_delivered(conversation_id: UUID, body: MessageStateRequest, current_user: dict = Depends(get_current_user)) -> dict:
