@@ -6,6 +6,8 @@ import {
   onAuthStateChanged,
   setPersistence,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   type User,
 } from "firebase/auth";
@@ -27,11 +29,21 @@ function ensurePersistence() {
   return persistencePromise;
 }
 
-export async function signInWithGoogle(): Promise<User> {
+export async function signInWithGoogle(): Promise<User | null> {
   await ensurePersistence();
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
+  const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
+  if (isMobile) {
+    await signInWithRedirect(auth, provider);
+    return null;
+  }
   return (await signInWithPopup(auth, provider)).user;
+}
+
+export async function completeGoogleRedirect(): Promise<User | null> {
+  await ensurePersistence();
+  return (await getRedirectResult(auth))?.user ?? null;
 }
 
 export async function logout(): Promise<void> {
