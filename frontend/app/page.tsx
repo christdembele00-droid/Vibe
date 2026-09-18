@@ -90,7 +90,7 @@ type Settings = {
 
 type ApiError = Error & { status?: number };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
+const API_URL =\n  process.env.NEXT_PUBLIC_API_URL?.replace(/\\/$/, "") ||\n  (typeof window !== "undefined" && window.location.hostname === "localhost"\n    ? "http://localhost:8000/api/v1"\n    : "");
 
 async function apiRequest<T>(
   path: string,
@@ -216,7 +216,7 @@ export default function Home() {
   );
 
   const loadAll = useCallback(async () => {
-    if (!user || !API_URL) return;
+    if (!user || !API_URL) {\n      if (user) setBackendError("Serveur VIBE non configuré. Définis NEXT_PUBLIC_API_URL pour cette version.");\n      return;\n    }
     try {
       setBackendError("");
       const token = await getIdToken();
