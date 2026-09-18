@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "prepare:web": "set -eu; rm -rf www; mkdir -p www; for file in *.html *.css *.js *.webmanifest *.png *.jpg *.jpeg *.svg *.ico *.webp; do [ -f \"$file\" ] && cp \"$file\" www/ || true; done; for d in assets images icons; do if [ -d \"$d\" ]; then rsync -a \"$d/\" \"www/$d/\"; fi; done",
-    "build:android": "npm run prepare:web && npx cap sync android && cd android && ./gradlew assembleDebug"
+    "prepare:web": "npm run build:frontend && rm -rf www && cp -R frontend/out www",
+    "build:android": "npm run prepare:web && npx cap sync android && cd android && ./gradlew assembleDebug",
+    "build:frontend": "cd frontend && npm install --no-audit --no-fund && npm run build"
   },
   "dependencies": {
     "@capacitor/core": "^7.4.3",
